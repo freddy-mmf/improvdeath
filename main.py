@@ -14,12 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 import webapp2
 
-class MainHandler(webapp2.RequestHandler):
-    def get(self):
-        self.response.write('Hello world!')
+from views import MainPage
+
 
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', MainPage)
 ], debug=True)
+
+
+app.registry['templates'] = os.path.join(os.path.dirname(__file__),
+										 'templates/')
+app.registry['images'] = os.path.join(os.path.dirname(__file__),
+										 'static/images')
+app.registry['css'] = os.path.join(os.path.dirname(__file__),
+										 'static/css')
+app.registry['js'] = os.path.join(os.path.dirname(__file__),
+										 'static/js')										 

@@ -21,7 +21,9 @@ from views import MainPage
 
 
 app = webapp2.WSGIApplication([
-    ('/', MainPage)
+    ('/', MainPage),
+    ('/show/', ShowRunPage),
+    ('/previous_show/(\d+)/', ShowRunPage),
 ], debug=True)
 
 

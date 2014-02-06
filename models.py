@@ -9,25 +9,23 @@ class Player(db.Model):
 
 
 class Show(db.Model):
-	date_run = db.DateTimeProperty()
+	scheduled = db.DateTimeProperty()
 	length = db.IntegerProperty()
+	time_started = db.DateTimeProperty()
 	
 	# Show affiliated players
     players = db.ListProperty(db.Key)
 	# Show death intervals
-    intervals = db.ListProperty(db.Key)
+    death_intervals = db.ListProperty(db.Key)
+
 
 class Death(db.Model):
-	show = db.ReferenceProperty(Show)
-	player = db.ReferenceProperty(Player)
-	created_date = db.DateTimeProperty(required=True,
+	show = db.ReferenceProperty(Show, required=True)
+	player = db.ReferenceProperty(Player, required=True)
+	time_of_death = db.DateTimeProperty(required=True,
                                      auto_now_add=True)
-	
-	@property
-    def used(self):
-        if show and player:
-        	return True
-        return False
+    method = db.StringProperty()
 
-class Interval(db.Model):
+
+class DeathInterval(db.Model):
 	minute = db.IntegerProperty()

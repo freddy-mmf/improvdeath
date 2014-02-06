@@ -1,8 +1,22 @@
 import os
+from functools import wraps
+
 import webapp2
 
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
+
+from models import Show, Player, Death, DeathInterval
+
+
+def login_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not users.get_current_user():
+            return webapp2.redirect(
+        			users.create_login_url(webapp2.get_request().url))
+        return func(*args, **kwargs)
+    return decorated_view
 
 
 class ViewBase(webapp2.RequestHandler):
@@ -36,8 +50,17 @@ class MainPage(ViewBase):
 												self.context))
 
 
-class MainAdmin(ViewBase):
+@login_required
+class ShowRunPage(ViewBase):
 	def get(self):
 		context = {}
-		self.response.out.write(template.render(self.path('admin/home.html'),
+		self.response.out.write(template.render(self.path('show_run.html'),
+												self.context))
+
+
+class PreviousShowPage(ViewBase):
+	def get(self, show_id):
+		
+		context = {}
+		self.response.out.write(template.render(self.path('show_run.html'),
 												self.context))

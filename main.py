@@ -17,13 +17,12 @@
 import os
 import webapp2
 
-from views import MainPage
+from views import MainPage, ShowPage
 
 
 app = webapp2.WSGIApplication([
-    ('/', MainPage),
-    ('/show/', ShowRunPage),
-    ('/previous_show/(\d+)/', ShowRunPage),
+    (r'/', MainPage),
+    (r'/show/(\w+)/', ShowPage),
 ], debug=True)
 
 
@@ -34,4 +33,5 @@ app.registry['images'] = os.path.join(os.path.dirname(__file__),
 app.registry['css'] = os.path.join(os.path.dirname(__file__),
 										 'static/css')
 app.registry['js'] = os.path.join(os.path.dirname(__file__),
-										 'static/js')										 
+										 'static/js')
+

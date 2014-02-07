@@ -5,8 +5,11 @@
     <a href="{{ url }}">{{ url_linktext }}</a>
     <h2>Showtime!<h2>
     <div id="showtime-text">
-    	
-    
+    	{% for show in shows %}
+    		Key: {{show}}
+    		Scheduled: {{show.scheduled}}</br>
+    		Length: {{show.length}}</br>
+    	{% endfor %}
     </div>
         
     <h2>Previous Shows<h2>

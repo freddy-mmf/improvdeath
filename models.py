@@ -21,14 +21,19 @@ class Show(db.Model):
 	start_time = db.DateTimeProperty()
 	end_time = db.DateTimeProperty()
 	
-	# Show affiliated players
-	players = db.ListProperty(db.Key)
+	@property
+	def players(self):
+		q = ShowPlayer.all()
+		q.filter("show =", self.key())
+		show_players = q.run()
+		return [x.player for x in show_players if getattr(x, 'player', None)]
 	
 	@property
 	def deaths(self):
-		q = Death.all()
-		q.filter("show =", self)
-		return q.run()
+		q = ShowDeath.all()
+		q.filter("show =", self.key())
+		death_intervals = q.run()
+		return [x.death for x in death_intervals if getattr(x, 'death', None)]
 	
 	@property
 	def running(self):
@@ -53,12 +58,21 @@ class Show(db.Model):
 				death.time_of_death = self.start_time + \
 									  datetime.timedelta(minutes=death.interval)
 				death.put()
-		super(Show, self).put(*args, **kwargs)
+		return super(Show, self).put(*args, **kwargs)
 
 
 class Death(db.Model):
-	show = db.ReferenceProperty(Show, required=True)
 	interval = db.IntegerProperty(required=True)
 	player = db.ReferenceProperty(Player)
 	time_of_death = db.DateTimeProperty()
 	method = db.StringProperty()
+
+
+class ShowPlayer(db.Model):
+	show = db.ReferenceProperty(Show, required=True)
+	player = db.ReferenceProperty(Player, required=True)
+
+class ShowDeath(db.Model):
+	show = db.ReferenceProperty(Show, required=True)
+	death = db.ReferenceProperty(Death, required=True)
+	

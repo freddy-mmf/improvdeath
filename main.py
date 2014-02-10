@@ -17,21 +17,22 @@
 import os
 import webapp2
 
-from views import MainPage, ShowPage
+from views import MainPage, ShowPage, CreateShow
 
 
 app = webapp2.WSGIApplication([
     (r'/', MainPage),
-    (r'/show/(\w+)/', ShowPage),
+    (r'/show/([\w\W]+)/', ShowPage),
+    (r'/create_show/', CreateShow),
 ], debug=True)
 
 
 app.registry['templates'] = os.path.join(os.path.dirname(__file__),
 										 'templates/')
 app.registry['images'] = os.path.join(os.path.dirname(__file__),
-										 'static/images')
+										 '/static/img/')
 app.registry['css'] = os.path.join(os.path.dirname(__file__),
-										 'static/css')
+										 '/static/css/')
 app.registry['js'] = os.path.join(os.path.dirname(__file__),
-										 'static/js')
+										 '/static/js/')
 

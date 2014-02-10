@@ -1,16 +1,38 @@
 {% extends "base.html" %}
-{% block content %}
-	<h1>Improv Death</h1>
 
-    <a href="{{ url }}">{{ url_linktext }}</a>
-    <h2>Showtime!<h2>
-    <div id="showtime-text">
-    	{% for show in shows %}
-    		Key: {{show}}
-    		Scheduled: {{show.scheduled}}</br>
-    		Length: {{show.length}}</br>
-    	{% endfor %}
-    </div>
-        
-    <h2>Previous Shows<h2>
+{% block home-selected %}class="imp-menu-selected"{% endblock %}
+
+{% block content %}
+  <div id="home-page">
+	<div class="pure-g">
+		<div class="pure-u-1-4"></div>
+    	<div class="pure-u-1-2">
+    		<h1 style="border-style:none;">&nbsp;</h1>
+    		<div id="current-show" class="current-box">
+    			<h1>Current Show</h1>
+    			{% if current_show.scheduled %}
+	       			<a href="/show/{{current_show.key}}/">{{current_show.scheduled|date:"l N jS, Y @ P"}}</a>
+	       		{% else %}
+	       			No Upcoming Shows
+	       		{% endif %}
+	       	</div>
+	   	</div>
+    	<div class="pure-u-1-4"></div>
+	</div>
+	<div class="pure-g">
+		<div class="pure-u-1-4"></div>
+    	<div class="pure-u-1-2">
+			<h1 style="border-style:none;">&nbsp;</h1>
+    		<div id="previous-shows">
+    			<h1>Previous Shows</h1>
+				{% for show in previous_shows %}
+					{% if show.scheduled %}
+		    			<a href="/show/{{show.key}}/">{{show.scheduled|date:"l N jS, Y @ P"}}</a><br/>
+		    		{% endif %}
+	    		{% endfor %}
+	        </div>
+	  	</div>
+		<div class="pure-u-1-4"></div>
+	</div>
+  </div>
 {% endblock %}

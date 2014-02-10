@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
+	
 	<form action="/show/{{show}}/" method="post">
         <div>
         <input type="hidden" name="start_show" value="True">
-        <input type="submit" value="Start the Show!"></div>
+        <input type="submit" class="pure-button pure-button-primary" value="Start the Show!"></div>
     </form>
     <div id="show-screen">
     	<img src="/static/img/improv_death.png"/>

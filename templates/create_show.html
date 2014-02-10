@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block add_head %}
+<link rel="stylesheet" type="text/css" href="{{css_path}}jquery.datetimepicker.css"/ >
+<script src="{{js_path}}jquery.datetimepicker.js"></script>
+
+<script>
+$(document).ready(function(){
+  $('#datetimepicker').datetimepicker({
+  	format:'d.m.Y H:i',
+  	inline:true,
+  });
+});
+</script>
+{% endblock %}
+
+{% block create-selected %}class="pure-menu-selected"{% endblock %}
+
+{% block content %}
+	<div id="create-form" class="pure-g">
+		<h1>&nbsp;</h1>
+        <div class="pure-u-1-4"></div>
+		<div class="pure-u-1-2">
+			<form action="/create_show/" method="post">
+		        <div>
+		        	{% if created %}
+						Show Created Successfully!<br/>
+					{% endif %}
+		        	<label>Length:</label> <input type="text" name="show_length"><br/>
+		        	<label>Scheduled Time:</label> <input id="datetimepicker" type="text" name="scheduled"><br/>
+		        	<label>Players:</label>
+		        	<select name="player_list" multiple>
+		        	  {% for player in players %}
+					  	<option value="{{player.key}}">{{player.name}}</option>
+					  {% endfor %}
+					</select><br/>
+					<label>Death intervals (comma separated minutes):</label>
+					<input type="text" name="death_intervals"><br/>
+		        	<input type="submit" value="Create Show">
+		        </div>
+		    </form>
+		</div>
+		<div class="pure-u-1-4"></div>
+	</div>
+{% endblock %}

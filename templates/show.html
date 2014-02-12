@@ -1,12 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
-	
-	<form action="/show/{{show}}/" method="post">
-        <div>
-        <input type="hidden" name="start_show" value="True">
-        <input type="submit" class="pure-button pure-button-primary" value="Start the Show!"></div>
-    </form>
-    <div id="show-screen">
-    	<img src="/static/img/improv_death.png"/>
-    </div>
+	<h1>&nbsp;</h1>
+	{% if is_today and is_admin and not show.running %}
+		<form action="/show/{{show}}/" method="post">
+	        <div>
+	        <input type="hidden" name="start_show" value="True">
+	        <input type="submit" class="pure-button pure-button-primary" value="Start the Show!"></div>
+	    </form>
+	{% endif %}
+	{% if show.running %}
+    	<div id="show-screen">
+    		<img src="/static/img/improv_death.png"/>
+	    </div>
+	{% endif %}
+	{% if show.in_future %}
+		Show is scheduled for {{show.scheduled}}
+	{% endif %}
+	{% if show.in_past %}
+		Date of Show: {{show.scheduled}}
+	{% endif %}
 {% endblock %}

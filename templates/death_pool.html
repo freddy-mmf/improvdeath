@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block add-death-selected %}class="pure-menu-selected"{% endblock %}
+
+{% block content %}
+	<div id="create-death" class="pure-g">
+		<h1>&nbsp;</h1>
+        <div class="pure-u-1-4"></div>
+		<div class="pure-u-1-2">
+			<form action="/deathpool/" method="post">
+		        <div>
+		        	{% if created %}
+						Death Added Successfully!<br/>
+					{% endif %}
+		        	<label>Death:</label> <input type="text" name="cause"><br/>
+		        	<input type="submit" value="Add Death">
+		        </div>
+		    </form>
+		</div>
+		<div class="pure-u-1-4"></div>
+	</div>
+	<div id="delete-current-death" class="pure-g">
+		<h1>&nbsp;</h1>
+        <div class="pure-u-1-4"></div>
+		<div class="pure-u-1-2">
+			<form action="/deathpool/" method="post">
+		        <div>
+		        	{% if cur_deleted %}
+						Deleted Successfully.<br/>
+					{% endif %}
+			    	<label>Today's Death Pool:</label>
+			    	{% if is_admin %}
+		        		<select name="current_death_list" multiple>
+		        	  	{% for death in current_death_pool %}
+					  		<option value="{{death.key.id}}">{{death.cause}}</option>
+					  	{% endfor %}
+						</select><br/>
+						<input type="submit" value="Delete Selected">
+					{% else %}
+						<br/>
+						{% for death in current_death_pool %}
+					  		{{death.cause}}<br/>
+					  	{% endfor %}
+					{% endif %}
+				</div>
+		    </form>
+		</div>
+		<div class="pure-u-1-4"></div>
+	</div>
+	<div id="delete-prev-death" class="pure-g">
+		<h1>&nbsp;</h1>
+        <div class="pure-u-1-4"></div>
+		<div class="pure-u-1-2">
+			<form action="/deathpool/" method="post">
+		        <div>
+		        	{% if prev_deleted %}
+						Deleted Successfully.<br/>
+					{% endif %}
+			    	<label>Previous Shows Death Pool:</label>
+			    	{% if is_admin %}
+			        	<select name="previous_death_list" multiple>
+			        	  {% for death in previous_death_pool %}
+						  	<option value="{{death.key.id}}">{{death.cause}}</option>
+						  {% endfor %}
+						</select><br/>
+						<input type="submit" value="Delete Selected">
+					{% else %}
+						<br/>
+						{% for death in previous_death_pool %}
+					  		{{death.cause}}<br/>
+					  	{% endfor %}
+					{% endif %}
+				</div>
+		    </form>
+		</div>
+		<div class="pure-u-1-4"></div>
+	</div>
+{% endblock %}

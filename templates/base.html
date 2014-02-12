@@ -16,6 +16,7 @@
 	        	<li {% block home-selected %}{% endblock %}><a href="/">Home</a></li>
     	    	{% if is_admin %}
 	            	<li {% block create-selected %}{% endblock %}><a href="/create_show/">Create Show</a></li>
+	            	<li {% block add-death-selected %}{% endblock %}><a href="/deathpool/">Add Deaths</a></li>
 	            {% endif %}
 	            <li><a href="{{auth_url}}">{{auth_action}}</a></li>
 	        </ul>

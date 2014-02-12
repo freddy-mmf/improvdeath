@@ -11,7 +11,7 @@
     		<div id="current-show" class="current-box">
     			<h1>Current Show</h1>
     			{% if current_show.scheduled %}
-	       			<a href="/show/{{current_show.key}}/">{{current_show.scheduled|date:"l N jS, Y @ P"}}</a>
+	       			<a href="/show/{{current_show.key.id}}/">{{current_show.scheduled|date:"l N jS, Y @ P"}}</a>
 	       		{% else %}
 	       			No Upcoming Shows
 	       		{% endif %}
@@ -27,7 +27,7 @@
     			<h1>Previous Shows</h1>
 				{% for show in previous_shows %}
 					{% if show.scheduled %}
-		    			<a href="/show/{{show.key}}/">{{show.scheduled|date:"l N jS, Y @ P"}}</a><br/>
+		    			<a href="/show/{{show.key.id}}/">{{show.scheduled|date:"l N jS, Y @ P"}}</a><br/>
 		    		{% endif %}
 	    		{% endfor %}
 	        </div>

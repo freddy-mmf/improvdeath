@@ -17,13 +17,14 @@
 import os
 import webapp2
 
-from views import MainPage, ShowPage, CreateShow
+from views import MainPage, ShowPage, CreateShow, DeathPool
 
 
 app = webapp2.WSGIApplication([
     (r'/', MainPage),
-    (r'/show/([\w\W]+)/', ShowPage),
+    (r'/show/(\d+)/', ShowPage),
     (r'/create_show/', CreateShow),
+    (r'/deathpool/', DeathPool),
 ], debug=True)
 
 

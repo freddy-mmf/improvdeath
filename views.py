@@ -6,9 +6,9 @@ import webapp2
 
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
-from google.appengine.ext import db
+from google.appengine.ext import ndb
 
-from models import Show, Player, Death, ShowPlayer, ShowDeath
+from models import Show, Player, Death, ShowPlayer, ShowDeath, CauseOfDeath
 
 
 def admin_required(func):
@@ -52,15 +52,11 @@ class ViewBase(webapp2.RequestHandler):
 class MainPage(ViewBase):
 	def get(self):
 		# Get the current show
-		q = Show.all()
-		q.filter("scheduled >=", datetime.datetime.now())
-		q.order("scheduled")
-		current_show = q.get()
+		current_show = Show.query(
+			Show.scheduled >= datetime.datetime.now()).order(Show.scheduled).get()
 		# Get the previous shows
-		q = Show.all()
-		q.filter("scheduled <", datetime.datetime.now())
-		q.order("scheduled")
-		previous_shows = q.run()
+		previous_shows = Show.query(
+			Show.scheduled < datetime.datetime.now()).order(Show.scheduled).filter()
 		context = {'current_show': current_show,
 				   'previous_shows': previous_shows}
 		self.response.out.write(template.render(self.path('home.html'),
@@ -69,13 +65,13 @@ class MainPage(ViewBase):
 
 class ShowPage(ViewBase):
 	def get(self, show_key):
-		show = db.Key(encoded=show_key)
+		show = ndb.Key(Show, int(show_key)).get()
 		context	= {'show': show}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
 	@admin_required
 	def post(self, show_key):
-		show = db.Key(encoded=show_key)
+		show = ndb.Key(Show, int(show_key)).get()
 		if self.request.get('start_show'):
 			show.start_time = datetime.datetime.now()
 			show.put()
@@ -84,6 +80,7 @@ class ShowPage(ViewBase):
 												self.add_context()))
 
 class CreateShow(ViewBase):
+	@admin_required
 	def get(self):
 		context = {'players': Player.all().run()}
 		self.response.out.write(template.render(self.path('create_show.html'),
@@ -93,7 +90,7 @@ class CreateShow(ViewBase):
 	def post(self):
 		length = int(self.request.get('show_length'))
 		scheduled_string = self.request.get('scheduled')
-		player_list = self.request.get('player_list', allow_multiple=True)
+		player_list = self.request.get_all('player_list')
 		death_intervals = self.request.get('death_intervals')
 		context = {'players': Player.all().run()}
 		print "length: %s scheduled: %s player_list: %s death_intervals: %s" % (
@@ -116,9 +113,52 @@ class CreateShow(ViewBase):
 				ShowDeath(show=show, death=death).put()
 			# Add the players to the show
 			for player in player_list:
-				print player
-				player = db.Key(encoded=player)
+				player = ndb.Key(urlsafe=player)
 				ShowPlayer(show=show, player=player).put()
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
+												self.add_context(context)))
+
+
+class DeathPool(ViewBase):
+	def get(self):
+		current_deaths = CauseOfDeath.query(
+			CauseOfDeath.created_date == datetime.datetime.today(),
+			CauseOfDeath.used == False).fetch()
+		previous_deaths = CauseOfDeath.query(
+			CauseOfDeath.created_date < datetime.datetime.today(),
+			CauseOfDeath.used == False).fetch()
+		context = {'current_death_pool': current_deaths,
+				   'previous_death_pool': previous_deaths}
+		self.response.out.write(template.render(self.path('death_pool.html'),
+												self.add_context(context)))
+
+	def post(self):
+		context = {}
+		cod = None
+		cause = self.request.get('cause')
+		current_death_list = self.request.get_all('current_death_list')
+		previous_death_list = self.request.get_all('previous_death_list')
+		if cause:
+			cod = CauseOfDeath(cause=cause).put().get()
+			context['created'] = True
+		elif current_death_list:
+			for death in current_death_list:
+				death_key = ndb.Key(CauseOfDeath, int(death)).get()
+				death_key.key.delete()
+			context['cur_deleted'] = True
+		elif previous_death_list:
+			for death in previous_death_list:
+				death_key = ndb.Key(CauseOfDeath, int(death)).get()
+				death_key.key.delete()
+			context['prev_deleted'] = True
+		context['current_death_pool'] = CauseOfDeath.query(
+			CauseOfDeath.created_date == datetime.datetime.today(),
+			CauseOfDeath.used == False).fetch()
+		if cod:
+			context['current_death_pool'].append(cod)
+		context['previous_death_pool'] = CauseOfDeath.query(
+			CauseOfDeath.created_date < datetime.datetime.today(),
+			CauseOfDeath.used == False).fetch()
+		self.response.out.write(template.render(self.path('death_pool.html'),
 												self.add_context(context)))

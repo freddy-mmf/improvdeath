@@ -1,4 +1,5 @@
 import os
+import json
 import datetime
 from functools import wraps
 
@@ -51,12 +52,20 @@ class ViewBase(webapp2.RequestHandler):
 		
 class MainPage(ViewBase):
 	def get(self):
+		# Get today's and tomorrow's start time
+		today = datetime.date.today()
+		today_start = datetime.datetime.fromordinal(today.toordinal())
+		tomorrow = datetime.date.today() + datetime.timedelta(1)
+		tomorrow_start = datetime.datetime.fromordinal(tomorrow.toordinal())
+		
 		# Get the current show
 		current_show = Show.query(
-			Show.scheduled >= datetime.datetime.now()).order(Show.scheduled).get()
+			Show.scheduled > today_start,
+			Show.scheduled < tomorrow_start,).order(Show.scheduled).get()
+
 		# Get the previous shows
 		previous_shows = Show.query(
-			Show.scheduled < datetime.datetime.now()).order(Show.scheduled).filter()
+			Show.scheduled < today_start).order(Show.scheduled).filter()
 		context = {'current_show': current_show,
 				   'previous_shows': previous_shows}
 		self.response.out.write(template.render(self.path('home.html'),
@@ -118,6 +127,16 @@ class CreateShow(ViewBase):
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
+
+
+class ShowJSON(ViewBase):
+	def get(self):
+		self.response.headers['Content-Type'] = 'application/json'   
+		obj = {
+			'success': 'some var', 
+			'payload': 'some var',
+		  } 
+		self.response.out.write(json.dumps(obj))
 
 
 class DeathPool(ViewBase):

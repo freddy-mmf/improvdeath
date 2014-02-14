@@ -1,73 +1,9 @@
 /*
- * -- TOP NAV MENU STYLES --
- * This is the blue top menu
- */
-
-#nav, #nav li div {
-    background-color: #003D7A;
-}
-
-#header div {
-    background-color: #003D7A;
-}
-
-#nav li a:hover {
-    background-color: #0052A3;
-    color: #FFFFFF;
-}
-
-#nav li a:visited {
-    color: #FFFFFF;
-}
-
-#nav li a {
-    background-color: #003D7A;
-    color: #FFFFFF;
-}
-
-.imp-menu-selected li {
-	background-color: #003D7A;
-    color: #FFFFFF;
-}
-
-.home-menu {
-        text-align: left;
-    }
-        .home-menu ul {
-            float: right;
-        }
-
-.white-text {
-	color: #FFFFFF;
-}
-
-/*
  * -- HOMEPAGE STYLES --
  * These are the styles for the content of the homepage
  */
 
-#main-container h1 {
-	text-align:center;
-}
-
-#main-container {
-	background-color: #000000;
-	color: #FFFFFF;
-}
-
-.current-box {
-	padding: 1em;
-	text-align: center;
-}
-
-#home-page h1 {
-	text-align: center;
-	font-size:xx-large;
-	border-bottom: 8px solid #FFFFFF;
-    color: #FFFFFF;
-}
-
-#home-page a {
+.show-link a {
 	text-align: center;
     display: block;
     margin: 0 auto;
@@ -80,15 +16,11 @@
     color: #FFFFFF;
 }
 
-#home-page a:hover {
+.show-link a:hover {
     background-color: #0052CC;
     color: #FFFFFF;
 }
 
-#home-page a:visited {
+.show-link a:visited {
     color: #FFFFFF;
-}
-
-#create-form label {
-	padding: 3em;
 }

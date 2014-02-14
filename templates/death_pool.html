@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block add-death-selected %}class="pure-menu-selected"{% endblock %}
+{% block add-death-selected %}class="active"{% endblock %}
 
 {% block content %}
 	<div id="create-death" class="pure-g">
@@ -9,6 +9,7 @@
 		<div class="pure-u-1-2">
 			<form action="/deathpool/" method="post">
 		        <div>
+		        	<h2>You can only add deaths on show days</h2>
 		        	{% if created %}
 						Death Added Successfully!<br/>
 					{% endif %}

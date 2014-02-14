@@ -1,38 +1,46 @@
 {% extends "base.html" %}
 
-{% block home-selected %}class="imp-menu-selected"{% endblock %}
+{% block home-selected %}class="active"{% endblock %}
 
 {% block content %}
-  <div id="home-page">
-	<div class="pure-g">
-		<div class="pure-u-1-4"></div>
-    	<div class="pure-u-1-2">
-    		<h1 style="border-style:none;">&nbsp;</h1>
-    		<div id="current-show" class="current-box">
-    			<h1>Current Show</h1>
-    			{% if current_show.scheduled %}
-	       			<a href="/show/{{current_show.key.id}}/">{{current_show.scheduled|date:"l N jS, Y @ P"}}</a>
-	       		{% else %}
-	       			No Upcoming Shows
-	       		{% endif %}
-	       	</div>
-	   	</div>
-    	<div class="pure-u-1-4"></div>
+  <div class="container-fluid">
+  	<div class="row">
+  		<div class="col-md-4 col-md-offset-4">
+			<div class="panel panel-primary">
+				<div class="panel-heading">Current Show</div>
+				<div class="panel-body">
+					{% if current_show.scheduled %}
+						<div class="btn btn-primary btn-block">
+							<a class-"text-center" style="color:white;" onMouseOver="this.style.color='#fff' onMouseOut="this.style.color='#fff'"
+								   href="/show/{{current_show.key.id}}/">{{current_show.scheduled|date:"l N jS, Y @ P"}}</a>
+						</div>
+					{% else %}
+						No Upcoming Shows
+					{% endif %}
+				</div>
+			</div>
+		</div>
 	</div>
-	<div class="pure-g">
-		<div class="pure-u-1-4"></div>
-    	<div class="pure-u-1-2">
-			<h1 style="border-style:none;">&nbsp;</h1>
-    		<div id="previous-shows">
-    			<h1>Previous Shows</h1>
-				{% for show in previous_shows %}
-					{% if show.scheduled %}
-		    			<a href="/show/{{show.key.id}}/">{{show.scheduled|date:"l N jS, Y @ P"}}</a><br/>
-		    		{% endif %}
-	    		{% endfor %}
-	        </div>
-	  	</div>
-		<div class="pure-u-1-4"></div>
+	<div class="row">
+		<div class="col-md-4 col-md-offset-4">
+			<div class="panel panel-info">
+				<div class="panel-heading">Previous Shows</div>
+				<div class="panel-body">
+					{% if previous_shows %}
+						{% for show in previous_shows %}
+							{% if show.scheduled %}
+							  <div class="btn btn-info btn-block">
+								<a class-"text-center" style="color:white;" onMouseOver="this.style.color='#fff' onMouseOut="this.style.color='#fff'"
+								   href="/show/{{show.key.id}}/">{{show.scheduled|date:"l N jS, Y @ P"}}</a><br/>
+							  </div>
+							{% endif %}
+						{% endfor %}
+					{% else %}
+						No Previous Shows Listed
+					{% endif %}
+				</div>
+			</div>
+		</div>
 	</div>
   </div>
 {% endblock %}

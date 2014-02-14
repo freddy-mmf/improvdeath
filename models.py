@@ -39,6 +39,7 @@ class Show(ndb.Model):
 		if now >= self.start_time and now <= self.end_time:
 			return True
 		return False
+
 	@property
 	def is_today(self):
 		return self.scheduled.date() == datetime.date.today()

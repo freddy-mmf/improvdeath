@@ -17,7 +17,7 @@
 import os
 import webapp2
 
-from views import MainPage, ShowPage, CreateShow, DeathPool
+from views import MainPage, ShowPage, CreateShow, DeathPool, ShowJSON
 
 
 app = webapp2.WSGIApplication([
@@ -25,6 +25,7 @@ app = webapp2.WSGIApplication([
     (r'/show/(\d+)/', ShowPage),
     (r'/create_show/', CreateShow),
     (r'/deathpool/', DeathPool),
+    (r'/show/(\d+)/show.json', ShowJSON),
 ], debug=True)
 
 
@@ -36,4 +37,6 @@ app.registry['css'] = os.path.join(os.path.dirname(__file__),
 										 '/static/css/')
 app.registry['js'] = os.path.join(os.path.dirname(__file__),
 										 '/static/js/')
+app.registry['audio'] = os.path.join(os.path.dirname(__file__),
+										 '/static/audio/')
 

@@ -37,6 +37,7 @@ class ViewBase(webapp2.RequestHandler):
 				    'image_path': self.app.registry.get('images'),
 		            'css_path': self.app.registry.get('css'),
 		            'js_path': self.app.registry.get('js'),
+		            'audio_path': self.app.registry.get('audio'),
 		            'is_admin': users.is_current_user_admin(),
 					'user': user,
 					'auth_url': auth_url,
@@ -75,7 +76,8 @@ class MainPage(ViewBase):
 class ShowPage(ViewBase):
 	def get(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
-		context	= {'show': show}
+		context	= {'show': show,
+				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
 	@admin_required
@@ -84,7 +86,8 @@ class ShowPage(ViewBase):
 		if self.request.get('start_show'):
 			show.start_time = datetime.datetime.now()
 			show.put()
-		context	= {'show': show}
+		context	= {'show': show,
+				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context()))
 
@@ -130,13 +133,25 @@ class CreateShow(ViewBase):
 
 
 class ShowJSON(ViewBase):
-	def get(self):
-		self.response.headers['Content-Type'] = 'application/json'   
-		obj = {
-			'success': 'some var', 
-			'payload': 'some var',
-		  } 
-		self.response.out.write(json.dumps(obj))
+	def get(self, show_key):
+		show = ndb.Key(Show, int(show_key)).get()
+		show_obj = {'event': 'default'}
+		if show.running:
+			now = datetime.datetime.now()
+			# Within first 10 seconds of show starting
+			first_ten_end = show.start_time + datetime.timedelta(seconds=10)
+			# If we're within the first 10 seconds of the show
+			if now >= show.start_time and now <= first_ten_end:
+				show_obj = {'event': 'init-players'}
+			else:
+				for death in show.deaths:
+					thirty_after_interval = death.time_of_death + datetime.timedelta(
+																			seconds=30)
+					if now >= death.time_of_death and now <= thirty_after_interval:
+						show_obj = {'event': 'player-death',
+								    'player_photo': death.player.photo_filename}
+		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
+		self.response.out.write(json.dumps(show_obj))
 
 
 class DeathPool(ViewBase):

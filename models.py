@@ -23,12 +23,13 @@ class Show(ndb.Model):
 	
 	@property
 	def players(self):
-		show_players = ShowPlayer.query(ShowPlayer.show == self.key()).fetch()
+		show_players = ShowPlayer.query(ShowPlayer.show == self.key).fetch()
+		print "showplayers, ", show_players
 		return [x.player for x in show_players if getattr(x, 'player', None)]
 	
 	@property
 	def deaths(self):
-		show_players = ShowDeath.query(ShowDeath.show == self.key()).fetch()
+		show_players = ShowDeath.query(ShowDeath.show == self.key).fetch()
 		return [x.death for x in death_intervals if getattr(x, 'death', None)]
 	
 	@property

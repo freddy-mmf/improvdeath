@@ -17,29 +17,42 @@ $(document).ready(function(){
 {% block create-selected %}class="active"{% endblock %}
 
 {% block content %}
-	<div id="create-form" class="pure-g">
-		<h1>&nbsp;</h1>
-        <div class="pure-u-1-4"></div>
-		<div class="pure-u-1-2">
-			<form action="/create_show/" method="post">
-		        <div>
-		        	{% if created %}
-						Show Created Successfully!<br/>
-					{% endif %}
-		        	<label>Length:</label> <input type="text" name="show_length"><br/>
-		        	<label>Scheduled Time:</label> <input id="datetimepicker" type="text" name="scheduled"><br/>
-		        	<label>Players:</label>
-		        	<select name="player_list" multiple>
-		        	  {% for player in players %}
-					  	<option value="{{player.key}}">{{player.name}}</option>
-					  {% endfor %}
-					</select><br/>
-					<label>Death intervals (comma separated minutes):</label>
-					<input type="text" name="death_intervals"><br/>
-		        	<input type="submit" value="Create Show">
-		        </div>
-		    </form>
+	<form class="form-horizontal" role="form" action="/create_show/" method="post">
+			{% if created %}
+				Show Created Successfully!<br/>
+			{% endif %}
+		<div class="form-group">
+			<label class="col-md-2 control-label">Length:</label>
+			<div class="col-sm-1">
+				<input type="text" class="form-control" name="show_length">
+			</div>
 		</div>
-		<div class="pure-u-1-4"></div>
-	</div>
+		<div class="form-group">
+			<label class="col-md-2 control-label">Scheduled Time:</label>
+			<div class="col-sm-6">
+				<input id="datetimepicker" class="form-control" type="text" name="scheduled">
+			</div>
+		</div>
+		<div class="form-group">
+			<label class="col-md-2 control-label">Players:</label>
+			<div class="col-sm-2">
+				<select name="player_list" multiple class="form-control">
+				  {% for player in players %}
+					<option value="{{player.key.id}}">{{player.name}}</option>
+				  {% endfor %}
+				</select>
+			</div>
+		</div>
+		<div class="form-group">
+			<label class="col-md-2 control-label">Death intervals (comma separated minutes):</label>
+			<div class="col-sm-3">
+				<input type="text" class="form-control" name="death_intervals"><br/>
+			</div>
+		</div>
+		<div class="form-group ">
+			<div class="col-sm-offset-2">
+				<button type="submit" class="btn btn-default">Create Show</button>
+			</div>
+		</div>
+	</form>
 {% endblock %}

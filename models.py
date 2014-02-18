@@ -8,7 +8,7 @@ class Player(ndb.Model):
 	name = ndb.StringProperty(required=True)
 	photo_filename = ndb.StringProperty(required=True)
 	date_added = ndb.DateTimeProperty(required=True,
-									 auto_now_add=True)
+									  default=datetime.datetime.now())
 	
 	@property
 	def img_path(self):
@@ -24,26 +24,26 @@ class Show(ndb.Model):
 	@property
 	def players(self):
 		show_players = ShowPlayer.query(ShowPlayer.show == self.key).fetch()
-		print "showplayers, ", show_players
-		return [x.player for x in show_players if getattr(x, 'player', None)]
+		return [x.player.get() for x in show_players if getattr(x, 'player', None)]
 	
 	@property
 	def deaths(self):
-		show_players = ShowDeath.query(ShowDeath.show == self.key).fetch()
-		return [x.death for x in death_intervals if getattr(x, 'death', None)]
+		death_intervals = ShowDeath.query(ShowDeath.show == self.key).fetch()
+		return [x.death.get() for x in death_intervals if getattr(x, 'death', None)]
 	
 	@property
 	def running(self):
-		if not self.start_time or not ndbself.end_time:
+		if not self.start_time or not self.end_time:
 			return False
 		now = datetime.datetime.now()
+		print now >= self.start_time and now <= self.end_time
 		if now >= self.start_time and now <= self.end_time:
 			return True
 		return False
 
 	@property
 	def is_today(self):
-		return self.scheduled.date() == datetime.date.today()
+		return True #self.scheduled.date() == datetime.date.today()
 	
 	@property
 	def in_future(self):
@@ -54,16 +54,40 @@ class Show(ndb.Model):
 		return self.scheduled.date() < datetime.date.today()
 	
 	def put(self, *args, **kwargs):
-		start_time = kwargs.get('start_time')
 		# If start_time is specified, it must mean a show has started
-		if start_time and self.length:
+		if self.start_time and self.length:
 			# Set the end time of the show
-			self.end_time = start_time + datetime.timedelta(minutes=self.length)
+			self.end_time = self.start_time + datetime.timedelta(minutes=self.length)
 			# Make a copy of the list of players and randomize it
 			rand_players = self.players
 			random.shuffle(rand_players)
+			# Get the potential death causes for the show
+			today = datetime.date.today()
+			today_causes = CauseOfDeath.query(
+					CauseOfDeath.used != True,
+					CauseOfDeath.created_date == today).fetch(keys_only=True)
+			# If the number of causes is enough to fill all the deaths of the show
+			if len(today_causes) >= len(self.deaths):
+				rand_causes = today_causes
+			# Otherwise, pull from the previous death pool
+			else:
+				rand_causes = CauseOfDeath.query(
+								CauseOfDeath.used != True).fetch(keys_only=True)
+			# Randomize the cause list
+			random.shuffle(rand_causes)
 			for death in self.deaths:
-				death.player = rand_players.pop()
+				### CAUSE, PLAYER, TIME OF DEATH NOT GETTING SET PROPERLY FOR ALL ###
+				# Pop a random player off the list
+				death.player = rand_players.pop().key
+				# Pop a random cause off the list
+				death_cause = rand_causes.pop()
+				# Set the cause to the death_cause key
+				death.cause = death_cause
+				# Get the cause entity
+				cause_entity = death_cause.get()
+				# Set the entity as used, and save it
+				cause_entity.used = True
+				cause_entity.put()
 				death.time_of_death = self.start_time + \
 									  datetime.timedelta(minutes=death.interval)
 				death.put()
@@ -72,7 +96,8 @@ class Show(ndb.Model):
 
 class CauseOfDeath(ndb.Model):
 	cause = ndb.StringProperty(required=True)
-	created_date = ndb.DateProperty(required=True, auto_now_add=True)
+	created_date = ndb.DateProperty(required=True,
+									auto_now_add=True)
 	used = ndb.BooleanProperty(default=False)
 
 

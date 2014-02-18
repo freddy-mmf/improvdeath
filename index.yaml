@@ -12,5 +12,10 @@ indexes:
 
 - kind: CauseOfDeath
   properties:
+  - name: created_date
+  - name: used
+
+- kind: CauseOfDeath
+  properties:
   - name: used
   - name: created_date

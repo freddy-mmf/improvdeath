@@ -56,13 +56,14 @@ class MainPage(ViewBase):
 		# Get today's and tomorrow's start time
 		today = datetime.date.today()
 		today_start = datetime.datetime.fromordinal(today.toordinal())
+		print "today_start, ", today_start
 		tomorrow = datetime.date.today() + datetime.timedelta(1)
 		tomorrow_start = datetime.datetime.fromordinal(tomorrow.toordinal())
 		
 		# Get the current show
 		current_show = Show.query(
 			Show.scheduled > today_start,
-			Show.scheduled < tomorrow_start,).order(Show.scheduled).get()
+			Show.scheduled < tomorrow_start).order(Show.scheduled).get()
 
 		# Get the previous shows
 		previous_shows = Show.query(
@@ -80,6 +81,7 @@ class ShowPage(ViewBase):
 				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
+
 	@admin_required
 	def post(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
@@ -89,12 +91,12 @@ class ShowPage(ViewBase):
 		context	= {'show': show,
 				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
-												self.add_context()))
+												self.add_context(context)))
 
 class CreateShow(ViewBase):
 	@admin_required
 	def get(self):
-		context = {'players': Player.all().run()}
+		context = {'players': Player.query().fetch()}
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
 
@@ -104,29 +106,31 @@ class CreateShow(ViewBase):
 		scheduled_string = self.request.get('scheduled')
 		player_list = self.request.get_all('player_list')
 		death_intervals = self.request.get('death_intervals')
-		context = {'players': Player.all().run()}
-		print "length: %s scheduled: %s player_list: %s death_intervals: %s" % (
-				length, scheduled_string, player_list, death_intervals)
+		context = {'players': Player.query().fetch()}
 		if length and player_list and death_intervals:
+			# Get the list of interval times
+			try:
+				interval_list = [int(x.strip()) for x in death_intervals.split(',')]
+			except ValueError:
+				raise ValueError("Invalid interval list '%s'. Must be comma separated.")
+			# If there are more death intervals than players, raise an error
+			if len(interval_list) > len(player_list):
+				raise ValueError("Not enough players for death intervals.")
 			if scheduled_string:
 				scheduled = datetime.datetime.strptime(scheduled_string,
 													   "%d.%m.%Y %H:%M")
 			else:
 				scheduled = None
 			show = Show(length=length, scheduled=scheduled).put()
-			# Get the list of interval times
-			try:
-				interval_list = [int(x.strip()) for x in death_intervals.split(',')]
-			except ValueError:
-				raise ValueError("Invalid interval list '%s'. Must be comma separated.")
 			# Add the death intervals to the show
 			for interval in interval_list:
 				death = Death(interval=interval).put()
 				ShowDeath(show=show, death=death).put()
 			# Add the players to the show
 			for player in player_list:
-				player = ndb.Key(urlsafe=player)
-				ShowPlayer(show=show, player=player).put()
+				player_key = ndb.Key(Player, int(player)).get().key
+				print player_key
+				ShowPlayer(show=show, player=player_key).put()
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
@@ -148,8 +152,9 @@ class ShowJSON(ViewBase):
 					thirty_after_interval = death.time_of_death + datetime.timedelta(
 																			seconds=30)
 					if now >= death.time_of_death and now <= thirty_after_interval:
+						player_entity = death.player.get()
 						show_obj = {'event': 'player-death',
-								    'player_photo': death.player.photo_filename}
+								    'player_photo': player_entity.photo_filename}
 		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
 		self.response.out.write(json.dumps(show_obj))
 

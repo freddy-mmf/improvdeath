@@ -4,7 +4,7 @@
 	<script>
 		$( document ).ready(function() {
 			// Hide all objects initially
-			$( "#init-players" ).hide();
+			//$( "#init-players" ).hide();
 			$( "#player-death" ).hide();
 			$( "#default" ).show();
 			{% if show.running %}
@@ -57,17 +57,22 @@
 {% endblock %}
 {% block content %}
 	<div class="container-fluid">
-		{% if show.running %}
+		<div id="init-players">
 			<div class="row">
-				<div class="col-md-2 col-md-offset-1">
-					<div id="init-players">
-						<h1>Player images</h1>
-					</div>
+				<div class="col-md-4 col-md-offset-2">
+					<h1>Tonight's Deaths</h1>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-2 col-md-offset-2">
 					{% for player in show.players %}
 						<img src="{{image_path}}{{player.photo_filename}}" alt="{{player.name}}" class="img-thumbnail">
 					{% endfor %}
 				</div>
 			</div>
+		</div>
+		{% if show.running %}
+			
 		{% endif %}
 		{% if show.is_today and is_admin and not show.running %}		
 			<div class="row">
@@ -89,9 +94,6 @@
 		{% endif %}
 		{% if show.in_future %}
 			Show is scheduled for {{show.scheduled}}
-		{% endif %}
-		{% if show.in_past %}
-			Date of Show: {{show.scheduled}}
 		{% endif %}
 	</div>
 {% endblock %}

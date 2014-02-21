@@ -38,6 +38,7 @@ class ViewBase(webapp2.RequestHandler):
 		            'css_path': self.app.registry.get('css'),
 		            'js_path': self.app.registry.get('js'),
 		            'audio_path': self.app.registry.get('audio'),
+		            'player_image_path': self.app.registry.get('player_images'),
 		            'is_admin': users.is_current_user_admin(),
 					'user': user,
 					'auth_url': auth_url,

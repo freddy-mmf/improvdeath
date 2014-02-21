@@ -76,9 +76,9 @@ class Show(ndb.Model):
 			# Randomize the cause list
 			random.shuffle(rand_causes)
 			for death in self.deaths:
-				### CAUSE, PLAYER, TIME OF DEATH NOT GETTING SET PROPERLY FOR ALL ###
+				popped_player = rand_players.pop().key
 				# Pop a random player off the list
-				death.player = rand_players.pop().key
+				death.player = popped_player
 				# Pop a random cause off the list
 				death_cause = rand_causes.pop()
 				# Set the cause to the death_cause key

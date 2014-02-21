@@ -59,22 +59,37 @@
 	<div class="container-fluid">
 		<div id="init-players">
 			<div class="row">
-				<div class="col-md-4 col-md-offset-2">
-					<h1>Tonight's Deaths</h1>
+				<div class="col-sm-6 col-sm-offset-2">
+					<h1 class="text-center">Tonight's Deaths</h1>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-md-2 col-md-offset-2">
-					{% for player in show.players %}
-						<img src="{{image_path}}{{player.photo_filename}}" alt="{{player.name}}" class="img-thumbnail">
-					{% endfor %}
+				<div class="col-sm-1 col-sm-offset-1">
+					&nbsp;
 				</div>
+				{% for player in show.players %}
+					{% if forloop.counter|divisibleby:"4" %}
+					</div>
+					<div class="row">
+						<div class="col-sm-1 col-sm-offset-1">
+							&nbsp;
+						</div>
+					{% endif %}
+					<div class="col-sm-2"> 
+						<div class="panel panel-info">
+  							<div class="panel-body">
+  								<img src="{{player_image_path}}{{player.photo_filename}}" alt="{{player.name}}" class="img-responsive img-thumbnail">
+							</div>
+  							<div class="panel-footer text-center" style="background-color:black;">{{player.name}}</div>
+						</div>
+					</div>
+				{% endfor %}
 			</div>
 		</div>
 		{% if show.running %}
 			
 		{% endif %}
-		{% if show.is_today and is_admin and not show.running %}		
+		{% if show.is_today and is_admin and not show.running and not show.start_time %}		
 			<div class="row">
 				<div class="col-md-4 col-md-offset-4 text-center">
 					<h1>Improv Death</h1>
@@ -93,7 +108,36 @@
 			Show starts: {{show.scheduled}}
 		{% endif %}
 		{% if show.in_future %}
-			Show is scheduled for {{show.scheduled}}
+			<div class="row">
+				<div class="col-md-4 col-md-offset-2">
+					{{show.start_time|date:"l N jS, Y @ P"}}
+				</div>
+			</div>
+			<div class="row">
+				<h1>Players</h1>
+				<div class="col-md-4 col-md-offset-2">
+					{% for player in show.players %}
+						<img src="{{image_path}}{{player.photo_filename}}" alt="{{player.name}}" class="img-thumbnail">
+						{{player.name}}
+					{% endfor %}
+				</div>
+			</div>
+		{% endif %}
+		{% if show.in_past %}
+			<div class="row">
+				<div class="col-md-4 col-md-offset-2">
+					{{show.start_time|date:"l N jS, Y @ P"}}
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-4 col-md-offset-2">
+					<h1>Deaths</h1>
+					{% for death in show.deaths %}
+						{{death.time_of_death}}: {{death.player.name}}<br/>
+						{{death.cause.cause}}
+					{% endfor %}
+				</div>
+			</div>
 		{% endif %}
 	</div>
 {% endblock %}

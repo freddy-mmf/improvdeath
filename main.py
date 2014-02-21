@@ -33,6 +33,8 @@ app.registry['templates'] = os.path.join(os.path.dirname(__file__),
 										 'templates/')
 app.registry['images'] = os.path.join(os.path.dirname(__file__),
 										 '/static/img/')
+app.registry['player_images'] = os.path.join(os.path.dirname(__file__),
+										 '/static/img/players/')
 app.registry['css'] = os.path.join(os.path.dirname(__file__),
 										 '/static/css/')
 app.registry['js'] = os.path.join(os.path.dirname(__file__),

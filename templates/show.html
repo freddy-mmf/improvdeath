@@ -4,11 +4,13 @@
 	<script>
 		$( document ).ready(function() {
 			// Hide all objects initially
-			//$( "#init-players" ).hide();
+			$( "#init-players" ).hide();
 			$( "#player-death" ).hide();
-			$( "#default" ).show();
+			$( "#default-screen" ).show();
 			{% if show.running %}
-				var prev_event = "default"
+				// Hide Nav Bar
+				$( "#top-nav-bar" ).hide();
+				var prev_event = "default-screen"
 				doPoll();
 			{% endif %}
 			// Poll function that checks for a change every 5 seconds using "always"
@@ -30,14 +32,17 @@
 									// IF a player has died
 									if (data.event === "player-death") {
 										// Change the img source to the player that died
-										var src = {{image_path}} + data.player_photo
+										var src = "{{player_image_path}}" + data.player_photo
+										console.log("Source: " + src)
+										console.log("Cause: " + data.cause)
 										$("#player-death-img").attr("src", src);
+										$("#player-death-cause").text(data.cause)
 									}
 									// Hide all divs
-									$( "#init-players,#player-death,#default" ).hide();
+									$( "#init-players,#player-death,#default-screen" ).hide();
 									// Show just the active event div
 									$("#" + data.event).show();
-									if (data.event !== "default") {
+									if (data.event !== "default-screen") {
 										// Play bell toll
 										$.playSound('{{host_url}}{{audio_path}}bell_toll');
 									}
@@ -57,37 +62,60 @@
 {% endblock %}
 {% block content %}
 	<div class="container-fluid">
-		<div id="init-players">
-			<div class="row">
-				<div class="col-sm-6 col-sm-offset-2">
-					<h1 class="text-center">Tonight's Deaths</h1>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-sm-1 col-sm-offset-1">
-					&nbsp;
-				</div>
-				{% for player in show.players %}
-					{% if forloop.counter|divisibleby:"4" %}
-					</div>
-					<div class="row">
-						<div class="col-sm-1 col-sm-offset-1">
-							&nbsp;
-						</div>
-					{% endif %}
-					<div class="col-sm-2"> 
-						<div class="panel panel-info">
-  							<div class="panel-body">
-  								<img src="{{player_image_path}}{{player.photo_filename}}" alt="{{player.name}}" class="img-responsive img-thumbnail">
-							</div>
-  							<div class="panel-footer text-center" style="background-color:black;">{{player.name}}</div>
-						</div>
-					</div>
-				{% endfor %}
-			</div>
-		</div>
 		{% if show.running %}
-			
+			<div id="init-players">
+				<div class="row">
+					<div class="col-sm-6 col-sm-offset-2">
+						<h1 class="text-center" style="background-color:#003D7A;">Tonight's Deaths</h1>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-sm-1 col-sm-offset-1">
+						&nbsp;
+					</div>
+					{% for death in show.deaths %}
+						{% if forloop.counter|divisibleby:"4" %}
+						</div>
+						<div class="row">
+							<div class="col-sm-1 col-sm-offset-1">
+								&nbsp;
+							</div>
+						{% endif %}
+						<div class="col-sm-2"> 
+							<div class="panel panel-info">
+								<div class="panel-body">
+									<img src="{{player_image_path}}{{death.player.get.photo_filename}}" alt="{{death.player.get.name}}" class="img-responsive img-thumbnail">
+								</div>
+								<div class="panel-footer text-center" style="background-color:black;">{{death.player.get.name}}</div>
+							</div>
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+			<div id="player-death">
+				<div class="row">
+					<div class="col-sm-3 col-sm-offset-2">
+						<h1 class="text-center" style="background-color:#003D7A;">RIP</h1>
+					</div>
+				</div>
+				<div class="row">	
+					<div class="col-sm-3 col-sm-offset-2"> 
+						<div class="panel panel-info">
+							<div class="panel-body">
+								<img id="player-death-img" class="img-responsive img-thumbnail">
+							</div>
+							<div id="player-death-cause" class="panel-footer text-center" style="background-color:black;"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="default-screen">
+				<div class="row">
+					<div class="col-sm-4 col-sm-offset-2">
+						<h1 class="text-center" style="padding-top:25px;padding-bottom:25px;">Improv Death</h1>
+					</div>
+				</div>
+			</div>
 		{% endif %}
 		{% if show.is_today and is_admin and not show.running and not show.start_time %}		
 			<div class="row">
@@ -99,13 +127,16 @@
 				<div class="col-md-4 col-md-offset-4">
 					<form action="/show/{{show.key.id}}/" method="post">
 						<input type="hidden" name="start_show" value="True">
-						<input type="submit" class="btn btn-info btn-block" value="Start the Show!">
+						<input type="submit" class="btn btn-info btn-block" style="background-color:#003D7A;" value="Start the Show!">
 					</form>
 				</div>
 			</div>
 		{% endif %}
 		{% if show.is_today and not is_admin and not show.running %}		
 			Show starts: {{show.scheduled}}
+		{% endif %}
+		{% if show.is_today and is_admin and not show.running and show.start_time %}		
+			<h1>Hope you enjoyed the show!</h1>
 		{% endif %}
 		{% if show.in_future %}
 			<div class="row">
@@ -131,7 +162,7 @@
 			</div>
 			<div class="row">
 				<div class="col-md-4 col-md-offset-2">
-					<h1>Deaths</h1>
+					<h1 class="text-center">Deaths</h1>
 					{% for death in show.deaths %}
 						{{death.time_of_death}}: {{death.player.name}}<br/>
 						{{death.cause.cause}}

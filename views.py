@@ -22,6 +22,26 @@ def admin_required(func):
     return decorated_view
 
 
+def get_today_start():
+	# Get today's and tomorrow's start time
+	today = datetime.date.today()
+	return datetime.datetime.fromordinal(today.toordinal())
+
+
+def get_tomorrow_start():
+	tomorrow = datetime.date.today() + datetime.timedelta(1)
+	return datetime.datetime.fromordinal(tomorrow.toordinal())
+
+
+def show_today():
+	# See if there is a show today, otherwise users aren't allowed to submit deaths
+	today_start = get_today_start()
+	tomorrow_start = get_tomorrow_start()
+	return bool(Show.query(
+		Show.scheduled > today_start,
+		Show.scheduled < tomorrow_start).get())
+
+
 class ViewBase(webapp2.RequestHandler):
 	def __init__(self, *args, **kwargs):
 		super(ViewBase, self).__init__(*args, **kwargs)
@@ -54,22 +74,21 @@ class ViewBase(webapp2.RequestHandler):
 		
 class MainPage(ViewBase):
 	def get(self):
-		# Get today's and tomorrow's start time
-		today = datetime.date.today()
-		today_start = datetime.datetime.fromordinal(today.toordinal())
-		print "today_start, ", today_start
-		tomorrow = datetime.date.today() + datetime.timedelta(1)
-		tomorrow_start = datetime.datetime.fromordinal(tomorrow.toordinal())
-		
+		today_start = get_today_start()
+		tomorrow_start = get_tomorrow_start()
+	
 		# Get the current show
 		current_show = Show.query(
 			Show.scheduled > today_start,
 			Show.scheduled < tomorrow_start).order(Show.scheduled).get()
-
+		# Get the future shows
+		future_shows = Show.query(
+			Show.scheduled > tomorrow_start).order(Show.scheduled).filter()
 		# Get the previous shows
 		previous_shows = Show.query(
 			Show.scheduled < today_start).order(Show.scheduled).filter()
 		context = {'current_show': current_show,
+				   'future_shows': future_shows,
 				   'previous_shows': previous_shows}
 		self.response.out.write(template.render(self.path('home.html'),
 												self.add_context(context)))
@@ -78,7 +97,8 @@ class MainPage(ViewBase):
 class ShowPage(ViewBase):
 	def get(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
-		context	= {'show': show,
+		context	= {'ddeath': show.deaths[0],
+				   'show': show,
 				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
@@ -130,17 +150,61 @@ class CreateShow(ViewBase):
 			# Add the players to the show
 			for player in player_list:
 				player_key = ndb.Key(Player, int(player)).get().key
-				print player_key
 				ShowPlayer(show=show, player=player_key).put()
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
 
 
+class DeleteShows(ViewBase):
+	@admin_required
+	def get(self):
+		context = {'shows': Show.query().fetch()}
+		self.response.out.write(template.render(self.path('delete_shows.html'),
+												self.add_context(context)))
+
+	@admin_required
+	def post(self):
+		show_id = int(self.request.get('show_id'))
+		show = ndb.Key(Show, int(show_id))
+		show_deaths = ShowDeath.query(ShowDeath.show == show).fetch()
+		for show_death in show_deaths:
+			show_death.death.delete()
+			show_death.key.delete()
+		show_players = ShowPlayer.query(ShowPlayer.show == show).fetch()
+		for show_player in show_players:
+			show_player.key.delete()
+		show.delete()
+		context = {'deleted': True,
+				   'shows': Show.query().fetch()}
+		self.response.out.write(template.render(self.path('delete_shows.html'),
+												self.add_context(context)))
+
+
+class AddPlayers(ViewBase):
+	@admin_required
+	def get(self):
+		self.response.out.write(template.render(self.path('add_players.html'),
+												self.add_context()))
+
+	@admin_required
+	def post(self):
+		created = False
+		player_name = self.request.get('player_name')
+		photo_filename = self.request.get('photo_filename')
+		if player_name and photo_filename:
+			Player(name=player_name,
+				   photo_filename=photo_filename).put()
+			created = True
+		context = {'created': created}
+		self.response.out.write(template.render(self.path('add_players.html'),
+												self.add_context(context)))
+			
+
 class ShowJSON(ViewBase):
 	def get(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
-		show_obj = {'event': 'default'}
+		show_obj = {'event': 'default-screen'}
 		if show.running:
 			now = datetime.datetime.now()
 			# Within first 10 seconds of show starting
@@ -155,7 +219,8 @@ class ShowJSON(ViewBase):
 					if now >= death.time_of_death and now <= thirty_after_interval:
 						player_entity = death.player.get()
 						show_obj = {'event': 'player-death',
-								    'player_photo': player_entity.photo_filename}
+								    'player_photo': player_entity.photo_filename,
+								    'cause': death.cause.get().cause}
 		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
 		self.response.out.write(json.dumps(show_obj))
 
@@ -169,12 +234,13 @@ class DeathPool(ViewBase):
 			CauseOfDeath.created_date < datetime.datetime.today(),
 			CauseOfDeath.used == False).fetch()
 		context = {'current_death_pool': current_deaths,
-				   'previous_death_pool': previous_deaths}
+				   'previous_death_pool': previous_deaths,
+				   'show_today': show_today()}
 		self.response.out.write(template.render(self.path('death_pool.html'),
 												self.add_context(context)))
 
 	def post(self):
-		context = {}
+		context = {'show_today': show_today()}
 		cod = None
 		cause = self.request.get('cause')
 		current_death_list = self.request.get_all('current_death_list')

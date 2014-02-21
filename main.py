@@ -17,14 +17,17 @@
 import os
 import webapp2
 
-from views import MainPage, ShowPage, CreateShow, DeathPool, ShowJSON
+from views import (MainPage, ShowPage, CreateShow, DeathPool, ShowJSON,
+				   AddPlayers, DeleteShows)
 
 
 app = webapp2.WSGIApplication([
     (r'/', MainPage),
     (r'/show/(\d+)/', ShowPage),
     (r'/create_show/', CreateShow),
+    (r'/delete_shows/', DeleteShows),
     (r'/deathpool/', DeathPool),
+    (r'/add_players/', AddPlayers),
     (r'/show/(\d+)/show.json', ShowJSON),
 ], debug=True)
 

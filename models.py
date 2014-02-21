@@ -29,14 +29,13 @@ class Show(ndb.Model):
 	@property
 	def deaths(self):
 		death_intervals = ShowDeath.query(ShowDeath.show == self.key).fetch()
-		return [x.death.get() for x in death_intervals if getattr(x, 'death', None)]
+		return [x.death.get() for x in death_intervals if getattr(x, 'death', None) and x.death.get()]
 	
 	@property
 	def running(self):
 		if not self.start_time or not self.end_time:
 			return False
 		now = datetime.datetime.now()
-		print now >= self.start_time and now <= self.end_time
 		if now >= self.start_time and now <= self.end_time:
 			return True
 		return False
@@ -60,7 +59,7 @@ class Show(ndb.Model):
 			self.end_time = self.start_time + datetime.timedelta(minutes=self.length)
 			# Make a copy of the list of players and randomize it
 			rand_players = self.players
-			random.shuffle(rand_players)
+			random.shuffle(rand_players, random.random)
 			# Get the potential death causes for the show
 			today = datetime.date.today()
 			today_causes = CauseOfDeath.query(
@@ -74,11 +73,10 @@ class Show(ndb.Model):
 				rand_causes = CauseOfDeath.query(
 								CauseOfDeath.used != True).fetch(keys_only=True)
 			# Randomize the cause list
-			random.shuffle(rand_causes)
+			random.shuffle(rand_causes, random.random)
 			for death in self.deaths:
-				popped_player = rand_players.pop().key
 				# Pop a random player off the list
-				death.player = popped_player
+				death.player = rand_players.pop().key
 				# Pop a random cause off the list
 				death_cause = rand_causes.pop()
 				# Set the cause to the death_cause key

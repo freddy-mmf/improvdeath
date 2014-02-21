@@ -23,6 +23,27 @@
 	</div>
 	<div class="row">
 		<div class="col-md-4 col-md-offset-4">
+			<div class="panel panel-success">
+				<div class="panel-heading">Future Shows</div>
+				<div class="panel-body">
+					{% if future_shows %}
+						{% for show in future_shows %}
+							{% if show.scheduled %}
+							  <div class="btn btn-info btn-block">
+								<a class-"text-center" style="color:white;" onMouseOver="this.style.color='#fff' onMouseOut="this.style.color='#fff'"
+								   href="/show/{{show.key.id}}/">{{show.scheduled|date:"l N jS, Y @ P"}}</a><br/>
+							  </div>
+							{% endif %}
+						{% endfor %}
+					{% else %}
+						No Future Shows Listed
+					{% endif %}
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-4 col-md-offset-4">
 			<div class="panel panel-info">
 				<div class="panel-heading">Previous Shows</div>
 				<div class="panel-body">

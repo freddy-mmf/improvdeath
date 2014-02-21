@@ -3,77 +3,90 @@
 {% block add-death-selected %}class="active"{% endblock %}
 
 {% block content %}
-	<div id="create-death" class="pure-g">
-		<h1>&nbsp;</h1>
-        <div class="pure-u-1-4"></div>
-		<div class="pure-u-1-2">
-			<form action="/deathpool/" method="post">
-		        <div>
-		        	<h2>You can only add deaths on show days</h2>
-		        	{% if created %}
-						Death Added Successfully!<br/>
-					{% endif %}
-		        	<label>Death:</label> <input type="text" name="cause"><br/>
-		        	<input type="submit" value="Add Death">
-		        </div>
-		    </form>
+	{% if show_today %}
+		{% if created %}
+			<div class="label label-info" style="font-size:large;">Death Added Successfully!</div>
+		{% endif %}
+		<form class="form-horizontal" role="form" action="/deathpool/" method="post">
+			<div class="form-group">
+				<label class="col-md-2 control-label">Death:</label>
+				<div class="col-md-4">
+					<input type="text" name="cause">
+				</div>
+			</div>
+			<input type="submit" value="Add Death">
+		</form>
+	{% else %}
+		<div class="row">
+			<div class="col-md-4 label label-info" style="font-size:large;">Sorry! You can only add deaths on show days!</div>
 		</div>
-		<div class="pure-u-1-4"></div>
-	</div>
-	<div id="delete-current-death" class="pure-g">
-		<h1>&nbsp;</h1>
-        <div class="pure-u-1-4"></div>
-		<div class="pure-u-1-2">
-			<form action="/deathpool/" method="post">
-		        <div>
-		        	{% if cur_deleted %}
-						Deleted Successfully.<br/>
-					{% endif %}
-			    	<label>Today's Death Pool:</label>
-			    	{% if is_admin %}
-		        		<select name="current_death_list" multiple>
-		        	  	{% for death in current_death_pool %}
-					  		<option value="{{death.key.id}}">{{death.cause}}</option>
-					  	{% endfor %}
-						</select><br/>
-						<input type="submit" value="Delete Selected">
-					{% else %}
-						<br/>
+	{% endif %}
+	{% if cur_deleted %}
+		<div class="label label-info" style="font-size:large;">Deleted Successfully.</div>
+	{% endif %}
+	{% if is_admin %}
+		<div class="row">
+			<form class="form-horizontal" role="form" action="/deathpool/" method="post">
+				<div class="form-group">
+					<label class="col-md-2 control-label">Today's Death Pool:</label>
+					<div class="col-md-2">
+						<select name="current_death_list" multiple class="form-control">
 						{% for death in current_death_pool %}
-					  		{{death.cause}}<br/>
-					  	{% endfor %}
-					{% endif %}
+							<option value="{{death.key.id}}">{{death.cause}}</option>
+						{% endfor %}
+						</select>
+					</div>
 				</div>
-		    </form>
+				<div class="col-md-offset-2">
+					<button type="submit" class="btn btn-default">Delete Selected</button>
+				</div>
+			</form>
 		</div>
-		<div class="pure-u-1-4"></div>
-	</div>
-	<div id="delete-prev-death" class="pure-g">
-		<h1>&nbsp;</h1>
-        <div class="pure-u-1-4"></div>
-		<div class="pure-u-1-2">
-			<form action="/deathpool/" method="post">
-		        <div>
-		        	{% if prev_deleted %}
-						Deleted Successfully.<br/>
-					{% endif %}
-			    	<label>Previous Shows Death Pool:</label>
-			    	{% if is_admin %}
-			        	<select name="previous_death_list" multiple>
-			        	  {% for death in previous_death_pool %}
-						  	<option value="{{death.key.id}}">{{death.cause}}</option>
-						  {% endfor %}
-						</select><br/>
-						<input type="submit" value="Delete Selected">
-					{% else %}
-						<br/>
+	{% else %}
+		<div class="row">
+	  		<div class="col-md-6 col-md-offset-2">
+				<div class="panel panel-primary">
+					<div class="panel-header">Previous Shows Death Pool</div>
+					<div class="panel-body" style="color:black;">
+						{% for death in current_death_pool %}
+							{{death.cause}}<br/>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+	{% endif %}
+	{% if prev_deleted %}
+		<div class="label label-info" style="font-size:large;">Deleted Successfully.</div>
+	{% endif %}
+	{% if is_admin %}
+		<form class="form-horizontal" role="form" action="/deathpool/" method="post">
+			<div class="form-group">
+				<label class="col-md-2 control-label">Previous Shows Death Pool:</label>
+				<div class="col-md-6">
+					<select name="previous_death_list" multiple class="form-control">
+					  {% for death in previous_death_pool %}
+						<option value="{{death.key.id}}">{{death.cause}}</option>
+					  {% endfor %}
+					</select>
+				</div>
+			</div>
+			<div class="col-md-offset-2">
+				<button type="submit" class="btn btn-default">Delete Selected</button>
+			</div>
+		</form>
+	{% else %}
+		<div class="row">
+	  		<div class="col-md-6 col-md-offset-2">
+				<div class="panel panel-primary">
+					<div class="panel-header" style="color:black;">Previous Shows Death Pool</div>
+					<div class="panel-body" style="color:black;">
 						{% for death in previous_death_pool %}
-					  		{{death.cause}}<br/>
-					  	{% endfor %}
-					{% endif %}
+							{{death.cause}}<br/>
+						{% endfor %}
+					</div>
 				</div>
-		    </form>
+			</div>
 		</div>
-		<div class="pure-u-1-4"></div>
-	</div>
+	{% endif %}
 {% endblock %}

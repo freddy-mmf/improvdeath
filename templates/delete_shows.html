@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block delete-shows-selected %}class="active"{% endblock %}
+
+{% block content %}
+	{% if deleted %}
+		Show Deleted Successfully!<br/>
+	{% endif %}
+	{% for show in shows %}
+		<form class="form-inline" role="form" action="/delete_shows/" method="post">
+			<div class="form-group">
+				<div class="col-md-8 col-md-offset-2">
+					<div class="label label-info" style="font-size:large;">{{show.scheduled|date:"l N jS, Y @ P"}}</div>
+					<input type="hidden" name="show_id" value="{{show.key.id}}">
+				</div>
+			</div>
+			<button type="submit" class="btn btn-danger">Delete Show</button>
+		</form>
+		<hr/>
+	{% endfor %}
+{% endblock %}

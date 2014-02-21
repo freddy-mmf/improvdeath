@@ -18,23 +18,16 @@
 			function doPoll(){
 				$.get('/show/{{show.key.id}}/show.json')
 						.fail(
-							function(data) {
-								console.log("Fetch failed.")
-								console.log(data)
-							}
+							function(data) {}
 						)
 						.done(
 							function(data) {
-								console.log(data);
 								// Something has changed
 								if (data.event !== prev_event) {
-									console.log("Change");
 									// IF a player has died
 									if (data.event === "player-death") {
 										// Change the img source to the player that died
 										var src = "{{player_image_path}}" + data.player_photo
-										console.log("Source: " + src)
-										console.log("Cause: " + data.cause)
 										$("#player-death-img").attr("src", src);
 										$("#player-death-cause").text(data.cause)
 									}

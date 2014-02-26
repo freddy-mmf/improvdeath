@@ -1,5 +1,19 @@
 {% extends "base.html" %}
 
+{% block add_head %}
+<link rel="stylesheet" type="text/css" href="{{css_path}}jquery.datetimepicker.css"/ >
+<script src="{{js_path}}jquery.datetimepicker.js"></script>
+
+<script>
+$(document).ready(function(){
+  $('#datetimepicker').datetimepicker({
+  	format:'d.m.Y H:i',
+  	inline:true,
+  });
+});
+</script>
+{% endblock %}
+
 {% block add-player-selected %}class="active"{% endblock %}
 
 {% block content %}
@@ -17,6 +31,12 @@
 			<label class="col-md-2 control-label">Photo Filename:</label>
 			<div class="col-sm-3">
 				<input type="text" class="form-control" name="photo_filename"><br/>
+			</div>
+		</div>
+		<div class="form-group">
+			<label class="col-md-2 control-label">Date Added:</label>
+			<div class="col-sm-6">
+				<input id="datetimepicker" class="form-control" type="text" name="date_added">
 			</div>
 		</div>
 		<div class="form-group ">

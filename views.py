@@ -11,6 +11,8 @@ from google.appengine.ext import ndb
 
 from models import Show, Player, Death, ShowPlayer, ShowDeath, CauseOfDeath
 
+from timezone import mountain_time, get_mountain_time, today
+
 
 def admin_required(func):
     @wraps(func)
@@ -23,13 +25,11 @@ def admin_required(func):
 
 
 def get_today_start():
-	# Get today's and tomorrow's start time
-	today = datetime.date.today()
 	return datetime.datetime.fromordinal(today.toordinal())
 
 
 def get_tomorrow_start():
-	tomorrow = datetime.date.today() + datetime.timedelta(1)
+	tomorrow = today + datetime.timedelta(1)
 	return datetime.datetime.fromordinal(tomorrow.toordinal())
 
 
@@ -76,7 +76,7 @@ class MainPage(ViewBase):
 	def get(self):
 		today_start = get_today_start()
 		tomorrow_start = get_tomorrow_start()
-	
+
 		# Get the current show
 		current_show = Show.query(
 			Show.scheduled > today_start,
@@ -97,8 +97,10 @@ class MainPage(ViewBase):
 class ShowPage(ViewBase):
 	def get(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
-		context	= {'ddeath': show.deaths[0],
-				   'show': show,
+		available_causes = len(CauseOfDeath.query(
+							   CauseOfDeath.used == False).fetch())
+		context	= {'show': show,
+				   'available_causes': available_causes,
 				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
@@ -107,7 +109,7 @@ class ShowPage(ViewBase):
 	def post(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
 		if self.request.get('start_show'):
-			show.start_time = datetime.datetime.now()
+			show.start_time = mountain_time
 			show.put()
 		context	= {'show': show,
 				   'host_url': self.request.host_url}
@@ -125,8 +127,10 @@ class CreateShow(ViewBase):
 	def post(self):
 		length = int(self.request.get('show_length'))
 		scheduled_string = self.request.get('scheduled')
+		theme = self.request.get('theme')
 		player_list = self.request.get_all('player_list')
 		death_intervals = self.request.get('death_intervals')
+		show_style = self.request.get('show_style')
 		context = {'players': Player.query().fetch()}
 		if length and player_list and death_intervals:
 			# Get the list of interval times
@@ -141,8 +145,9 @@ class CreateShow(ViewBase):
 				scheduled = datetime.datetime.strptime(scheduled_string,
 													   "%d.%m.%Y %H:%M")
 			else:
-				scheduled = None
-			show = Show(length=length, scheduled=scheduled).put()
+				scheduled = mountain_time
+			show = Show(length=length, scheduled=scheduled,
+						theme=theme, show_style=show_style).put()
 			# Add the death intervals to the show
 			for interval in interval_list:
 				death = Death(interval=interval).put()
@@ -169,6 +174,9 @@ class DeleteShows(ViewBase):
 		show = ndb.Key(Show, int(show_id))
 		show_deaths = ShowDeath.query(ShowDeath.show == show).fetch()
 		for show_death in show_deaths:
+			cause = show_death.death.get().cause
+			if cause:
+				cause.delete()
 			show_death.death.delete()
 			show_death.key.delete()
 		show_players = ShowPlayer.query(ShowPlayer.show == show).fetch()
@@ -192,9 +200,16 @@ class AddPlayers(ViewBase):
 		created = False
 		player_name = self.request.get('player_name')
 		photo_filename = self.request.get('photo_filename')
+		date_added = self.request.get('date_added')
 		if player_name and photo_filename:
+			if date_added:
+				date_added = datetime.datetime.strptime(scheduled_string,
+													   "%d.%m.%Y %H:%M")
+			else:
+				date_added = mountain_time
 			Player(name=player_name,
-				   photo_filename=photo_filename).put()
+				   photo_filename=photo_filename,
+				   date_added=date_added).put()
 			created = True
 		context = {'created': created}
 		self.response.out.write(template.render(self.path('add_players.html'),
@@ -206,7 +221,7 @@ class ShowJSON(ViewBase):
 		show = ndb.Key(Show, int(show_key)).get()
 		show_obj = {'event': 'default-screen'}
 		if show.running:
-			now = datetime.datetime.now()
+			now = get_mountain_time()
 			# Within first 10 seconds of show starting
 			first_ten_end = show.start_time + datetime.timedelta(seconds=10)
 			# If we're within the first 10 seconds of the show
@@ -216,6 +231,8 @@ class ShowJSON(ViewBase):
 				for death in show.deaths:
 					thirty_after_interval = death.time_of_death + datetime.timedelta(
 																			seconds=30)
+					print "thirty_after_interval, ", thirty_after_interval
+					print "death.time_of_death, ", death.time_of_death
 					if now >= death.time_of_death and now <= thirty_after_interval:
 						player_entity = death.player.get()
 						show_obj = {'event': 'player-death',
@@ -228,10 +245,10 @@ class ShowJSON(ViewBase):
 class DeathPool(ViewBase):
 	def get(self):
 		current_deaths = CauseOfDeath.query(
-			CauseOfDeath.created_date == datetime.datetime.today(),
+			CauseOfDeath.created_date == today,
 			CauseOfDeath.used == False).fetch()
 		previous_deaths = CauseOfDeath.query(
-			CauseOfDeath.created_date < datetime.datetime.today(),
+			CauseOfDeath.created_date < today,
 			CauseOfDeath.used == False).fetch()
 		context = {'current_death_pool': current_deaths,
 				   'previous_death_pool': previous_deaths,
@@ -259,12 +276,12 @@ class DeathPool(ViewBase):
 				death_key.key.delete()
 			context['prev_deleted'] = True
 		context['current_death_pool'] = CauseOfDeath.query(
-			CauseOfDeath.created_date == datetime.datetime.today(),
+			CauseOfDeath.created_date == today,
 			CauseOfDeath.used == False).fetch()
 		if cod:
 			context['current_death_pool'].append(cod)
 		context['previous_death_pool'] = CauseOfDeath.query(
-			CauseOfDeath.created_date < datetime.datetime.today(),
+			CauseOfDeath.created_date < today,
 			CauseOfDeath.used == False).fetch()
 		self.response.out.write(template.render(self.path('death_pool.html'),
 												self.add_context(context)))

@@ -3,12 +3,13 @@ import random
 
 from google.appengine.ext import ndb
 
+from timezone import mountain_time, get_mountain_time, today
+
 
 class Player(ndb.Model):
 	name = ndb.StringProperty(required=True)
 	photo_filename = ndb.StringProperty(required=True)
-	date_added = ndb.DateTimeProperty(required=True,
-									  default=datetime.datetime.now())
+	date_added = ndb.DateTimeProperty()
 	
 	@property
 	def img_path(self):
@@ -17,9 +18,12 @@ class Player(ndb.Model):
 
 class Show(ndb.Model):
 	scheduled = ndb.DateTimeProperty()
+	theme = ndb.StringProperty()
 	length = ndb.IntegerProperty(required=True)
 	start_time = ndb.DateTimeProperty()
 	end_time = ndb.DateTimeProperty()
+	# Style in which to run the show
+	show_style = ndb.StringProperty()
 	
 	@property
 	def players(self):
@@ -35,22 +39,25 @@ class Show(ndb.Model):
 	def running(self):
 		if not self.start_time or not self.end_time:
 			return False
-		now = datetime.datetime.now()
+		now = get_mountain_time()
+		print "start time, ", self.start_time
+		print "end time, ", self.end_time
+		print "now, ", now
 		if now >= self.start_time and now <= self.end_time:
 			return True
 		return False
 
 	@property
 	def is_today(self):
-		return True #self.scheduled.date() == datetime.date.today()
+		return self.scheduled.date() == today
 	
 	@property
 	def in_future(self):
-		return self.scheduled.date() > datetime.date.today()
+		return self.scheduled.date() > today
 	
 	@property
 	def in_past(self):
-		return self.scheduled.date() < datetime.date.today()
+		return self.scheduled.date() < today
 	
 	def put(self, *args, **kwargs):
 		# If start_time is specified, it must mean a show has started
@@ -61,7 +68,6 @@ class Show(ndb.Model):
 			rand_players = self.players
 			random.shuffle(rand_players, random.random)
 			# Get the potential death causes for the show
-			today = datetime.date.today()
 			today_causes = CauseOfDeath.query(
 					CauseOfDeath.used != True,
 					CauseOfDeath.created_date == today).fetch(keys_only=True)
@@ -94,10 +100,13 @@ class Show(ndb.Model):
 
 class CauseOfDeath(ndb.Model):
 	cause = ndb.StringProperty(required=True)
-	created_date = ndb.DateProperty(required=True,
-									auto_now_add=True)
+	created_date = ndb.DateProperty(required=True)
 	used = ndb.BooleanProperty(default=False)
 
+	def put(self, *args, **kwargs):
+		self.created_date = mountain_time
+		return super(CauseOfDeath, self).put(*args, **kwargs)	
+	
 
 class Death(ndb.Model):
 	interval = ndb.IntegerProperty(required=True)

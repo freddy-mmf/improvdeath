@@ -29,10 +29,13 @@
 				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 				  <ul class="nav navbar-nav">
 					<li {% block home-selected %}{% endblock %}><a href="/">Home</a></li>
+					<li {% block add-death-selected %}{% endblock %}><a href="/add_deaths/">Deaths</a></li>
+					<li {% block add-theme-selected %}{% endblock %}><a href="/add_themes/">Themes</a></li>
 					{% if is_admin %}
 						<li {% block create-selected %}{% endblock %}><a href="/create_show/">Create Show</a></li>
 						<li {% block delete-shows-selected %}{% endblock %}><a href="/delete_shows/">Delete Shows</a></li>
-						<li {% block add-death-selected %}{% endblock %}><a href="/deathpool/">Add Deaths</a></li>
+						<li {% block delete-death-selected %}{% endblock %}><a href="/delete_deaths/">Delete Deaths</a></li>
+						<li {% block delete-theme-selected %}{% endblock %}><a href="/delete_themes/">Delete Themes</a></li>
 						<li {% block add-player-selected %}{% endblock %}><a href="/add_players/">Add Players</a></li>
 					{% endif %}
 				  </ul>

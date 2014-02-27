@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block add-theme-selected %}class="active"{% endblock %}
+
+{% block content %}
+	{% if created %}
+		<div class="label label-info" style="font-size:large;">Theme Added Successfully!</div>
+	{% endif %}
+	<form class="form-horizontal" role="form" action="/add_themes/" method="post">
+		<div class="form-group">
+			<label class="col-md-2 control-label">Theme:</label>
+			<div class="col-md-4">
+				<input type="text" class="form-control" name="theme_name">
+			</div>
+		</div>
+		<div class="col-md-offset-2">
+			<button type="submit" class="btn btn-default">Add Theme</button>
+		</div>
+	</form>
+{% endblock %}

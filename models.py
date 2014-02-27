@@ -106,6 +106,15 @@ class CauseOfDeath(ndb.Model):
 	def put(self, *args, **kwargs):
 		self.created_date = mountain_time
 		return super(CauseOfDeath, self).put(*args, **kwargs)	
+
+
+class Theme(ndb.Model):
+	created_date = ndb.DateTimeProperty(required=True)
+	name = ndb.StringProperty(required=True)
+	
+	def put(self, *args, **kwargs):
+		self.created_date = mountain_time
+		return super(Theme, self).put(*args, **kwargs)
 	
 
 class Death(ndb.Model):
@@ -124,17 +133,32 @@ class ShowDeath(ndb.Model):
 	show = ndb.KeyProperty(kind=Show, required=True)
 	death = ndb.KeyProperty(kind=Death, required=True)
 
-class Vote(ndb.Model):
+
+class DeathVote(ndb.Model):
 	cause = ndb.KeyProperty(kind=CauseOfDeath, required=True)
 	value = ndb.IntegerProperty(required=True, choices=[1, -1])
-	ip = ndb.StringProperty(required=True)
+	session_id = ndb.StringProperty(required=True)
 	
 	def put(self, *args, **kwargs):
 		cause = kwargs.get('cause')
-		ip = kwargs.get('ip')
-		existing_vote = Vote.query(Vote.cause == cause,
-								   Vote.ip == ip).get()
+		session_id = kwargs.get('session_id')
+		existing_vote = DeathVote.query(DeathVote.cause == cause,
+								        DeathVote.session_id == session_id).get()
 		if existing_vote:
-			return self
+			return None
 		return super(Vote, self).put(*args, **kwargs)
+
+
+class ThemeVote(ndb.Model):
+	theme = ndb.KeyProperty(kind=Theme, required=True)
+	value = ndb.IntegerProperty(required=True, choices=[1, -1])
+	session_id = ndb.StringProperty(required=True)
 	
+	def put(self, *args, **kwargs):
+		theme = kwargs.get('theme')
+		session_id = kwargs.get('session_id')
+		existing_vote = ThemeVote.query(ThemeVote.theme == theme,
+								        ThemeVote.session_id == session_id).get()
+		if existing_vote:
+			return None
+		return super(Vote, self).put(*args, **kwargs)

@@ -1,15 +1,18 @@
 import os
 import json
 import datetime
+import random
 from functools import wraps
 
 import webapp2
+from webapp2_extras import sessions
 
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
 from google.appengine.ext import ndb
 
-from models import Show, Player, Death, ShowPlayer, ShowDeath, CauseOfDeath
+from models import (Show, Player, Death, ShowPlayer, ShowDeath, CauseOfDeath,
+					Theme, DeathVote, ThemeVote)
 
 from timezone import mountain_time, get_mountain_time, today
 
@@ -70,6 +73,21 @@ class ViewBase(webapp2.RequestHandler):
 	
 	def path(self, filename):
 		return os.path.join(self.app.registry.get('templates'), filename)
+
+	def dispatch(self):
+		self.session_store = sessions.get_store(request=self.request)
+		try:
+			webapp2.RequestHandler.dispatch(self)
+		finally:
+			self.session_store.save_sessions(self.response)
+
+	@webapp2.cached_property
+	def session(self):
+		session = self.session_store.get_session()
+		if not session.get('id'):
+			# Get a random has to store as the session id
+			session['id'] = random.getrandbits(128)
+		return session
 
 		
 class MainPage(ViewBase):
@@ -242,46 +260,116 @@ class ShowJSON(ViewBase):
 		self.response.out.write(json.dumps(show_obj))
 
 
-class DeathPool(ViewBase):
+class AddDeaths(ViewBase):
 	def get(self):
 		current_deaths = CauseOfDeath.query(
 			CauseOfDeath.created_date == today,
 			CauseOfDeath.used == False).fetch()
-		previous_deaths = CauseOfDeath.query(
-			CauseOfDeath.created_date < today,
-			CauseOfDeath.used == False).fetch()
 		context = {'current_death_pool': current_deaths,
-				   'previous_death_pool': previous_deaths,
 				   'show_today': show_today()}
-		self.response.out.write(template.render(self.path('death_pool.html'),
+		self.response.out.write(template.render(self.path('add_deaths.html'),
 												self.add_context(context)))
 
 	def post(self):
 		context = {'show_today': show_today()}
 		cod = None
 		cause = self.request.get('cause')
-		current_death_list = self.request.get_all('current_death_list')
-		previous_death_list = self.request.get_all('previous_death_list')
 		if cause:
 			cod = CauseOfDeath(cause=cause).put().get()
 			context['created'] = True
-		elif current_death_list:
+		context['current_death_pool'] = CauseOfDeath.query(
+			CauseOfDeath.created_date == today,
+			CauseOfDeath.used == False,
+			CauseOfDeath.key != getattr(cod, 'key', None)).fetch()
+		if cod:
+			context['current_death_pool'].append(cod)
+		self.response.out.write(template.render(self.path('add_deaths.html'),
+												self.add_context(context)))
+
+
+class AddThemes(ViewBase):
+	def get(self):
+		context = {'themes': Theme.query().fetch(),
+				   'theme_votes': ThemeVote.query().fetch()}
+		self.response.out.write(template.render(self.path('add_themes.html'),
+												self.add_context(context)))
+
+	def post(self):
+		context = {}
+		theme = None
+		theme_name = self.request.get('theme_name')
+		if theme_name:
+			theme = Theme(name=theme_name).put().get()
+			context['created'] = True
+		context['themes'] = Theme.query(
+			Theme.key != getattr(theme, 'key', None)).fetch()
+		if theme:
+			context['themes'].append(theme)
+		self.response.out.write(template.render(self.path('add_themes.html'),
+												self.add_context(context)))
+
+
+class DeleteDeaths(ViewBase):
+	@admin_required
+	def get(self):
+		current_deaths = CauseOfDeath.query(
+			CauseOfDeath.created_date == today,
+			CauseOfDeath.used == False).fetch()
+		context = {'current_death_pool': current_deaths}
+		self.response.out.write(template.render(self.path('delete_deaths.html'),
+												self.add_context(context)))
+
+	@admin_required
+	def post(self):
+		context = {}
+		current_death_list = self.request.get_all('current_death_list')
+		delete_unused = self.request.get_all('delete_unused')
+		if current_death_list:
 			for death in current_death_list:
-				death_key = ndb.Key(CauseOfDeath, int(death)).get()
-				death_key.key.delete()
+				death_entity = ndb.Key(CauseOfDeath, int(death)).get()
+				# Get all the related death votes and delete them
+				death_votes = DeathVote.query(DeathVote.death == death_entity.key).fetch()
+				for dv in death_votes:
+					dv.key.delete()
+				death_entity.key.delete()
 			context['cur_deleted'] = True
-		elif previous_death_list:
-			for death in previous_death_list:
-				death_key = ndb.Key(CauseOfDeath, int(death)).get()
-				death_key.key.delete()
-			context['prev_deleted'] = True
+		elif delete_unused:
+			unused_deaths = CauseOfDeath.query(CauseOfDeath.used == False).fetch()
+			for unused in unused_deaths:
+				# Get all the related death votes and delete them
+				death_votes = DeathVote.query(DeathVote.death == unused.key).fetch()
+				for dv in death_votes:
+					dv.key.delete()
+				# Delete the un-used deaths
+				unused.key.delete()
+			context['unused_deleted'] = True
 		context['current_death_pool'] = CauseOfDeath.query(
 			CauseOfDeath.created_date == today,
 			CauseOfDeath.used == False).fetch()
-		if cod:
-			context['current_death_pool'].append(cod)
-		context['previous_death_pool'] = CauseOfDeath.query(
-			CauseOfDeath.created_date < today,
-			CauseOfDeath.used == False).fetch()
-		self.response.out.write(template.render(self.path('death_pool.html'),
+		self.response.out.write(template.render(self.path('delete_deaths.html'),
+												self.add_context(context)))
+
+
+class DeleteThemes(ViewBase):
+	@admin_required
+	def get(self):
+		context = {'themes': Theme.query().fetch()}
+		self.response.out.write(template.render(self.path('delete_themes.html'),
+												self.add_context(context)))
+
+	@admin_required
+	def post(self):
+		context = {}
+		delete_theme_list = self.request.get_all('delete_theme_list')
+		if delete_theme_list:
+			for theme in delete_theme_list:
+				theme_entity = ndb.Key(Theme, int(theme)).get()
+				# Get all the related theme votes and delete them
+				theme_votes = ThemeVote.query(ThemeVote.theme == theme_entity.key).fetch()
+				for tv in theme_votes:
+					tv.key.delete()
+				theme_entity.key.delete()
+			context['cur_deleted'] = True
+		context['themes'] = CauseOfDeath.query().fetch()
+		self.response.out.write(template.render(self.path('delete_themes.html'),
 												self.add_context(context)))

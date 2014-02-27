@@ -17,19 +17,29 @@
 import os
 import webapp2
 
-from views import (MainPage, ShowPage, CreateShow, DeathPool, ShowJSON,
-				   AddPlayers, DeleteShows)
+from views import (MainPage, ShowPage, CreateShow, AddPlayers, AddDeaths,
+				   AddThemes, DeleteShows, DeleteDeaths, DeleteThemes)
+
+
+config= {'webapp2_extras.sessions': {
+    	     'secret_key': '8djs1qjs3jsm'
+    	     }
+    	}
 
 
 app = webapp2.WSGIApplication([
     (r'/', MainPage),
     (r'/show/(\d+)/', ShowPage),
     (r'/create_show/', CreateShow),
-    (r'/delete_shows/', DeleteShows),
-    (r'/deathpool/', DeathPool),
+    (r'/add_deaths/', AddDeaths),
     (r'/add_players/', AddPlayers),
-    (r'/show/(\d+)/show.json', ShowJSON),
-], debug=True)
+    (r'/add_themes/', AddThemes),
+    (r'/delete_shows/', DeleteShows),
+    (r'/delete_deaths/', DeleteDeaths),
+    (r'/delete_themes/', DeleteThemes),
+],
+  config=config,
+  debug=True)
 
 
 app.registry['templates'] = os.path.join(os.path.dirname(__file__),

@@ -11,10 +11,12 @@ from google.appengine.ext.webapp import template
 from google.appengine.api import users
 from google.appengine.ext import ndb
 
-from models import (Show, Player, Death, ShowPlayer, ShowDeath, CauseOfDeath,
-					Theme, DeathVote, ThemeVote)
+from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
+					Theme, ActionVote, ThemeVote, LiveActionVote)
 
-from timezone import mountain_time, get_mountain_time, today
+from timezone import mountain_time, get_mountain_time
+
+VOTE_AFTER_INTERVAL = 20
 
 
 def admin_required(func):
@@ -28,21 +30,29 @@ def admin_required(func):
 
 
 def get_today_start():
+	today = get_mountain_time().date()
 	return datetime.datetime.fromordinal(today.toordinal())
 
 
 def get_tomorrow_start():
+	today = get_mountain_time().date()
 	tomorrow = today + datetime.timedelta(1)
 	return datetime.datetime.fromordinal(tomorrow.toordinal())
 
 
-def show_today():
-	# See if there is a show today, otherwise users aren't allowed to submit deaths
+def future_show():
+	# See if there is a show today, otherwise users aren't allowed to submit actions
 	today_start = get_today_start()
-	tomorrow_start = get_tomorrow_start()
-	return bool(Show.query(
-		Show.scheduled > today_start,
-		Show.scheduled < tomorrow_start).get())
+	return bool(Show.query(Show.scheduled >= today_start).get())
+
+
+def get_live_vote(interval, session_id, player=player):
+	return LiveActionVote.query(
+					LiveActionVote.player == player,
+					LiveActionVote.interval == int(interval),
+					LiveActionVote.created == get_mountain_time().date(),
+					LiveActionVote.session_id == session_id).get()
+
 
 
 class ViewBase(webapp2.RequestHandler):
@@ -115,10 +125,10 @@ class MainPage(ViewBase):
 class ShowPage(ViewBase):
 	def get(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
-		available_causes = len(CauseOfDeath.query(
-							   CauseOfDeath.used == False).fetch())
+		available_actions = len(Action.query(
+							   Action.used == False).fetch())
 		context	= {'show': show,
-				   'available_causes': available_causes,
+				   'available_actions': available_actions,
 				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
@@ -126,9 +136,23 @@ class ShowPage(ViewBase):
 	@admin_required
 	def post(self, show_key):
 		show = ndb.Key(Show, int(show_key)).get()
+		action_id = self.request.get('action_id')
+		player_id = self.request.get('player_id')
+		interval = self.request.get('interval')
 		if self.request.get('start_show'):
-			show.start_time = mountain_time
+			show.start_time = get_mountain_time()
 			show.put()
+		elif action_id and player_id and interval:
+			action = ndb.Key(Action, int(action_id))
+			player = ndb.Key(Player, int(player_id))
+			session_id = self.request.session.get('id')
+			if not get_live_vote(interval, session_id, player=player):
+				LiveActionVote(action=action,
+							   player=player,
+							   interval=int(interval),
+							   created=get_mountain_time().date(),
+							   session_id=session_id).put()
+						   
 		context	= {'show': show,
 				   'host_url': self.request.host_url}
 		self.response.out.write(template.render(self.path('show.html'),
@@ -147,29 +171,27 @@ class CreateShow(ViewBase):
 		scheduled_string = self.request.get('scheduled')
 		theme = self.request.get('theme')
 		player_list = self.request.get_all('player_list')
-		death_intervals = self.request.get('death_intervals')
-		show_style = self.request.get('show_style')
+		action_intervals = self.request.get('action_intervals')
 		context = {'players': Player.query().fetch()}
-		if length and player_list and death_intervals:
+		if length and player_list and action_intervals:
 			# Get the list of interval times
 			try:
-				interval_list = [int(x.strip()) for x in death_intervals.split(',')]
+				interval_list = [int(x.strip()) for x in action_intervals.split(',')]
 			except ValueError:
 				raise ValueError("Invalid interval list '%s'. Must be comma separated.")
-			# If there are more death intervals than players, raise an error
+			# If there are more action intervals than players, raise an error
 			if len(interval_list) > len(player_list):
-				raise ValueError("Not enough players for death intervals.")
+				raise ValueError("Not enough players for action intervals.")
 			if scheduled_string:
 				scheduled = datetime.datetime.strptime(scheduled_string,
 													   "%d.%m.%Y %H:%M")
 			else:
-				scheduled = mountain_time
-			show = Show(length=length, scheduled=scheduled,
-						theme=theme, show_style=show_style).put()
-			# Add the death intervals to the show
+				scheduled = get_mountain_time()
+			show = Show(length=length, scheduled=scheduled, theme=theme).put()
+			# Add the action intervals to the show
 			for interval in interval_list:
-				death = Death(interval=interval).put()
-				ShowDeath(show=show, death=death).put()
+				player_action = PlayerAction(interval=interval).put()
+				ShowAction(show=show, player_action=player_action).put()
 			# Add the players to the show
 			for player in player_list:
 				player_key = ndb.Key(Player, int(player)).get().key
@@ -190,13 +212,13 @@ class DeleteShows(ViewBase):
 	def post(self):
 		show_id = int(self.request.get('show_id'))
 		show = ndb.Key(Show, int(show_id))
-		show_deaths = ShowDeath.query(ShowDeath.show == show).fetch()
-		for show_death in show_deaths:
-			cause = show_death.death.get().cause
-			if cause:
-				cause.delete()
-			show_death.death.delete()
-			show_death.key.delete()
+		show_actions = ShowAction.query(ShowAction.show == show).fetch()
+		for show_action in show_actions:
+			action = show_action.player_action.get().action
+			if action:
+				action.delete()
+			show_action.player_action.delete()
+			show_action.key.delete()
 		show_players = ShowPlayer.query(ShowPlayer.show == show).fetch()
 		for show_player in show_players:
 			show_player.key.delete()
@@ -224,7 +246,7 @@ class AddPlayers(ViewBase):
 				date_added = datetime.datetime.strptime(scheduled_string,
 													   "%d.%m.%Y %H:%M")
 			else:
-				date_added = mountain_time
+				date_added = get_mountain_time()
 			Player(name=player_name,
 				   photo_filename=photo_filename,
 				   date_added=date_added).put()
@@ -232,65 +254,38 @@ class AddPlayers(ViewBase):
 		context = {'created': created}
 		self.response.out.write(template.render(self.path('add_players.html'),
 												self.add_context(context)))
-			
-
-class ShowJSON(ViewBase):
-	def get(self, show_key):
-		show = ndb.Key(Show, int(show_key)).get()
-		show_obj = {'event': 'default-screen'}
-		if show.running:
-			now = get_mountain_time()
-			# Within first 10 seconds of show starting
-			first_ten_end = show.start_time + datetime.timedelta(seconds=10)
-			# If we're within the first 10 seconds of the show
-			if now >= show.start_time and now <= first_ten_end:
-				show_obj = {'event': 'init-players'}
-			else:
-				for death in show.deaths:
-					thirty_after_interval = death.time_of_death + datetime.timedelta(
-																			seconds=30)
-					print "thirty_after_interval, ", thirty_after_interval
-					print "death.time_of_death, ", death.time_of_death
-					if now >= death.time_of_death and now <= thirty_after_interval:
-						player_entity = death.player.get()
-						show_obj = {'event': 'player-death',
-								    'player_photo': player_entity.photo_filename,
-								    'cause': death.cause.get().cause}
-		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-		self.response.out.write(json.dumps(show_obj))
 
 
-class AddDeaths(ViewBase):
+class AddActions(ViewBase):
 	def get(self):
-		current_deaths = CauseOfDeath.query(
-			CauseOfDeath.created_date == today,
-			CauseOfDeath.used == False).fetch()
-		context = {'current_death_pool': current_deaths,
-				   'show_today': show_today()}
-		self.response.out.write(template.render(self.path('add_deaths.html'),
+		actions = Action.query(
+			Action.used == False).fetch()
+		context = {'actions': actions,
+				   'future_show': future_show()}
+		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
 
 	def post(self):
-		context = {'show_today': show_today()}
-		cod = None
-		cause = self.request.get('cause')
-		if cause:
-			cod = CauseOfDeath(cause=cause).put().get()
+		context = {'future_show': future_show()}
+		action = None
+		description = self.request.get('description')
+		if description:
+			action = Action(description=description).put().get()
 			context['created'] = True
-		context['current_death_pool'] = CauseOfDeath.query(
-			CauseOfDeath.created_date == today,
-			CauseOfDeath.used == False,
-			CauseOfDeath.key != getattr(cod, 'key', None)).fetch()
-		if cod:
-			context['current_death_pool'].append(cod)
-		self.response.out.write(template.render(self.path('add_deaths.html'),
+		context['actions'] = Action.query(
+			Action.used == False,
+			Action.key != getattr(action, 'key', None)).fetch()
+		if action:
+			context['actions'].append(action)
+		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
 
 
 class AddThemes(ViewBase):
 	def get(self):
-		context = {'themes': Theme.query().fetch(),
-				   'theme_votes': ThemeVote.query().fetch()}
+		themes = Theme.query().order(-Theme.vote_value).fetch()
+		print "themes, ", themes
+		context = {'themes': themes}
 		self.response.out.write(template.render(self.path('add_themes.html'),
 												self.add_context(context)))
 
@@ -298,55 +293,79 @@ class AddThemes(ViewBase):
 		context = {}
 		theme = None
 		theme_name = self.request.get('theme_name')
+		downvote = self.request.get('downvote')
+		upvote = self.request.get('upvote')
 		if theme_name:
-			theme = Theme(name=theme_name).put().get()
+			theme = Theme(name=theme_name,
+						  vote_value=0).put().get()
 			context['created'] = True
-		context['themes'] = Theme.query(
-			Theme.key != getattr(theme, 'key', None)).fetch()
+		elif upvote or downvote:
+			if downvote:
+				vote_value = -1
+				theme_id = downvote
+			else:
+				vote_value = 1
+				theme_id = upvote
+			theme_key = ndb.Key(Theme, int(theme_id)).get().key
+			tv = ThemeVote.query(
+					ThemeVote.theme == theme_key,
+					ThemeVote.session_id == str(self.session.get('id', '0'))).get()
+			if tv and tv.value != vote_value:
+				tv.value = vote_value
+				tv.put()
+			elif not tv:
+				ThemeVote(theme=theme_key,
+					  	  session_id=str(self.session.get('id')),
+					  	  value=vote_value).put()
 		if theme:
+			# Have to sort first by theme key, since we query on it. Dumb...
+			themes = Theme.query(Theme.key != theme.key).order(Theme.key, -Theme.vote_value).fetch()
+			context['themes'] = themes
 			context['themes'].append(theme)
+		else:
+			themes = Theme.query().order(-Theme.vote_value).fetch()
+			context['themes'] = themes
+			
 		self.response.out.write(template.render(self.path('add_themes.html'),
 												self.add_context(context)))
 
 
-class DeleteDeaths(ViewBase):
+class DeleteActions(ViewBase):
 	@admin_required
 	def get(self):
-		current_deaths = CauseOfDeath.query(
-			CauseOfDeath.created_date == today,
-			CauseOfDeath.used == False).fetch()
-		context = {'current_death_pool': current_deaths}
-		self.response.out.write(template.render(self.path('delete_deaths.html'),
+		actions = Action.query(
+			Action.used == False).fetch()
+		context = {'actions': actions}
+		self.response.out.write(template.render(self.path('delete_actions.html'),
 												self.add_context(context)))
 
 	@admin_required
 	def post(self):
 		context = {}
-		current_death_list = self.request.get_all('current_death_list')
+		action_list = self.request.get_all('action_list')
 		delete_unused = self.request.get_all('delete_unused')
-		if current_death_list:
-			for death in current_death_list:
-				death_entity = ndb.Key(CauseOfDeath, int(death)).get()
-				# Get all the related death votes and delete them
-				death_votes = DeathVote.query(DeathVote.death == death_entity.key).fetch()
-				for dv in death_votes:
-					dv.key.delete()
-				death_entity.key.delete()
+		if action_list:
+			for action in action_list:
+				action_entity = ndb.Key(Action, int(action)).get()
+				# Get all the related action votes and delete them
+				action_votes = ActionVote.query(ActionVote.action == action_entity.key).fetch()
+				for av in action_votes:
+					av.key.delete()
+				action_entity.key.delete()
 			context['cur_deleted'] = True
 		elif delete_unused:
-			unused_deaths = CauseOfDeath.query(CauseOfDeath.used == False).fetch()
-			for unused in unused_deaths:
-				# Get all the related death votes and delete them
-				death_votes = DeathVote.query(DeathVote.death == unused.key).fetch()
-				for dv in death_votes:
-					dv.key.delete()
-				# Delete the un-used deaths
+			unused_actions = Action.query(Action.used == False).fetch()
+			for unused in unused_actions:
+				# Get all the related action votes and delete them
+				action_votes = ActionVote.query(ActionVote.action == unused.key).fetch()
+				for av in action_votes:
+					av.key.delete()
+				# Delete the un-used actions
 				unused.key.delete()
 			context['unused_deleted'] = True
-		context['current_death_pool'] = CauseOfDeath.query(
-			CauseOfDeath.created_date == today,
-			CauseOfDeath.used == False).fetch()
-		self.response.out.write(template.render(self.path('delete_deaths.html'),
+		context['actions'] = Action.query(
+			Action.used == False).fetch()
+		self.response.out.write(template.render(self.path('delete_actions.html'),
 												self.add_context(context)))
 
 
@@ -370,6 +389,55 @@ class DeleteThemes(ViewBase):
 					tv.key.delete()
 				theme_entity.key.delete()
 			context['cur_deleted'] = True
-		context['themes'] = CauseOfDeath.query().fetch()
+		context['themes'] = Action.query().fetch()
 		self.response.out.write(template.render(self.path('delete_themes.html'),
 												self.add_context(context)))
+
+
+class ActionsJSON(ViewBase):
+	def get(self, show_id, interval):
+		show = ndb.Key(Show, int(show_id)).get()
+		live_vote = get_live_vote(interval, session_id)
+		now = get_mountain_time()
+		interval_vote_end = show.start_time + datetime.timedelta(minutes=interval) \
+							  + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
+		if now > interval_vote_end:
+			# Make sure we've picked an action
+		else:
+			# Return un-used actions, sorted by vote
+		if not live_vote:
+			unused_actions = Action.query(Action.used == False).fetch()
+			action_data = []
+			for i in range(0, 2):
+				try:
+					action_data.append({unused_actions[i].id: unused_actions[i].name})
+				except IndexError:
+					pass
+		else:
+			action_data = {'voted': True}
+		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
+		self.response.out.write(json.dumps(action_data))
+
+
+class ShowJSON(ViewBase):
+	def get(self, show_key):
+		show = ndb.Key(Show, int(show_key)).get()
+		show_obj = {'event': 'default-screen'}
+		if show.running:
+			now = get_mountain_time()
+			# Within first 10 seconds of show starting
+			first_ten_end = show.start_time + datetime.timedelta(seconds=10)
+			# If we're within the first 10 seconds of the show
+			if now >= show.start_time and now <= first_ten_end:
+				show_obj = {'event': 'init-players'}
+			else:
+				for player_action in show.player_actions:
+					thirty_after_interval = action.time_of_action + datetime.timedelta(
+																			seconds=30)
+					if now >= player_action.time_of_action and now <= thirty_after_interval:
+						player_action_entity = player_action.player.get()
+						show_obj = {'event': 'player-action',
+								    'player_photo': player_action_entity.photo_filename,
+								    'description': player_action.description.get().description}
+		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
+		self.response.out.write(json.dumps(show_obj))

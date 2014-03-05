@@ -1,56 +1,102 @@
 {% extends "base.html" %}
 {% block add_head %}
+	<link rel="stylesheet" type="text/css" href="{{css_path}}jquery.countdown.css">
+
 	<script src="{{js_path}}jquery.playSound.js"></script>
+	<script src="{{js_path}}jquery.plugin.min.js"></script>
+	<script src="{{js_path}}jquery.countdown.min.js"></script>
 	<script>
 		$( document ).ready(function() {
 			// Hide all objects initially
 			$( "#init-players" ).hide();
-			$( "#front-style" ).hide();
-			$( "#player-death" ).hide();
+			//$( "#player-action" ).hide();
 			{% if show.running %}
 				// Hide Nav Bar
 				$( "#top-nav-bar" ).hide();
 				run_show();
 				function run_show(){
-					{% if show.show_style == "front" %}
-						$.playSound('{{host_url}}{{audio_path}}bell_toll');
-						$( "#front-style" ).show();
-					{% endif %}
-					{% if show.show_style == "interval" %}
-						var current_player = "";
-						var hide_players_key = "{% for death in show.deaths %}#player-{{forloop.counter}}{% if not forloop.last %},{% endif %}{% endfor %}"
-						var start_time = new Date("{{show.start_time|date:"Y-m-d"}}T{{show.start_time|date:"H:i:s"}}");
-						var intervals = {{% for death in show.deaths %}
-											{{death.interval}}: "{{forloop.counter}}"{% if not forloop.last %},{% endif %}
-										 {% endfor %}};
-						// Hide all player divs
-						$(hide_players_key).hide();
-					
-						window.setInterval(function(){
-						  change_interval();
-						}, 5000);
-						function change_interval(){
-							var current_time = Date.now();
-							var elapsed_millis = current_time - start_time;
-							var elapsed_total_seconds = parseInt(elapsed_millis / 1000);
-        					var elapsed_minutes = parseInt(elapsed_total_seconds / 60);
-							console.log("elapsed minutes: " + elapsed_minutes)
-							var interval_keys = $.each(intervals, function(key, value) {return key});
-							console.log("interval keys: " + interval_keys)
-							if (elapsed_minutes in intervals) {
-								if (current_player !== intervals[elapsed_minutes]) {
-									current_player = intervals[elapsed_minutes]
-									$.playSound('{{host_url}}{{audio_path}}bell_toll');
-								}
-								$( "#player-death" ).show();
-								// Hide all player divs
-								$(hide_players_key).hide();
-								// Show the current player
-								$("#player-" + intervals[elapsed_minutes]).show();
-								
+					var current_player = "";
+					var hide_players_key = "{% for player_action in show.player_actions %}#player-{{forloop.counter}}{% if not forloop.last %},{% endif %}{% endfor %}";
+					var start_time = new Date('{{show.start_time|date:"F j, Y H:i:s-0700"}}');
+					var intervals = {{% for player_action in show.player_actions %}
+										{{player_action.interval}}: "{{forloop.counter}}"{% if not forloop.last %},{% endif %}
+									 {% endfor %}};
+					// Hide all player divs
+					//$(hide_players_key).hide();
+					// Run the interval change immediately
+					change_interval();
+					$( "#player-action" ).show();
+				
+					window.setInterval(function(){
+					  change_interval();
+					}, 3000);
+					function change_interval(){
+						var current_time = new Date();
+						var elapsed_millis = current_time - start_time;
+						var elapsed_total_seconds = parseInt(elapsed_millis / 1000);
+						var elapsed_minutes = parseInt(elapsed_total_seconds / 60);
+						var interval_keys = $.each(intervals, function(key, value) {return key});
+						// If we've hit an interval
+						if (elapsed_minutes in intervals) {
+							var vote_end_played
+							var hide_vote_buttons = "#po-" + elapsed_minutes + "-1-btn,#po-"  + elapsed_minutes + "-2-btn,#po-" + elapsed_minutes + "-3-btn";
+							// If the current player number is different than the interval player number
+							if (current_player !== intervals[elapsed_minutes]) {
+								// Set the current player number to the interval number
+								current_player = intervals[elapsed_minutes]
+								$.playSound('{{host_url}}{{audio_path}}vote-chime');
 							}
+							// Get the exact minute start of the interval
+							var interval_start = start_time.setMinutes(start_time.getMinutes() + elapsed_minutes)
+							// Get the ending vote time of the interval
+							var vote_end = interval_start.setSeconds(interval_start.getSeconds() + 20)
+							// If we're still in the 20 second voting window
+							if (current_time <= vote_end) {
+								// Hide the final voted action button
+								$("va-" + elapsed_minutes + "-btn").hide()
+								// Set up the clock
+								$('.glowingLayout').countdown({until: vote_end, compact: true, 
+    								layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
+								$(".glowingLayout").show();
+								// Pull from the json to get the voting options
+								$.get( "/actions_json/{{show.key.id}}/" + elapsed_minutes + "/", function( data ) {
+									// If the user has already voted
+									if ("voted" in data) {
+										// Hide the voting buttons
+										$(hide_vote_buttons).hide();
+									}
+									// Otherwise, set the voting options
+									else {
+										for (var i=1; i<=3 ;i++) {
+											if (i in data) {
+												var action_name = data[i]['name'];
+												var action_id = data[i]['id'];
+												$("po-" + elapsed_minutes + "-" + i + "-act").attr('value', action_id)
+												$("po-" + elapsed_minutes + "-" + i + "-btn").attr('value', action_name)
+											}
+										}
+										// Show the voting buttons
+										$(hide_vote_buttons).show();
+									}
+								});
+							}
+							// The 20 second window has passed
+							else {
+								console.log('20 seconds are up');
+								$(".glowingLayout").hide();
+								$(hide_vote_buttons).hide();
+								$.get( "/actions_json/{{show.key.id}}/" + elapsed_minutes + "/", function( data ) {
+									$("va-" + elapsed_minutes + "-btn").text(data['current_action'])
+									$("va-" + elapsed_minutes + "-btn").show()
+								}
+							}
+							$( "#player-action" ).show();
+							// Hide all player divs
+							$(hide_players_key).hide();
+							// Show the current player
+							$("#player-" + intervals[elapsed_minutes]).show();
 						}
-					{% endif %}
+					}
 				}
 			{% endif %}
 		});
@@ -61,73 +107,69 @@
 		{% if show.running %}
 			<div id="default-screen">
 				<div class="row">
-					<div class="col-sm-6 col-sm-offset-2">
-						<h1 class="text-center" style="background-color:#003D7A;">Improv Death<br/> Theme: {{show.theme}}</h1>
+					<div class="col-sm-4 col-sm-offset-3">
+						<h3 class="text-center" style="background-color:#003D7A;">Improv Madlib</h3>
 					</div>
 				</div>
 			</div>
-			<div id="player-death">
-				{% for death in show.deaths %}
+			<div id="player-action">
+				{% for player_action in show.player_actions %}
 					<div id="player-{{forloop.counter}}">
-						<div class="row">
-							<div class="col-sm-4 col-sm-offset-3">
-								<h1 class="text-center" style="background-color:#003D7A;">RIP</h1>
-							</div>
-						</div>
 						<div class="row">	
 							<div class="col-sm-4 col-sm-offset-3"> 
 								<div class="panel panel-info">
 									<div class="panel-body">
 										<div class="row text-center">
-											<img src="{{player_image_path}}{{death.player.get.photo_filename}}" alt="{{death.player.get.name}}" class="img-responsive img-thumbnail">
+											<img src="{{player_image_path}}{{player_action.player.get.photo_filename}}" alt="{{player_action.player.get.name}}" class="img-responsive img-thumbnail">
+										</div>
+										<div class="row">
+											<div class="col-sm-4 col-sm-offset-4">
+												<span class="countdown glowingLayout"></span>
+											</div>
 										</div>
 									</div>
-									<div id="player-death-cause" class="panel-footer text-center" style="background-color:black;">{{death.cause.get.cause}}</div>
+									<div id="player-action-description-{{forloop.counter}}" class="panel-footer text-center" style="background-color:black;">
+										<form action="/show/{{show.key.id}}/" method="post">
+											<input id="po-{{player_action.interval}}-1-act" type="hidden" name="action_id" value="" />
+											<input type="hidden" name="player_id" value="{{player_action.player.key.id}}" />
+											<input type="hidden" name="interval" value="{{player_action.interval}}" />
+											<input id="po-{{player_action.interval}}-1-btn" type="submit" class="btn btn-info btn-block" value="No other action options"/>
+										</form>
+										<form action="/show/{{show.key.id}}/" method="post">
+											<input id="po-{{player_action.interval}}-2-act" type="hidden" name="action_id" value="" />
+											<input type="hidden" name="player_id" value="{{player_action.player.key.id}}" />
+											<input type="hidden" name="interval" value="{{player_action.interval}}" />
+											<input id="po-{{player_action.interval}}-2-btn" type="submit" class="btn btn-info btn-block" value="No other action options"/>
+										</form>
+										<form action="/show/{{show.key.id}}/" method="post">
+											<input id="po-{{player_action.interval}}-3-act" type="hidden" name="action_id" value="" />
+											<input type="hidden" name="player_id" value="{{player_action.player.key.id}}" />
+											<input type="hidden" name="interval" value="{{player_action.interval}}" />
+											<input id="po-{{player_action.interval}}-3-btn" type="submit" class="btn btn-info btn-block" value="No other action options"/>
+										</form>
+										<button id="va-{{player_action.interval}}-btn" class="btn btn-default btn-block"></button>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
 				{% endfor %}
 			</div>
-			<div id="front-style">
-				<div class="row">
-					<div class="col-sm-1 col-sm-offset-1">
-						&nbsp;
-					</div>
-					{% for death in show.deaths %}
-						{% if forloop.counter|divisibleby:"4" %}
-						</div>
-						<div class="row">
-							<div class="col-sm-1 col-sm-offset-1">
-								&nbsp;
-							</div>
-						{% endif %}
-						<div class="col-sm-2"> 
-							<div class="panel panel-info">
-								<div class="panel-body">
-									<img src="{{player_image_path}}{{death.player.get.photo_filename}}" alt="{{death.player.get.name}}" class="img-responsive img-thumbnail">
-								</div>
-								<div class="panel-footer text-center" style="background-color:black;">{{death.cause.get.cause}}</div>
-							</div>
-						</div>
-					{% endfor %}
-				</div>
-			</div>
 		{% endif %}
 		{% if show.is_today and is_admin and not show.running and not show.start_time %}		
 			<div class="row">
 				<div class="col-md-4 col-md-offset-4 text-center">
-					<h1>Improv Death</h1>
+					<h1>Improv Madlib</h1>
 				</div>
 			</div>
 			<div class="row">
 				<div class="col-md-4 col-md-offset-4">
 					<form action="/show/{{show.key.id}}/" method="post">
 						<input type="hidden" name="start_show" value="True">
-						{% if available_causes > show.deaths|length %}
+						{% if available_actions >= show.player_actions|length %}
 							<input type="submit" class="btn btn-info btn-block" style="background-color:#003D7A;" value="Start the Show!">
 						{% else %}
-							<h1>Need more deaths for show to start!</h1>
+							<h1>Need more actions for show to start!</h1>
 						{% endif %}
 					</form>
 				</div>
@@ -162,13 +204,26 @@
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-md-4 col-md-offset-2">
-					<h1 class="text-center">Deaths</h1>
-					{% for death in show.deaths %}
-						{{death.time_of_death}}: {{death.player.name}}<br/>
-						{{death.cause.cause}}
-					{% endfor %}
+				<div class="col-sm-1 col-sm-offset-1">
+					&nbsp;
 				</div>
+				{% for player_action in show.player_actions %}
+					{% if forloop.counter|divisibleby:"4" %}
+					</div>
+					<div class="row">
+						<div class="col-sm-1 col-sm-offset-1">
+							&nbsp;
+						</div>
+					{% endif %}
+					<div class="col-sm-2"> 
+						<div class="panel panel-info">
+							<div class="panel-body">
+								<img src="{{player_image_path}}{{player_action.player.get.photo_filename}}" alt="{{player_action.player.get.name}}" class="img-responsive img-thumbnail">
+							</div>
+							<div class="panel-footer text-center" style="background-color:black;">{{player_action.action.get.description}}</div>
+						</div>
+					</div>
+				{% endfor %}
 			</div>
 		{% endif %}
 	</div>

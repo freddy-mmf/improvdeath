@@ -22,8 +22,6 @@ class Show(ndb.Model):
 	length = ndb.IntegerProperty(required=True)
 	start_time = ndb.DateTimeProperty()
 	end_time = ndb.DateTimeProperty()
-	# Style in which to run the show
-	show_style = ndb.StringProperty()
 	
 	@property
 	def players(self):
@@ -31,18 +29,16 @@ class Show(ndb.Model):
 		return [x.player.get() for x in show_players if getattr(x, 'player', None)]
 	
 	@property
-	def deaths(self):
-		death_intervals = ShowDeath.query(ShowDeath.show == self.key).fetch()
-		return [x.death.get() for x in death_intervals if getattr(x, 'death', None) and x.death.get()]
+	def player_actions(self):
+		action_intervals = ShowAction.query(ShowAction.show == self.key).fetch()
+		return [x.player_action.get() for x in action_intervals if getattr(x, 'player_action', None) and x.player_action.get()]
 	
 	@property
 	def running(self):
+		#return True
 		if not self.start_time or not self.end_time:
 			return False
 		now = get_mountain_time()
-		print "start time, ", self.start_time
-		print "end time, ", self.end_time
-		print "now, ", now
 		if now >= self.start_time and now <= self.end_time:
 			return True
 		return False
@@ -67,61 +63,41 @@ class Show(ndb.Model):
 			# Make a copy of the list of players and randomize it
 			rand_players = self.players
 			random.shuffle(rand_players, random.random)
-			# Get the potential death causes for the show
-			today_causes = CauseOfDeath.query(
-					CauseOfDeath.used != True,
-					CauseOfDeath.created_date == today).fetch(keys_only=True)
-			# If the number of causes is enough to fill all the deaths of the show
-			if len(today_causes) >= len(self.deaths):
-				rand_causes = today_causes
-			# Otherwise, pull from the previous death pool
-			else:
-				rand_causes = CauseOfDeath.query(
-								CauseOfDeath.used != True).fetch(keys_only=True)
-			# Randomize the cause list
-			random.shuffle(rand_causes, random.random)
-			for death in self.deaths:
+			for player_action in self.player_actions:
 				# Pop a random player off the list
-				death.player = rand_players.pop().key
-				# Pop a random cause off the list
-				death_cause = rand_causes.pop()
-				# Set the cause to the death_cause key
-				death.cause = death_cause
-				# Get the cause entity
-				cause_entity = death_cause.get()
-				# Set the entity as used, and save it
-				cause_entity.used = True
-				cause_entity.put()
-				death.time_of_death = self.start_time + \
-									  datetime.timedelta(minutes=death.interval)
-				death.put()
+				player_action.player = rand_players.pop().key
+				player_action.time_of_action = self.start_time + \
+									  datetime.timedelta(minutes=player_action.interval)
+				player_action.put()
 		return super(Show, self).put(*args, **kwargs)
 
 
-class CauseOfDeath(ndb.Model):
-	cause = ndb.StringProperty(required=True)
+class Action(ndb.Model):
+	description = ndb.StringProperty(required=True)
 	created_date = ndb.DateProperty(required=True)
 	used = ndb.BooleanProperty(default=False)
+	vote_value = ndb.IntegerProperty(default=0)
 
 	def put(self, *args, **kwargs):
 		self.created_date = mountain_time
-		return super(CauseOfDeath, self).put(*args, **kwargs)	
+		return super(Action, self).put(*args, **kwargs)	
 
 
 class Theme(ndb.Model):
 	created_date = ndb.DateTimeProperty(required=True)
 	name = ndb.StringProperty(required=True)
+	vote_value = ndb.IntegerProperty(default=0)
 	
 	def put(self, *args, **kwargs):
 		self.created_date = mountain_time
 		return super(Theme, self).put(*args, **kwargs)
 	
 
-class Death(ndb.Model):
+class PlayerAction(ndb.Model):
 	interval = ndb.IntegerProperty(required=True)
 	player = ndb.KeyProperty(kind=Player)
-	time_of_death = ndb.DateTimeProperty()
-	cause = ndb.KeyProperty(kind=CauseOfDeath)
+	time_of_action = ndb.DateTimeProperty()
+	action = ndb.KeyProperty(kind=Action)
 
 
 class ShowPlayer(ndb.Model):
@@ -129,36 +105,38 @@ class ShowPlayer(ndb.Model):
 	player = ndb.KeyProperty(kind=Player, required=True)
 
 
-class ShowDeath(ndb.Model):
+class ShowAction(ndb.Model):
 	show = ndb.KeyProperty(kind=Show, required=True)
-	death = ndb.KeyProperty(kind=Death, required=True)
+	player_action = ndb.KeyProperty(kind=PlayerAction, required=True)
 
 
-class DeathVote(ndb.Model):
-	cause = ndb.KeyProperty(kind=CauseOfDeath, required=True)
+class ActionVote(ndb.Model):
+	action = ndb.KeyProperty(kind=Action, required=True)
 	value = ndb.IntegerProperty(required=True, choices=[1, -1])
 	session_id = ndb.StringProperty(required=True)
 	
 	def put(self, *args, **kwargs):
-		cause = kwargs.get('cause')
-		session_id = kwargs.get('session_id')
-		existing_vote = DeathVote.query(DeathVote.cause == cause,
-								        DeathVote.session_id == session_id).get()
-		if existing_vote:
-			return None
-		return super(Vote, self).put(*args, **kwargs)
+		action = Action.query(Action.key == self.action).get()
+		action.vote_value += self.value
+		action.put()
+		return super(ActionVote, self).put(*args, **kwargs)
 
 
 class ThemeVote(ndb.Model):
 	theme = ndb.KeyProperty(kind=Theme, required=True)
 	value = ndb.IntegerProperty(required=True, choices=[1, -1])
 	session_id = ndb.StringProperty(required=True)
-	
+
 	def put(self, *args, **kwargs):
-		theme = kwargs.get('theme')
-		session_id = kwargs.get('session_id')
-		existing_vote = ThemeVote.query(ThemeVote.theme == theme,
-								        ThemeVote.session_id == session_id).get()
-		if existing_vote:
-			return None
-		return super(Vote, self).put(*args, **kwargs)
+		theme = Theme.query(Theme.key == self.theme).get()
+		theme.vote_value += self.value
+		theme.put()
+		return super(ThemeVote, self).put(*args, **kwargs)
+
+
+class LiveActionVote(ndb.Model):
+	action = ndb.KeyProperty(kind=Action, required=True)
+	player = ndb.KeyProperty(kind=Player, required=True)
+	interval = ndb.IntegerProperty(required=True)
+	session_id = ndb.StringProperty(required=True)
+	created = ndb.DateProperty(required=True)

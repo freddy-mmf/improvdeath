@@ -2,13 +2,13 @@
   <head>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="{{css_path}}bootstrap.min.css" rel="stylesheet" media="screen">
-  	<link rel="stylesheet" href="{{css_path}}base.css">
+  	<link rel="stylesheet" type="text/css" href="{{css_path}}base.css">
   	
   	<script src="{{js_path}}jquery-1.11.0.min.js"></script>
   	<script src="{{js_path}}bootstrap.min.js"></script>
   	
   	{% block add_head %}{% endblock %}
-  	<title>{% block title %}Improv Death{% endblock %}</title>
+  	<title>{% block title %}Improv Madlib{% endblock %}</title>
   </head>
 
   <body>
@@ -23,18 +23,18 @@
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
 					</button>
-					<a class="navbar-brand" href="/">Improv Death</a>
+					<a class="navbar-brand" href="/">Improv Madlib</a>
 				</div>
 				<!-- Collect the nav links, forms, and other content for toggling -->
 				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 				  <ul class="nav navbar-nav">
 					<li {% block home-selected %}{% endblock %}><a href="/">Home</a></li>
-					<li {% block add-death-selected %}{% endblock %}><a href="/add_deaths/">Deaths</a></li>
+					<li {% block add-action-selected %}{% endblock %}><a href="/add_actions/">Actions</a></li>
 					<li {% block add-theme-selected %}{% endblock %}><a href="/add_themes/">Themes</a></li>
 					{% if is_admin %}
 						<li {% block create-selected %}{% endblock %}><a href="/create_show/">Create Show</a></li>
 						<li {% block delete-shows-selected %}{% endblock %}><a href="/delete_shows/">Delete Shows</a></li>
-						<li {% block delete-death-selected %}{% endblock %}><a href="/delete_deaths/">Delete Deaths</a></li>
+						<li {% block delete-action-selected %}{% endblock %}><a href="/delete_actions/">Delete Actions</a></li>
 						<li {% block delete-theme-selected %}{% endblock %}><a href="/delete_themes/">Delete Themes</a></li>
 						<li {% block add-player-selected %}{% endblock %}><a href="/add_players/">Add Players</a></li>
 					{% endif %}

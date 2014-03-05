@@ -17,8 +17,9 @@
 import os
 import webapp2
 
-from views import (MainPage, ShowPage, CreateShow, AddPlayers, AddDeaths,
-				   AddThemes, DeleteShows, DeleteDeaths, DeleteThemes)
+from views import (MainPage, ShowPage, CreateShow, AddPlayers, AddActions,
+				   AddThemes, DeleteShows, DeleteActions, DeleteThemes,
+				   ActionsJSON)
 
 
 config= {'webapp2_extras.sessions': {
@@ -31,12 +32,13 @@ app = webapp2.WSGIApplication([
     (r'/', MainPage),
     (r'/show/(\d+)/', ShowPage),
     (r'/create_show/', CreateShow),
-    (r'/add_deaths/', AddDeaths),
+    (r'/add_actions/', AddActions),
     (r'/add_players/', AddPlayers),
     (r'/add_themes/', AddThemes),
     (r'/delete_shows/', DeleteShows),
-    (r'/delete_deaths/', DeleteDeaths),
+    (r'/delete_actions/', DeleteActions),
     (r'/delete_themes/', DeleteThemes),
+    (r'/actions_json/(\d+)/(\d+)/', ActionsJSON),
 ],
   config=config,
   debug=True)

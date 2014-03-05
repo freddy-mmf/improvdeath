@@ -1,0 +1,69 @@
+/* jQuery Countdown styles 2.0.0. */
+.is-countdown {
+	border: 1px solid #ccc;
+	background-color: #eee;
+}
+.countdown-rtl {
+	direction: rtl;
+}
+.countdown-holding span {
+	color: #888;
+}
+.countdown-row {
+	clear: both;
+	width: 100%;
+	padding: 0px 2px;
+	text-align: center;
+}
+.countdown-show1 .countdown-section {
+	width: 98%;
+}
+.countdown-show2 .countdown-section {
+	width: 48%;
+}
+.countdown-show3 .countdown-section {
+	width: 32.5%;
+}
+.countdown-show4 .countdown-section {
+	width: 24.5%;
+}
+.countdown-show5 .countdown-section {
+	width: 19.5%;
+}
+.countdown-show6 .countdown-section {
+	width: 16.25%;
+}
+.countdown-show7 .countdown-section {
+	width: 14%;
+}
+.countdown-section {
+	display: block;
+	float: left;
+	font-size: 75%;
+	text-align: center;
+}
+.countdown-amount {
+    font-size: 200%;
+}
+.countdown-period {
+    display: block;
+}
+.countdown-descr {
+	display: block;
+	width: 100%;
+}
+
+.glowingLayout { width: 418px; background-color: #000;  border:1px solid #fff; }
+.glowingLayout span { display: block; float: left; width: 34px; height: 50px;
+	background: url('../img/countdownGlowing.gif') no-repeat 0px 0px; }
+.glowingLayout span.image0 { background-position: -0px 0px; }
+.glowingLayout span.image1 { background-position: -34px 0px; }
+.glowingLayout span.image2 { background-position: -68px 0px; }
+.glowingLayout span.image3 { background-position: -102px 0px; }
+.glowingLayout span.image4 { background-position: -136px 0px; }
+.glowingLayout span.image5 { background-position: -170px 0px; }
+.glowingLayout span.image6 { background-position: -204px 0px; }
+.glowingLayout span.image7 { background-position: -238px 0px; }
+.glowingLayout span.image8 { background-position: -272px 0px; }
+.glowingLayout span.image9 { background-position: -306px 0px; }
+}

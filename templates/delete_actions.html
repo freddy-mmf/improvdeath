@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block delete-death-selected %}class="active"{% endblock %}
+{% block delete-action-selected %}class="active"{% endblock %}
 
 {% block content %}
 	{% if cur_deleted %}
 		<div class="label label-info" style="font-size:large;">Deleted Successfully.</div>
 	{% endif %}
-	<form class="form-horizontal" role="form" action="/delete_deaths/" method="post">
+	<form class="form-horizontal" role="form" action="/delete_actions/" method="post">
 		<div class="form-group">
-			<label class="col-md-2 control-label">Today's Death Pool:</label>
+			<label class="col-md-2 control-label">Actions:</label>
 			<div class="col-md-4">
-				<select name="current_death_list" multiple class="form-control">
-				{% for death in current_death_pool %}
-					<option value="{{death.key.id}}">{{death.cause}}</option>
+				<select name="action_list" multiple class="form-control">
+				{% for action in actions %}
+					<option value="{{action.key.id}}">{{action.description}}</option>
 				{% endfor %}
 				</select>
 			</div>
@@ -24,10 +24,10 @@
 	{% if unused_deleted %}
 		<div class="label label-info" style="font-size:large;">Deleted Un-used Successfully.</div>
 	{% endif %}
-	<form class="form-horizontal" role="form" action="/delete_deaths/" method="post">
+	<form class="form-horizontal" role="form" action="/delete_actions/" method="post">
 		<input type="hidden" name="delete_unused" value="True"/>
 		<div class="col-md-offset-2">
-			<button type="submit" class="btn btn-danger">Delete Un-used Deaths</button>
+			<button type="submit" class="btn btn-danger">Delete Un-used Actions</button>
 		</div>
 	</form>
 {% endblock %}

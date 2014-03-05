@@ -129,7 +129,8 @@ class ShowPage(ViewBase):
 							   Action.used == False).fetch())
 		context	= {'show': show,
 				   'available_actions': available_actions,
-				   'host_url': self.request.host_url}
+				   'host_url': self.request.host_url,
+				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
 
@@ -154,7 +155,8 @@ class ShowPage(ViewBase):
 							   session_id=session_id).put()
 						   
 		context	= {'show': show,
-				   'host_url': self.request.host_url}
+				   'host_url': self.request.host_url,
+				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
 
@@ -397,20 +399,46 @@ class DeleteThemes(ViewBase):
 class ActionsJSON(ViewBase):
 	def get(self, show_id, interval):
 		show = ndb.Key(Show, int(show_id)).get()
-		live_vote = get_live_vote(interval, session_id)
+		# Get the player
+		player = show.get_player_by_interval(interval)
+		# Determine if we've already voted on this interval
+		live_vote = get_live_vote(interval, session_id, player=player)
 		now = get_mountain_time()
 		interval_vote_end = show.start_time + datetime.timedelta(minutes=interval) \
 							  + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
 		if now > interval_vote_end:
-			# Make sure we've picked an action
-		else:
+			player_action = show.get_player_action_by_interval(interval)
+			# If an action wasn't chosen for this interval
+			if not player_action.action:
+				# Get the actions that were voted on this interval
+				interval_actions = []
+				live_action_votes = LiveActionVotes.query(
+										LiveActionVotes.player == player,
+										LiveActionVotes.interval == int(interval),
+										LiveActionVotes.created == now.date()).fetch()
+				for lav in live_action_votes:
+					interval_actions.append(lav.action)
+				# Get the most voted, un-used action
+				voted_action = Action.query(
+								Action.used == False,
+								Action.key.IN(interval_actions),
+								).order(-Action.live_vote_value).get()
+				# Set the player action
+				player_action.time_of_action = now
+				player_action.action = voted_action
+				player_action.put()
+				action_data = {'current_action': voted_action.description}
+			else:
+				action_data = {'current_action': player_action.action.description}
+		elif not live_vote:
 			# Return un-used actions, sorted by vote
-		if not live_vote:
-			unused_actions = Action.query(Action.used == False).fetch()
+			unused_actions = Action.query(Action.used == False,
+										  ).order(-Action.vote_value).fetch(3)
 			action_data = []
 			for i in range(0, 2):
 				try:
-					action_data.append({unused_actions[i].id: unused_actions[i].name})
+					action_data.append({'name': unused_actions[i].description,
+									    'id': unused_actions[i].key.id})
 				except IndexError:
 					pass
 		else:

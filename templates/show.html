@@ -49,8 +49,8 @@
 							// Get the exact minute start of the interval
 							var interval_start = start_time.setMinutes(start_time.getMinutes() + elapsed_minutes)
 							// Get the ending vote time of the interval
-							var vote_end = interval_start.setSeconds(interval_start.getSeconds() + 20)
-							// If we're still in the 20 second voting window
+							var vote_end = interval_start.setSeconds(interval_start.getSeconds() + {{VOTE_AFTER_INTERVAL}})
+							// If we're still in the {{VOTE_AFTER_INTERVAL}} second voting window
 							if (current_time <= vote_end) {
 								// Hide the final voted action button
 								$("va-" + elapsed_minutes + "-btn").hide()
@@ -80,9 +80,9 @@
 									}
 								});
 							}
-							// The 20 second window has passed
+							// The {{VOTE_AFTER_INTERVAL}} second window has passed
 							else {
-								console.log('20 seconds are up');
+								console.log('{{VOTE_AFTER_INTERVAL}} seconds are up');
 								$(".glowingLayout").hide();
 								$(hide_vote_buttons).hide();
 								$.get( "/actions_json/{{show.key.id}}/" + elapsed_minutes + "/", function( data ) {

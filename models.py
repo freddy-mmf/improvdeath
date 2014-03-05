@@ -24,6 +24,17 @@ class Show(ndb.Model):
 	end_time = ndb.DateTimeProperty()
 	
 	@property
+	def get_player_action_by_interval(self, interval):
+		for pa in self.player_actions:
+			if pa.interval == int(interval):
+				return pa
+	
+	@property
+	def get_player_by_interval(self, interval):
+		pa = self.get_player_action_by_interval(interval)
+		return pa.player
+		
+	@property
 	def players(self):
 		show_players = ShowPlayer.query(ShowPlayer.show == self.key).fetch()
 		return [x.player.get() for x in show_players if getattr(x, 'player', None)]
@@ -77,6 +88,7 @@ class Action(ndb.Model):
 	created_date = ndb.DateProperty(required=True)
 	used = ndb.BooleanProperty(default=False)
 	vote_value = ndb.IntegerProperty(default=0)
+	live_vote_value = ndb.IntegerProperty(default=0)
 
 	def put(self, *args, **kwargs):
 		self.created_date = mountain_time
@@ -140,3 +152,9 @@ class LiveActionVote(ndb.Model):
 	interval = ndb.IntegerProperty(required=True)
 	session_id = ndb.StringProperty(required=True)
 	created = ndb.DateProperty(required=True)
+
+	def put(self, *args, **kwargs):
+		action = Action.query(Action.key == self.action).get()
+		action.live_vote_value += 1
+		action.put()
+		return super(ThemeVote, self).put(*args, **kwargs)

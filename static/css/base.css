@@ -24,3 +24,30 @@
 .show-link a:visited {
     color: #FFFFFF;
 }
+
+a.white-link,a.white-link:visited,a.white-link:hover {
+	color: white;
+	text-decoration:none;
+}
+
+div.header-btn,div.header-btn:hover {
+	font-size:x-large;
+	cursor:default;
+}
+
+div.home-show-btn {
+	font-size:x-large;
+}
+
+div.name-header {
+	background-color:#428bca;
+	font-size:large;
+}
+
+div.x-large-font {
+	font-size:x-large;
+}
+
+button.voted-action-btn {
+	cursor:default;
+}

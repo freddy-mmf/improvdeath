@@ -46,12 +46,12 @@ def future_show():
 	return bool(Show.query(Show.scheduled >= today_start).get())
 
 
-def get_live_vote(interval, session_id, player=player):
+def get_live_vote(interval, session_id, player):
 	return LiveActionVote.query(
 					LiveActionVote.player == player,
 					LiveActionVote.interval == int(interval),
 					LiveActionVote.created == get_mountain_time().date(),
-					LiveActionVote.session_id == session_id).get()
+					LiveActionVote.session_id == str(session_id)).get()
 
 
 
@@ -147,7 +147,7 @@ class ShowPage(ViewBase):
 			action = ndb.Key(Action, int(action_id))
 			player = ndb.Key(Player, int(player_id))
 			session_id = self.request.session.get('id')
-			if not get_live_vote(interval, session_id, player=player):
+			if not get_live_vote(interval, session_id, player):
 				LiveActionVote(action=action,
 							   player=player,
 							   interval=int(interval),
@@ -286,7 +286,6 @@ class AddActions(ViewBase):
 class AddThemes(ViewBase):
 	def get(self):
 		themes = Theme.query().order(-Theme.vote_value).fetch()
-		print "themes, ", themes
 		context = {'themes': themes}
 		self.response.out.write(template.render(self.path('add_themes.html'),
 												self.add_context(context)))
@@ -402,34 +401,47 @@ class ActionsJSON(ViewBase):
 		# Get the player
 		player = show.get_player_by_interval(interval)
 		# Determine if we've already voted on this interval
-		live_vote = get_live_vote(interval, session_id, player=player)
+		live_vote = get_live_vote(interval, self.session.get('id'), player)
 		now = get_mountain_time()
-		interval_vote_end = show.start_time + datetime.timedelta(minutes=interval) \
+		interval_vote_end = show.start_time + datetime.timedelta(minutes=int(interval)) \
 							  + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
 		if now > interval_vote_end:
 			player_action = show.get_player_action_by_interval(interval)
 			# If an action wasn't chosen for this interval
 			if not player_action.action:
 				# Get the actions that were voted on this interval
-				interval_actions = []
-				live_action_votes = LiveActionVotes.query(
-										LiveActionVotes.player == player,
-										LiveActionVotes.interval == int(interval),
-										LiveActionVotes.created == now.date()).fetch()
+				interval_voted_actions = []
+				live_action_votes = LiveActionVote.query(
+										LiveActionVote.player == player,
+										LiveActionVote.interval == int(interval),
+										LiveActionVote.created == now.date()).fetch()
+				# Add the voted on actions to a list
 				for lav in live_action_votes:
-					interval_actions.append(lav.action)
-				# Get the most voted, un-used action
-				voted_action = Action.query(
-								Action.used == False,
-								Action.key.IN(interval_actions),
-								).order(-Action.live_vote_value).get()
+					interval_voted_actions.append(lav.action)
+				# If the actions were voted on
+				if interval_voted_actions:
+					# Get the most voted, un-used action
+					voted_action = Action.query(
+									Action.used == False,
+									Action.key.IN(interval_voted_actions),
+									).order(-Action.live_vote_value).get()
+				# If no live action votes were cast
+				# take the highest regular voted action that hasn't been used
+				else:
+					# Get the most voted, un-used action
+					voted_action = Action.query(
+									Action.used == False,
+									).order(-Action.vote_value).get()
 				# Set the player action
 				player_action.time_of_action = now
-				player_action.action = voted_action
+				player_action.action = voted_action.key
 				player_action.put()
+				# Set the action as used
+				voted_action.used = True
+				voted_action.put()
 				action_data = {'current_action': voted_action.description}
 			else:
-				action_data = {'current_action': player_action.action.description}
+				action_data = {'current_action': player_action.action.get().description}
 		elif not live_vote:
 			# Return un-used actions, sorted by vote
 			unused_actions = Action.query(Action.used == False,

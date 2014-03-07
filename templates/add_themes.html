@@ -9,25 +9,33 @@
 {% block add-theme-selected %}class="active"{% endblock %}
 
 {% block content %}
-	{% if created %}
-		<div class="label label-info" style="font-size:large;">Theme Added Successfully!</div>
-	{% endif %}
-	<form class="form-horizontal" role="form" action="/add_themes/" method="post">
-		<div class="form-group">
-			<label class="col-md-2 control-label">Theme:</label>
-			<div class="col-md-4">
-				<input type="text" class="form-control" name="theme_name">
-			</div>
-		</div>
-		<div class="col-md-offset-2">
-			<button type="submit" class="btn btn-default">Add Theme</button>
-		</div>
-	</form>
 	<div class="container-fluid">
 		<div class="row">
 			<div class="col-md-5 col-md-offset-1">
+				{% if created %}
+					<div class="label label-info" style="font-size:large;">Theme Added Successfully!</div>
+				{% endif %}
+				<div class="panel panel-success">
+					<div class="panel-heading x-large-font">Add Theme</div>
+					<div class="panel-body">
+						<form class="form-horizontal" role="form" action="/add_themes/" method="post">
+							<div class="form-group">
+								<div class="col-md-9">
+									<input type="text" class="form-control" name="theme_name">
+								</div>
+								<div>
+									<button type="submit" class="btn btn-default">Add Theme</button>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-5 col-md-offset-1">
 				<div class="panel panel-primary">
-					<div class="panel-heading"><h3>Vote for Themes!</h3></div>
+					<div class="panel-heading x-large-font">Vote for Themes</div>
 					<div class="panel-body">
 						{% for theme in themes %}
 							<div class="row">

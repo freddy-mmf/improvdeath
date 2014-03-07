@@ -23,13 +23,11 @@ class Show(ndb.Model):
 	start_time = ndb.DateTimeProperty()
 	end_time = ndb.DateTimeProperty()
 	
-	@property
 	def get_player_action_by_interval(self, interval):
 		for pa in self.player_actions:
 			if pa.interval == int(interval):
 				return pa
 	
-	@property
 	def get_player_by_interval(self, interval):
 		pa = self.get_player_action_by_interval(interval)
 		return pa.player

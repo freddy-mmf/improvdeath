@@ -3,7 +3,7 @@ import random
 
 from google.appengine.ext import ndb
 
-from timezone import mountain_time, get_mountain_time, today
+from timezone import get_mountain_time, back_to_tz
 
 
 class Player(ndb.Model):
@@ -22,6 +22,18 @@ class Show(ndb.Model):
 	length = ndb.IntegerProperty(required=True)
 	start_time = ndb.DateTimeProperty()
 	end_time = ndb.DateTimeProperty()
+	
+	@property
+	def start_time_tz(self):
+		return back_to_tz(self.start_time)
+	
+	@property
+	def end_time_tz(self):
+		return back_to_tz(self.end_time)
+	
+	@property
+	def scheduled_tz(self):
+		return back_to_tz(self.scheduled)
 	
 	def get_player_action_by_interval(self, interval):
 		for pa in self.player_actions:
@@ -47,22 +59,23 @@ class Show(ndb.Model):
 		#return True
 		if not self.start_time or not self.end_time:
 			return False
-		now = get_mountain_time()
-		if now >= self.start_time and now <= self.end_time:
+		now_tz = back_to_tz(get_mountain_time())
+		print "now: %s tz_start: %s" % (now_tz, self.start_time_tz)
+		if now_tz >= self.start_time_tz and now_tz <= self.end_time_tz:
 			return True
 		return False
 
 	@property
 	def is_today(self):
-		return self.scheduled.date() == today
+		return self.scheduled.date() == get_mountain_time().date()
 	
 	@property
 	def in_future(self):
-		return self.scheduled.date() > today
+		return self.scheduled.date() > get_mountain_time().date()
 	
 	@property
 	def in_past(self):
-		return self.scheduled.date() < today
+		return self.scheduled.date() < get_mountain_time().date()
 	
 	def put(self, *args, **kwargs):
 		# If start_time is specified, it must mean a show has started
@@ -73,6 +86,10 @@ class Show(ndb.Model):
 			rand_players = self.players
 			random.shuffle(rand_players, random.random)
 			for player_action in self.player_actions:
+				# If random players list gets empty, refill it with more players
+				if len(rand_players) == 0:
+					rand_players = self.players
+					random.shuffle(rand_players, random.random)
 				# Pop a random player off the list
 				player_action.player = rand_players.pop().key
 				player_action.time_of_action = self.start_time + \
@@ -89,7 +106,7 @@ class Action(ndb.Model):
 	live_vote_value = ndb.IntegerProperty(default=0)
 
 	def put(self, *args, **kwargs):
-		self.created_date = mountain_time
+		self.created_date =  get_mountain_time()
 		return super(Action, self).put(*args, **kwargs)	
 
 
@@ -99,7 +116,7 @@ class Theme(ndb.Model):
 	vote_value = ndb.IntegerProperty(default=0)
 	
 	def put(self, *args, **kwargs):
-		self.created_date = mountain_time
+		self.created_date =  get_mountain_time()
 		return super(Theme, self).put(*args, **kwargs)
 	
 
@@ -108,6 +125,10 @@ class PlayerAction(ndb.Model):
 	player = ndb.KeyProperty(kind=Player)
 	time_of_action = ndb.DateTimeProperty()
 	action = ndb.KeyProperty(kind=Action)
+
+	@property
+	def time_of_action_tz(self):
+		return back_to_tz(self.time_of_action)
 
 
 class ShowPlayer(ndb.Model):
@@ -155,4 +176,4 @@ class LiveActionVote(ndb.Model):
 		action = Action.query(Action.key == self.action).get()
 		action.live_vote_value += 1
 		action.put()
-		return super(ThemeVote, self).put(*args, **kwargs)
+		return super(LiveActionVote, self).put(*args, **kwargs)

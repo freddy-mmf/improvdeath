@@ -48,6 +48,10 @@ div.x-large-font {
 	font-size:x-large;
 }
 
+button.x-large-font {
+	font-size:x-large;
+}
+
 button.voted-action-btn {
 	cursor:default;
 }

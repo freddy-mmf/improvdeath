@@ -1,0 +1,50 @@
+<div id="default-screen">
+	<div class="row">
+		<div class="col-sm-4 col-sm-offset-3">
+			<h3 class="text-center" style="background-color:#003D7A;">Choose Your Own Improventure</h3>
+		</div>
+	</div>
+</div>
+<div id="player-action">
+	{% for player_action in show.player_actions %}
+		<div id="player-{{forloop.counter}}">
+			<div class="row">	
+				<div class="col-sm-4 col-sm-offset-3"> 
+					<div class="panel panel-info">
+						<div class="panel-body">
+							<div class="row text-center">
+								<img src="{{player_image_path}}{{player_action.player.get.photo_filename}}" alt="{{player_action.player.get.name}}" class="img-responsive img-thumbnail">
+							</div>
+							<div class="row">
+								<div class="col-sm-4 col-sm-offset-4">
+									<span class="countdown glowingLayout"></span>
+								</div>
+							</div>
+						</div>
+						<div id="player-action-description-{{forloop.counter}}" class="panel-footer text-center" style="background-color:black;">
+							<form action="/show/{{show.key.id}}/" method="post">
+								<input id="po-{{player_action.interval}}-1-act" type="hidden" name="action_id" value="" />
+								<input type="hidden" name="player_id" value="{{player_action.player.id}}" />
+								<input type="hidden" name="interval" value="{{player_action.interval}}" />
+								<input id="po-{{player_action.interval}}-1-btn" type="submit" class="btn btn-info btn-block" value="No other action options"/>
+							</form>
+							<form action="/show/{{show.key.id}}/" method="post">
+								<input id="po-{{player_action.interval}}-2-act" type="hidden" name="action_id" value="" />
+								<input type="hidden" name="player_id" value="{{player_action.player.id}}" />
+								<input type="hidden" name="interval" value="{{player_action.interval}}" />
+								<input id="po-{{player_action.interval}}-2-btn" type="submit" class="btn btn-info btn-block" value="No other action options"/>
+							</form>
+							<form action="/show/{{show.key.id}}/" method="post">
+								<input id="po-{{player_action.interval}}-3-act" type="hidden" name="action_id" value="" />
+								<input type="hidden" name="player_id" value="{{player_action.player.id}}" />
+								<input type="hidden" name="interval" value="{{player_action.interval}}" />
+								<input id="po-{{player_action.interval}}-3-btn" type="submit" class="btn btn-info btn-block" value="No other action options"/>
+							</form>
+							<button id="va-{{player_action.interval}}-btn" class="btn btn-primary btn-block x-large-font voted-action-btn">{% if voted %}Vote Submitted!{% endif %}</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	{% endfor %}
+</div>

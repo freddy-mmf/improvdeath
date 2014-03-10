@@ -1,5 +1,7 @@
 import datetime
 import time
+from pytz.gae import pytz
+
 
 class Mountain_tzinfo(datetime.tzinfo):
     """Implementation of the Pacific timezone."""
@@ -31,6 +33,7 @@ def get_mountain_time():
 				time.mktime(datetime.datetime.utcnow().timetuple()), Mountain_tzinfo())
 	return mountain_time.replace(tzinfo=None)
 
-mountain_time = get_mountain_time()
 
-today = mountain_time.date()
+def back_to_tz(date_time):
+	denver_tz = pytz.timezone('America/Denver')
+	return denver_tz.localize(date_time, is_dst=None)

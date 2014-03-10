@@ -14,12 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#import sys
+#for p in ['gaepytz-2011h.zip']:
+#    sys.path.insert(0, p)
+
 import os
 import webapp2
 
 from views import (MainPage, ShowPage, CreateShow, AddPlayers, AddActions,
 				   AddThemes, DeleteShows, DeleteActions, DeleteThemes,
-				   ActionsJSON)
+				   ActionsJSON, JSTestPage)
 
 
 config= {'webapp2_extras.sessions': {
@@ -39,6 +43,7 @@ app = webapp2.WSGIApplication([
     (r'/delete_actions/', DeleteActions),
     (r'/delete_themes/', DeleteThemes),
     (r'/actions_json/(\d+)/(\d+)/', ActionsJSON),
+    (r'/js_test/', JSTestPage),
 ],
   config=config,
   debug=True)

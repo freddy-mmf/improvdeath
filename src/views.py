@@ -14,7 +14,7 @@ from google.appengine.ext import ndb
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, LiveActionVote)
 
-from timezone import mountain_time, get_mountain_time
+from timezone import get_mountain_time, back_to_tz
 
 VOTE_AFTER_INTERVAL = 20
 
@@ -108,13 +108,12 @@ class MainPage(ViewBase):
 		# Get the current show
 		current_show = Show.query(
 			Show.scheduled > today_start,
-			Show.scheduled < tomorrow_start).order(Show.scheduled).get()
+			Show.scheduled < tomorrow_start).order(-Show.scheduled).get()
 		# Get the future shows
 		future_shows = Show.query(
 			Show.scheduled > tomorrow_start).order(Show.scheduled).filter()
 		# Get the previous shows
-		previous_shows = Show.query(
-			Show.scheduled < today_start).order(Show.scheduled).filter()
+		previous_shows = Show.query(Show.end_time != None).order(-Show.end_time).filter()
 		context = {'current_show': current_show,
 				   'future_shows': future_shows,
 				   'previous_shows': previous_shows}
@@ -136,6 +135,7 @@ class ShowPage(ViewBase):
 
 	@admin_required
 	def post(self, show_key):
+		voted = False
 		show = ndb.Key(Show, int(show_key)).get()
 		action_id = self.request.get('action_id')
 		player_id = self.request.get('player_id')
@@ -146,7 +146,9 @@ class ShowPage(ViewBase):
 		elif action_id and player_id and interval:
 			action = ndb.Key(Action, int(action_id))
 			player = ndb.Key(Player, int(player_id))
-			session_id = self.request.session.get('id')
+			session_id = str(self.session.get('id'))
+			voted = True
+			# If the user hasn't already voted
 			if not get_live_vote(interval, session_id, player):
 				LiveActionVote(action=action,
 							   player=player,
@@ -156,7 +158,8 @@ class ShowPage(ViewBase):
 						   
 		context	= {'show': show,
 				   'host_url': self.request.host_url,
-				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
+				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
+				   'voted': voted}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
 
@@ -403,9 +406,11 @@ class ActionsJSON(ViewBase):
 		# Determine if we've already voted on this interval
 		live_vote = get_live_vote(interval, self.session.get('id'), player)
 		now = get_mountain_time()
-		interval_vote_end = show.start_time + datetime.timedelta(minutes=int(interval)) \
+		# Add timezone for comparisons
+		now_tz = back_to_tz(now)
+		interval_vote_end = show.start_time_tz + datetime.timedelta(minutes=int(interval)) \
 							  + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
-		if now > interval_vote_end:
+		if now_tz > interval_vote_end:
 			player_action = show.get_player_action_by_interval(interval)
 			# If an action wasn't chosen for this interval
 			if not player_action.action:
@@ -447,10 +452,10 @@ class ActionsJSON(ViewBase):
 			unused_actions = Action.query(Action.used == False,
 										  ).order(-Action.vote_value).fetch(3)
 			action_data = []
-			for i in range(0, 2):
+			for i in range(0, 3):
 				try:
 					action_data.append({'name': unused_actions[i].description,
-									    'id': unused_actions[i].key.id})
+									    'id': unused_actions[i].key.id()})
 				except IndexError:
 					pass
 		else:
@@ -459,25 +464,58 @@ class ActionsJSON(ViewBase):
 		self.response.out.write(json.dumps(action_data))
 
 
-class ShowJSON(ViewBase):
-	def get(self, show_key):
-		show = ndb.Key(Show, int(show_key)).get()
-		show_obj = {'event': 'default-screen'}
-		if show.running:
-			now = get_mountain_time()
-			# Within first 10 seconds of show starting
-			first_ten_end = show.start_time + datetime.timedelta(seconds=10)
-			# If we're within the first 10 seconds of the show
-			if now >= show.start_time and now <= first_ten_end:
-				show_obj = {'event': 'init-players'}
-			else:
-				for player_action in show.player_actions:
-					thirty_after_interval = action.time_of_action + datetime.timedelta(
-																			seconds=30)
-					if now >= player_action.time_of_action and now <= thirty_after_interval:
-						player_action_entity = player_action.player.get()
-						show_obj = {'event': 'player-action',
-								    'player_photo': player_action_entity.photo_filename,
-								    'description': player_action.description.get().description}
-		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-		self.response.out.write(json.dumps(show_obj))
+class MockObject(object):
+	def __init__(self, **kwargs):
+		for key, value in kwargs.items():
+			setattr(self, key, value)
+
+class JSTestPage(ViewBase):
+	@admin_required
+	def get(self):
+		
+		player_freddy = MockObject(get = {'name':'Freddy',
+						 			'photo_filename': 'freddy.jpg',
+						 			'date_added': get_mountain_time().date()})
+		player_dan = MockObject(get = {'name':'Dan',
+						 			'photo_filename': 'dan.jpg',
+						 			'date_added': get_mountain_time().date()})
+		player_jeff = MockObject(get = {'name':'Jeff',
+						 			'photo_filename': 'jeff.jpg',
+						 			'date_added': get_mountain_time().date()})
+		player_list = [player_freddy, player_dan, player_jeff]
+		
+		start_time = back_to_tz(get_mountain_time())
+		end_time = start_time + datetime.timedelta(minutes=5)
+		show_mock = type('Show',
+						 (object,),
+						 dict(scheduled = get_mountain_time(),
+							  player_actions = [],
+							  theme = 'Pirates',
+							  length = 4,
+							  start_time = start_time,
+							  end_time = end_time,
+							  start_time_tz = start_time,
+							  end_time_tz = end_time,
+							  running = True))
+		available_actions = []
+		for i in range(1, 4):
+			
+			player_action_mock = MockObject(interval = i,
+							  player = player_list[i-1],
+							  time_of_action = get_mountain_time(),
+							  action = None)
+			show_mock.player_actions.append(player_action_mock)
+			action_mock = MockObject(description = 'Option %s' % i,
+						 created_date = get_mountain_time().date(),
+						 used = False,
+						 vote_value = 0,
+						 live_vote_value = 0)
+			available_actions.append(action_mock)
+		print show_mock.player_actions[0].interval
+		context	= {'show': show_mock,
+				   'available_actions': available_actions,
+				   'host_url': self.request.host_url,
+				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
+				   'mocked': True}
+		self.response.out.write(template.render(self.path('js_test.html'),
+												self.add_context(context)))

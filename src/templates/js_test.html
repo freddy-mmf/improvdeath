@@ -1,12 +1,9 @@
 {% extends "base.html" %}
-{% block add_head %}
-	<link rel="stylesheet" type="text/css" href="{{css_path}}jquery.countdown.css">
 
-	<script src="{{js_path}}jquery.playSound.js"></script>
-	<script src="{{js_path}}jquery.plugin.min.js"></script>
-	<script src="{{js_path}}jquery.countdown.min.js"></script>
-	<script>{% include "show_poll_js.html" %}</script>
-{% endblock %}
+{% block add_head %}{% include "show_poll_js.html" %}{% endblock %}
+
+{% block test-js-selected %}class="active"{% endblock %}
+
 {% block content %}
 	<div class="container-fluid">
 		{% include "show_voting.html" %}

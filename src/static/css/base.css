@@ -55,3 +55,29 @@ button.x-large-font {
 button.voted-action-btn {
 	cursor:default;
 }
+
+.progress-bar {
+	width: 400px;
+	height: 22px;
+	border: 1px solid #111;
+	background-color: #595959;
+}
+
+.progress-bar div {
+	height: 100%;
+	color: #fff;
+	text-align: right;
+	line-height: 22px; /* same as #progressBar height if we want text middle aligned */
+	width: 0;
+	background-color: #CC0000;
+}
+
+.word-wrap {
+	white-space: normal;
+}
+
+hr.thick-divider {
+	height:3px;
+	border:none;
+	color:#333;
+}

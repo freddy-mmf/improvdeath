@@ -46,17 +46,15 @@
 											<button class="upvote" type="submit"></button>
 										</form> 
 										<span class="count">&nbsp;&nbsp;{{theme.vote_value}}</span>
-										<form action="/add_themes/" method="post">
-											<input type="hidden" name="downvote" value="{{theme.key.id}}"/>
-											<button class="downvote" type="submit"></button>
-										</form>
 									</div>
 								</div>
-								<div class="col-md-6" style="padding-top:5%;">
-									<span style="color:black;font-size:x-large;">&nbsp;{{theme.name}}</span>
+								<div class="col-md-11">
+									<span class="word-wrap" style="color:black;font-size:x-large;">&nbsp;{{theme.name}}</span>
 								</div>
-							</div>
-							<hr/>
+							</div>							
+							{% if not forloop.last %}
+								<hr class="thick-divider bg-primary"/>
+							{% endif %}
 						{% endfor %}
 					</div>
 				</div>

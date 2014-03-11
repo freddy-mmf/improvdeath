@@ -53,6 +53,25 @@ def get_live_vote(interval, session_id, player):
 					LiveActionVote.created == get_mountain_time().date(),
 					LiveActionVote.session_id == str(session_id)).get()
 
+def get_all_live_count(interval, player):
+	return LiveActionVote.query(
+					LiveActionVote.player == player,
+					LiveActionVote.interval == int(interval),
+					LiveActionVote.created == get_mountain_time().date()).count()
+
+
+def get_live_percentage(action, interval, player, all_votes=None):
+	action_votes = LiveActionVote.query(
+					LiveActionVote.action == action,
+					LiveActionVote.player == player,
+					LiveActionVote.interval == int(interval),
+					LiveActionVote.created == get_mountain_time().date()).count()
+	if not all_votes:
+		all_votes = get_all_live_count(interval, player)
+	# If either of the two live action counts are zero, return zero percent
+	if action_votes == 0 or action_votes == 0:
+		return 0
+	return 100 * float(action_votes)/float(action_votes)
 
 
 class ViewBase(webapp2.RequestHandler):
@@ -264,7 +283,7 @@ class AddPlayers(ViewBase):
 class AddActions(ViewBase):
 	def get(self):
 		actions = Action.query(
-			Action.used == False).fetch()
+			Action.used == False).order(-Action.vote_value).fetch()
 		context = {'actions': actions,
 				   'future_show': future_show()}
 		self.response.out.write(template.render(self.path('add_actions.html'),
@@ -274,14 +293,28 @@ class AddActions(ViewBase):
 		context = {'future_show': future_show()}
 		action = None
 		description = self.request.get('description')
+		upvote = self.request.get('upvote')
 		if description:
 			action = Action(description=description).put().get()
 			context['created'] = True
-		context['actions'] = Action.query(
-			Action.used == False,
-			Action.key != getattr(action, 'key', None)).fetch()
+		elif upvote:
+			action_key = ndb.Key(Action, int(upvote)).get().key
+			av = ActionVote.query(
+					ActionVote.action == action_key,
+					ActionVote.session_id == str(self.session.get('id', '0'))).get()
+			if not av:
+				ActionVote(action=action_key,
+					  	   session_id=str(self.session.get('id')),
+					  	   value=1).put()
 		if action:
+			context['actions'] = Action.query(Action.used == False,
+											  Action.key != action.key,
+											  ).order(-Action.vote_value).fetch()
 			context['actions'].append(action)
+		else:
+			context['actions'] = Action.query(Action.used == False
+											 ).order(-Action.vote_value).fetch()
+			
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
 
@@ -297,33 +330,24 @@ class AddThemes(ViewBase):
 		context = {}
 		theme = None
 		theme_name = self.request.get('theme_name')
-		downvote = self.request.get('downvote')
 		upvote = self.request.get('upvote')
 		if theme_name:
 			theme = Theme(name=theme_name,
 						  vote_value=0).put().get()
 			context['created'] = True
-		elif upvote or downvote:
-			if downvote:
-				vote_value = -1
-				theme_id = downvote
-			else:
-				vote_value = 1
-				theme_id = upvote
-			theme_key = ndb.Key(Theme, int(theme_id)).get().key
+		elif upvote:
+			theme_key = ndb.Key(Theme, int(upvote)).get().key
 			tv = ThemeVote.query(
 					ThemeVote.theme == theme_key,
 					ThemeVote.session_id == str(self.session.get('id', '0'))).get()
-			if tv and tv.value != vote_value:
-				tv.value = vote_value
-				tv.put()
-			elif not tv:
+			if not tv:
 				ThemeVote(theme=theme_key,
 					  	  session_id=str(self.session.get('id')),
-					  	  value=vote_value).put()
+					  	  value=1).put()
 		if theme:
 			# Have to sort first by theme key, since we query on it. Dumb...
-			themes = Theme.query(Theme.key != theme.key).order(Theme.key, -Theme.vote_value).fetch()
+			themes = Theme.query(Theme.key != theme.key
+								).order(Theme.key, -Theme.vote_value).fetch()
 			context['themes'] = themes
 			context['themes'].append(theme)
 		else:
@@ -393,7 +417,7 @@ class DeleteThemes(ViewBase):
 					tv.key.delete()
 				theme_entity.key.delete()
 			context['cur_deleted'] = True
-		context['themes'] = Action.query().fetch()
+		context['themes'] = Theme.query().fetch()
 		self.response.out.write(template.render(self.path('delete_themes.html'),
 												self.add_context(context)))
 
@@ -410,9 +434,10 @@ class ActionsJSON(ViewBase):
 		now_tz = back_to_tz(now)
 		interval_vote_end = show.start_time_tz + datetime.timedelta(minutes=int(interval)) \
 							  + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
+		print "vote end: %s now: %s" % (interval_vote_end, now_tz)
 		if now_tz > interval_vote_end:
 			player_action = show.get_player_action_by_interval(interval)
-			# If an action wasn't chosen for this interval
+			# If an action wasn't already chosen for this interval
 			if not player_action.action:
 				# Get the actions that were voted on this interval
 				interval_voted_actions = []
@@ -444,18 +469,35 @@ class ActionsJSON(ViewBase):
 				# Set the action as used
 				voted_action.used = True
 				voted_action.put()
-				action_data = {'current_action': voted_action.description}
+				percent = get_live_percentage(voted_action,
+											  interval,
+											  player,
+											  all_votes=len(live_action_votes))
+				action_data = {'current_action': voted_action.description,
+							   'percent': percent}
 			else:
-				action_data = {'current_action': player_action.action.get().description}
+				all_votes = get_all_live_count(interval, player)
+				percent = get_live_percentage(player_action.action,
+											  interval,
+											  player,
+											  all_votes=all_votes)
+				action_data = {'current_action': player_action.action.get().description,
+							   'percent': percent}
 		elif not live_vote:
 			# Return un-used actions, sorted by vote
 			unused_actions = Action.query(Action.used == False,
 										  ).order(-Action.vote_value).fetch(3)
+			all_votes = get_all_live_count(interval, player)
 			action_data = []
 			for i in range(0, 3):
+				percent = get_live_percentage(unused_actions[i].key,
+											  interval,
+											  player,
+											  all_votes=all_votes)
 				try:
 					action_data.append({'name': unused_actions[i].description,
-									    'id': unused_actions[i].key.id()})
+									    'id': unused_actions[i].key.id(),
+									    'percent': percent})
 				except IndexError:
 					pass
 		else:
@@ -485,7 +527,7 @@ class JSTestPage(ViewBase):
 		player_list = [player_freddy, player_dan, player_jeff]
 		
 		start_time = back_to_tz(get_mountain_time())
-		end_time = start_time + datetime.timedelta(minutes=5)
+		end_time = start_time + datetime.timedelta(minutes=4)
 		show_mock = type('Show',
 						 (object,),
 						 dict(scheduled = get_mountain_time(),
@@ -511,11 +553,11 @@ class JSTestPage(ViewBase):
 						 vote_value = 0,
 						 live_vote_value = 0)
 			available_actions.append(action_mock)
-		print show_mock.player_actions[0].interval
 		context	= {'show': show_mock,
 				   'available_actions': available_actions,
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
-				   'mocked': True}
+				   'mocked': self.request.GET.get('mock', 'full'),
+				   'sample': self.request.GET.get('sample')}
 		self.response.out.write(template.render(self.path('js_test.html'),
 												self.add_context(context)))

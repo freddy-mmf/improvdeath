@@ -47,17 +47,15 @@
 												<button class="upvote" type="submit"></button>
 											</form> 
 											<span class="count">&nbsp;&nbsp;{{action.vote_value}}</span>
-											<form action="/add_actions/" method="post">
-												<input type="hidden" name="downvote" value="{{action.key.id}}"/>
-												<button class="downvote" type="submit"></button>
-											</form>
 										</div>
 									</div>
-									<div class="col-md-10 col-md-offset-2" style="padding-top:5%;">
-										<span style="color:black;font-size:medium;">&nbsp;{{action.description}}</span>
+									<div class="col-md-10">
+										<span class="word-wrap" style="color:black;font-size:large;">&nbsp;{{action.description}}</span>
 									</div>
 								</div>
-								<hr/>
+								{% if not forloop.last %}
+									<hr class="thick-divider bg-primary"/>
+								{% endif %}
 							{% endfor %}
 						</div>
 					</div>

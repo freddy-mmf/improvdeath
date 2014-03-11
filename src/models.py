@@ -60,7 +60,6 @@ class Show(ndb.Model):
 		if not self.start_time or not self.end_time:
 			return False
 		now_tz = back_to_tz(get_mountain_time())
-		print "now: %s tz_start: %s" % (now_tz, self.start_time_tz)
 		if now_tz >= self.start_time_tz and now_tz <= self.end_time_tz:
 			return True
 		return False

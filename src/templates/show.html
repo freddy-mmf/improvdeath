@@ -36,7 +36,6 @@
 			Show starts: {{show.scheduled}}
 		{% endif %}
 		{% if show.is_today and is_admin and not show.running and show.start_time_tz %}
-			{{show.running}}		
 			<h1>Hope you enjoyed the show!</h1>
 		{% endif %}
 		{% if show.in_future %}

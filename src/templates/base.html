@@ -37,12 +37,13 @@
 						<li {% block delete-action-selected %}{% endblock %}><a href="/delete_actions/">Delete Actions</a></li>
 						<li {% block delete-theme-selected %}{% endblock %}><a href="/delete_themes/">Delete Themes</a></li>
 						<li {% block add-player-selected %}{% endblock %}><a href="/add_players/">Add Players</a></li>
+						<li {% block test-js-selected %}{% endblock %}><a href="/js_test/">Test JS</a></li>
 					{% endif %}
 				  </ul>
 				  <ul class="nav navbar-nav navbar-right">
 					<li><a href="{{auth_url}}">{{auth_action}}</a></li>
 				  </ul>
-				  <p class="navbar-text navbar-right">Signed in as {{user.nickname}}</p>
+				  <p class="navbar-text navbar-right">{{user.nickname}}</p>
 				</div>
 			</div>
 		</nav>

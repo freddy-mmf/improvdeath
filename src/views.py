@@ -2,6 +2,7 @@ import os
 import json
 import datetime
 import random
+import math
 from functools import wraps
 
 import webapp2
@@ -16,7 +17,7 @@ from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 
 from timezone import get_mountain_time, back_to_tz
 
-VOTE_AFTER_INTERVAL = 20
+VOTE_AFTER_INTERVAL = 30
 
 
 def admin_required(func):
@@ -71,7 +72,7 @@ def get_live_percentage(action, interval, player, all_votes=None):
 	# If either of the two live action counts are zero, return zero percent
 	if action_votes == 0 or action_votes == 0:
 		return 0
-	return 100 * float(action_votes)/float(action_votes)
+	return int(math.floor(100 * float(action_votes)/float(all_votes)))
 
 
 class ViewBase(webapp2.RequestHandler):
@@ -152,7 +153,6 @@ class ShowPage(ViewBase):
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
 
-	@admin_required
 	def post(self, show_key):
 		voted = False
 		show = ndb.Key(Show, int(show_key)).get()
@@ -309,7 +309,7 @@ class AddActions(ViewBase):
 		if action:
 			context['actions'] = Action.query(Action.used == False,
 											  Action.key != action.key,
-											  ).order(-Action.vote_value).fetch()
+											  ).order(Action.key, -Action.vote_value).fetch()
 			context['actions'].append(action)
 		else:
 			context['actions'] = Action.query(Action.used == False

@@ -107,7 +107,7 @@ $( document ).ready(function() {
 										var player_action_prefix = "#po-" + elapsed_minutes + "-" + (option_num + 1);
 										var prog_bar_prefix = "#pb-" + elapsed_minutes + "-" + (option_num + 1);
 										$(player_action_prefix + "-act").attr('value', action_id);
-										$(player_action_prefix + "-btn").html(action_name);
+										$(player_action_prefix + "-btn").attr('value', action_name);
 										progress(action_percent,
 												 $(prog_bar_prefix),
 												 $(player_action_prefix + "-btn").width());

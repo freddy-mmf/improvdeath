@@ -59,8 +59,10 @@ $( document ).ready(function() {
 					if (current_player !== intervals[elapsed_minutes]) {
 						// Set the current player number to the interval number
 						current_player = intervals[elapsed_minutes];
-						$("#player-" + current_player).show();
-						$.playSound('{{host_url}}{{audio_path}}vote-chime');
+                        $("#player-" + current_player).show();
+                        {% if is_admin %]
+						    $.playSound('{{host_url}}{{audio_path}}vote-chime');
+                        {% endif %}
 						// Set the vote end sound to false
 						vote_end_played = false;
 					}
@@ -122,8 +124,10 @@ $( document ).ready(function() {
 					}
 					// The {{VOTE_AFTER_INTERVAL}} second window has passed
 					else {
-						if ( vote_end_played === false) {
-							$.playSound('{{host_url}}{{audio_path}}action-chime');
+                        if ( vote_end_played === false) {
+                            {% if is_admin %}
+                                $.playSound('{{host_url}}{{audio_path}}action-chime');
+                            {% endif %}
 							vote_end_played = true;
 						}
 						$(countdown_select).hide();

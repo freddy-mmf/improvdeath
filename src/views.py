@@ -17,7 +17,7 @@ from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 
 from timezone import get_mountain_time, back_to_tz
 
-VOTE_AFTER_INTERVAL = 30
+VOTE_AFTER_INTERVAL = 45
 
 
 def admin_required(func):

@@ -1,7 +1,9 @@
 <div id="default-screen">
 	<div class="row">
 		<div class="col-sm-4 col-sm-offset-3">
-			<h3 class="text-center" style="background-color:#003D7A;">Choose Your Own Improventure</h3>
+			<h3 class="text-center" style="background-color:#003D7A;">Choose Your Own Improventure<br/>{{host_url}}{% if not is_admin %}
+				<br/><span class="medium-font">If options aren't displaying, click here: </span><a href="{{path_qs}}" class="btn btn-info large-font">Refresh</a>{% endif %}
+			</h3>
 		</div>
 	</div>
 </div>
@@ -22,7 +24,7 @@
 							</div>
 						</div>
 						<div id="player-action-description-{{forloop.counter}}" class="panel-footer" style="background-color:black;">
-							<div class="row">
+							<div id="pa-row-{{player_action.interval}}-1" class="row">
 								<div class="col-sm-12">
 									<form action="/show/{{show.key.id}}/" method="post">
 										<input id="po-{{player_action.interval}}-1-act" type="hidden" name="action_id" value="" />
@@ -33,7 +35,7 @@
 									</form>
 								</div>
 							</div>
-							<div class="row">
+							<div id="pa-row-{{player_action.interval}}-2" class="row">
 								<div class="col-sm-12">
 									<form action="/show/{{show.key.id}}/" method="post">
 										<input id="po-{{player_action.interval}}-2-act" type="hidden" name="action_id" value="" />
@@ -44,7 +46,7 @@
 									</form>
 								</div>
 							</div>
-							<div class="row">
+							<div id="pa-row-{{player_action.interval}}-3" class="row">
 								<div class="col-sm-12">
 									<form action="/show/{{show.key.id}}/" method="post">
 										<input id="po-{{player_action.interval}}-3-act" type="hidden" name="action_id" value="" />

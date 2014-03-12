@@ -24,8 +24,9 @@ def admin_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         if not users.is_current_user_admin():
-            return webapp2.redirect(
-        			users.create_login_url(webapp2.get_request().url))
+            redirect_uri = users.create_login_url(webapp2.get_request().uri)
+            print redirect_uri
+            return webapp2.redirect(redirect_uri, abort=True)
         return func(*args, **kwargs)
     return decorated_view
 
@@ -95,7 +96,8 @@ class ViewBase(webapp2.RequestHandler):
 		            'is_admin': users.is_current_user_admin(),
 					'user': user,
 					'auth_url': auth_url,
-					'auth_action': auth_action}
+					'auth_action': auth_action,
+					'path_qs': self.request.path_qs}
 	
 	def add_context(self, add_context={}):
 		self.context.update(add_context)
@@ -558,6 +560,7 @@ class JSTestPage(ViewBase):
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
 				   'mocked': self.request.GET.get('mock', 'full'),
-				   'sample': self.request.GET.get('sample')}
+				   'sample': self.request.GET.get('sample'),
+				   'is_admin': self.request.GET.get('is_admin')}
 		self.response.out.write(template.render(self.path('js_test.html'),
 												self.add_context(context)))

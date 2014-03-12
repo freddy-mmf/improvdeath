@@ -52,6 +52,14 @@ button.x-large-font {
 	font-size:x-large;
 }
 
+a.large-font {
+	font-size:large;
+}
+
+span.medium-font {
+	font-size:medium;
+}
+
 button.voted-action-btn {
 	cursor:default;
 }

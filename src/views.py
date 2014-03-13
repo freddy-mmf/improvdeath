@@ -565,6 +565,7 @@ class JSTestPage(ViewBase):
 		context	= {'show': show_mock,
 				   'available_actions': available_actions,
 				   'host_url': self.request.host_url,
+				   'host_domain': self.request.host_url.replace('http://', ''),
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
 				   'mocked': self.request.GET.get('mock', 'full'),
 				   'sample': self.request.GET.get('sample'),

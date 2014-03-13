@@ -121,6 +121,13 @@ class ViewBase(webapp2.RequestHandler):
 			session['id'] = random.getrandbits(128)
 		return session
 
+
+class RobotsTXT(webapp2.RequestHandler):
+	def get(self):
+		# Set to not be indexed
+		self.response.headers['Content-Type'] = 'text/plain'
+		self.response.out.write("User-agent: *\nDisallow: /")
+
 		
 class MainPage(ViewBase):
 	def get(self):

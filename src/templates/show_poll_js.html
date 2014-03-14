@@ -15,6 +15,34 @@ $( document ).ready(function() {
 		progressBarWidth = p_percent * p_option_width / 100;
 		$element.find('div').animate({ width: progressBarWidth }, 500).html(p_percent + "%&nbsp;");
 	}
+	function create_voting_options(voting_data, div_element) {
+		for (var option_num=0; option_num<=(voting_data.lenth - 1); option_num++) {
+			if (option_num < voting_data.length) {
+				var action_name = voting_data[option_num]['name'];
+				var action_id = voting_data[option_num]['id'];
+				var action_percent = voting_data[option_num]['percent'];
+				
+				<div id="pa-row-{{player_action.interval}}-1" class="row">
+								<div class="col-sm-12">
+									<form action="/show/{{show.key.id}}/" method="post">
+										<input id="po-{{player_action.interval}}-1-act" type="hidden" name="action_id" value="" />
+										<input type="hidden" name="player_id" value="{{player_action.player.id}}" />
+										<input type="hidden" name="interval" value="{{player_action.interval}}" />
+										<input id="po-{{player_action.interval}}-1-btn" type="submit" class="btn btn-primary btn-block word-wrap" value="No other action options"/>
+										<div id="pb-{{player_action.interval}}-1" class="progress-bar"><div></div></div>
+									</form>
+								</div>
+							</div>
+				var player_action_prefix = "#po-" + indentifier + "-" + (option_num + 1);
+				var prog_bar_prefix = "#pb-" + indentifier + "-" + (option_num + 1);
+				$(player_action_prefix + "-act").attr('value', action_id);
+				$(player_action_prefix + "-btn").attr('value', action_name);
+				progress(action_percent,
+						 $(prog_bar_prefix),
+						 $(player_action_prefix + "-btn").width());
+			}
+		}
+	}
 	// Hide all objects initially
 	$( "#init-players" ).hide();
 	$( "#player-action" ).hide();

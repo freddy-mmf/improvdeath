@@ -23,7 +23,7 @@ import webapp2
 
 from views import (MainPage, ShowPage, CreateShow, AddPlayers, AddActions,
 				   AddThemes, DeleteShows, DeleteActions, DeleteThemes,
-				   ActionsJSON, JSTestPage, RobotsTXT)
+				   ActionsJSON, JSTestPage, RobotsTXT, CurrentTime)
 
 
 config= {'webapp2_extras.sessions': {
@@ -45,6 +45,7 @@ app = webapp2.WSGIApplication([
     (r'/delete_themes/', DeleteThemes),
     (r'/actions_json/(\d+)/(\d+)/', ActionsJSON),
     (r'/js_test/', JSTestPage),
+    (r'/current_time/', CurrentTime),
 ],
   config=config,
   debug=True)

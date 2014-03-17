@@ -32,6 +32,7 @@ $( document ).ready(function() {
 			var current_player = "";
 			var hide_players_key = "{% for player_action in show.player_actions %}#player-{{forloop.counter}}{% if not forloop.last %},{% endif %}{% endfor %}";
 			var start_time = new Date('{{show.start_time_tz|date:"F j, Y H:i:s"}}');
+			var current_time = new Date(start_time.getTime());
 			var intervals = {{% for player_action in show.player_actions %}
 								{{player_action.interval}}: "{{forloop.counter}}"{% if not forloop.last %},{% endif %}
 							 {% endfor %}};
@@ -43,10 +44,15 @@ $( document ).ready(function() {
 			  change_interval();
 			}, 1000);
 			function change_interval(){
-				var current_time = new Date();
+				$.getJSON("/current_time/", function( data ) {
+					current_time.setHours(data['hour'],
+										  data['minute'],
+										  data['second']);
+				});
 				var elapsed_millis = current_time - start_time;
 				var elapsed_total_seconds = parseInt(elapsed_millis / 1000);
 				var elapsed_minutes = parseInt(elapsed_total_seconds / 60){% if mocked %} + 1{% endif %};
+				console.log(elapsed_minutes);
 				// If we've hit an interval
 				if ({% if mocked == 'default' %}false{% else %}elapsed_minutes in intervals{% endif %}) {
 					var hide_vote_buttons = "#po-" + elapsed_minutes + "-1-btn,"
@@ -132,7 +138,7 @@ $( document ).ready(function() {
 						$(countdown_select).hide();
 						$(hide_vote_buttons).hide();
 						{% if not mocked %}
-						$.get(interval_url, function( data ) {
+						$.getJSON(interval_url, function( data ) {
 						{% else %}
 							var data = {"current_action": "These are all super long to try and test the bounds of how big this is",
 										"percent": "70",

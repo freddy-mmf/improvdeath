@@ -17,7 +17,7 @@ from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 
 from timezone import get_mountain_time, back_to_tz
 
-VOTE_AFTER_INTERVAL = 45
+VOTE_AFTER_INTERVAL = 10
 
 
 def admin_required(func):
@@ -88,6 +88,7 @@ class ViewBase(webapp2.RequestHandler):
 			auth_url = users.create_login_url(self.request.uri)
 			auth_action = 'Login'
 		self.context = {
+					'host_domain': self.request.host_url.replace('http://', ''),
 				    'image_path': self.app.registry.get('images'),
 		            'css_path': self.app.registry.get('css'),
 		            'js_path': self.app.registry.get('js'),
@@ -212,9 +213,6 @@ class CreateShow(ViewBase):
 				interval_list = [int(x.strip()) for x in action_intervals.split(',')]
 			except ValueError:
 				raise ValueError("Invalid interval list '%s'. Must be comma separated.")
-			# If there are more action intervals than players, raise an error
-			if len(interval_list) > len(player_list):
-				raise ValueError("Not enough players for action intervals.")
 			if scheduled_string:
 				scheduled = datetime.datetime.strptime(scheduled_string,
 													   "%d.%m.%Y %H:%M")
@@ -565,10 +563,19 @@ class JSTestPage(ViewBase):
 		context	= {'show': show_mock,
 				   'available_actions': available_actions,
 				   'host_url': self.request.host_url,
-				   'host_domain': self.request.host_url.replace('http://', ''),
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
 				   'mocked': self.request.GET.get('mock', 'full'),
 				   'sample': self.request.GET.get('sample'),
 				   'is_admin': self.request.GET.get('is_admin')}
 		self.response.out.write(template.render(self.path('js_test.html'),
 												self.add_context(context)))
+												
+
+class CurrentTime(ViewBase):
+	def get(self):
+		mt = get_mountain_time()
+		date_values = {'hour': mt.hour,
+					   'minute': mt.minute,
+					   'second': mt.second}
+		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
+		self.response.out.write(json.dumps(date_values))

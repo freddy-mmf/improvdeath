@@ -13,12 +13,15 @@ from google.appengine.api import users
 from google.appengine.ext import ndb
 
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
-					Theme, ActionVote, ThemeVote, LiveActionVote)
+					Theme, ActionVote, ThemeVote, LiveActionVote, Item, ItemVote,
+					LiveItemVote, WildcardCharacter, WildcardCharacterVote,
+					LiveWildcardCharacterVote, RoleVote, LiveRoleVote)
 
 from timezone import get_mountain_time, back_to_tz
 
 VOTE_AFTER_INTERVAL = 10
 
+HERO_AFTER_INTERVAL = 15
 
 def admin_required(func):
     @wraps(func)
@@ -46,34 +49,6 @@ def future_show():
 	# See if there is a show today, otherwise users aren't allowed to submit actions
 	today_start = get_today_start()
 	return bool(Show.query(Show.scheduled >= today_start).get())
-
-
-def get_live_vote(interval, session_id, player):
-	return LiveActionVote.query(
-					LiveActionVote.player == player,
-					LiveActionVote.interval == int(interval),
-					LiveActionVote.created == get_mountain_time().date(),
-					LiveActionVote.session_id == str(session_id)).get()
-
-def get_all_live_count(interval, player):
-	return LiveActionVote.query(
-					LiveActionVote.player == player,
-					LiveActionVote.interval == int(interval),
-					LiveActionVote.created == get_mountain_time().date()).count()
-
-
-def get_live_percentage(action, interval, player, all_votes=None):
-	action_votes = LiveActionVote.query(
-					LiveActionVote.action == action,
-					LiveActionVote.player == player,
-					LiveActionVote.interval == int(interval),
-					LiveActionVote.created == get_mountain_time().date()).count()
-	if not all_votes:
-		all_votes = get_all_live_count(interval, player)
-	# If either of the two live action counts are zero, return zero percent
-	if action_votes == 0 or action_votes == 0:
-		return 0
-	return int(math.floor(100 * float(action_votes)/float(all_votes)))
 
 
 class ViewBase(webapp2.RequestHandler):
@@ -165,30 +140,72 @@ class ShowPage(ViewBase):
 
 	def post(self, show_key):
 		voted = False
+		voted_role = None
 		show = ndb.Key(Show, int(show_key)).get()
 		action_id = self.request.get('action_id')
 		player_id = self.request.get('player_id')
 		interval = self.request.get('interval')
-		if self.request.get('start_show'):
+		item_id = self.request.get('item_id')
+		player_role = self.request.get('player_role')
+		wildcard_character_id = self.request.get('wildcard_character_id')
+		session_id = str(self.session.get('id'))
+		
+		# Admin is starting the show
+		if self.request.get('start_show') and self.context.get('is_admin', False):
 			show.start_time = get_mountain_time()
 			show.put()
+		# Get submitting an action vote for an interval
 		elif action_id and player_id and interval:
+			voted = True
 			action = ndb.Key(Action, int(action_id))
 			player = ndb.Key(Player, int(player_id))
-			session_id = str(self.session.get('id'))
-			voted = True
 			# If the user hasn't already voted
-			if not get_live_vote(interval, session_id, player):
+			if not player.get().get_live_action_vote(interval, session_id):
 				LiveActionVote(action=action,
 							   player=player,
 							   interval=int(interval),
 							   created=get_mountain_time().date(),
 							   session_id=session_id).put()
+		# Submitting an item vote
+		elif item_id:
+			voted = True
+			item = ndb.Key(Item, int(item_id))
+			# If the user hasn't already voted for an item
+			if not item.get().get_live_item_vote(session_id):
+				LiveItemVote(item=item,
+							 created=get_mountain_time().date(),
+							 session_id=session_id).put()
+		# Submitting a player role vote
+		elif player_id and player_role:
+			voted = True
+			player = ndb.Key(Player, int(player_id))
+			# If no role vote exists for this user
+			if not player.get().get_role_vote(show, player_role):
+				# Create an initial Role vote
+				role_vote = RoleVote(show=show,
+						 			 player=player,
+						 			 role=player_role).put()
+			# If the user hasn't already submitted a live role vote
+			if not role_vote.get().get_live_role_vote(session_id):
+				# Create the live role vote
+				LiveRoleVote(role_vote=role_vote,
+						 	 session_id=session_id).put()
+				voted_role = player_role
+		# Submitting a wildcard vote
+		elif wildcard_character_id:
+			voted = True
+			wildcard_character = ndb.Key(WildcardCharacter, int(wildcard_character_id))
+			# If the user hasn't already voted for a wildcard character
+			if not wildcard_character.get().get_live_wc_vote(session_id):
+				# Add the live vote for the wildcard character
+				LiveWildcardCharacterVote(wildcard_character=wildcard_character,
+							 			  session_id=session_id).put()
 						   
 		context	= {'show': show,
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
-				   'voted': voted}
+				   'voted': voted,
+				   'voted_role': voted_role}
 		self.response.out.write(template.render(self.path('show.html'),
 												self.add_context(context)))
 
@@ -311,8 +328,7 @@ class AddActions(ViewBase):
 					ActionVote.session_id == str(self.session.get('id', '0'))).get()
 			if not av:
 				ActionVote(action=action_key,
-					  	   session_id=str(self.session.get('id')),
-					  	   value=1).put()
+					  	   session_id=str(self.session.get('id'))).put()
 		if action:
 			context['actions'] = Action.query(Action.used == False,
 											  Action.key != action.key,
@@ -349,8 +365,7 @@ class AddThemes(ViewBase):
 					ThemeVote.session_id == str(self.session.get('id', '0'))).get()
 			if not tv:
 				ThemeVote(theme=theme_key,
-					  	  session_id=str(self.session.get('id')),
-					  	  value=1).put()
+					  	  session_id=str(self.session.get('id'))).put()
 		if theme:
 			# Have to sort first by theme key, since we query on it. Dumb...
 			themes = Theme.query(Theme.key != theme.key
@@ -435,13 +450,12 @@ class ActionsJSON(ViewBase):
 		# Get the player
 		player = show.get_player_by_interval(interval)
 		# Determine if we've already voted on this interval
-		live_vote = get_live_vote(interval, self.session.get('id'), player)
+		live_vote = player.get().get_live_action_vote(interval, self.session.get('id'))
 		now = get_mountain_time()
 		# Add timezone for comparisons
 		now_tz = back_to_tz(now)
 		interval_vote_end = show.start_time_tz + datetime.timedelta(minutes=int(interval)) \
 							  + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
-		print "vote end: %s now: %s" % (interval_vote_end, now_tz)
 		if now_tz > interval_vote_end:
 			player_action = show.get_player_action_by_interval(interval)
 			# If an action wasn't already chosen for this interval
@@ -476,31 +490,28 @@ class ActionsJSON(ViewBase):
 				# Set the action as used
 				voted_action.used = True
 				voted_action.put()
-				percent = get_live_percentage(voted_action,
-											  interval,
-											  player,
-											  all_votes=len(live_action_votes))
+				percent = player.get().get_live_action_percentage(voted_action,
+											  					  interval,
+			  	     											  len(live_action_votes))
 				action_data = {'current_action': voted_action.description,
 							   'percent': percent}
 			else:
-				all_votes = get_all_live_count(interval, player)
-				percent = get_live_percentage(player_action.action,
-											  interval,
-											  player,
-											  all_votes=all_votes)
+				all_votes = player.get().get_all_live_action_count(interval)
+				percent = player.get().get_live_action_percentage(player_action.action,
+											  					  interval,
+											  					  all_votes)
 				action_data = {'current_action': player_action.action.get().description,
 							   'percent': percent}
 		elif not live_vote:
 			# Return un-used actions, sorted by vote
 			unused_actions = Action.query(Action.used == False,
 										  ).order(-Action.vote_value).fetch(3)
-			all_votes = get_all_live_count(interval, player)
+			all_votes = player.get().get_all_live_action_count(interval)
 			action_data = []
 			for i in range(0, 3):
-				percent = get_live_percentage(unused_actions[i].key,
-											  interval,
-											  player,
-											  all_votes=all_votes)
+				percent = player.get().get_live_action_percentage(unused_actions[i].key,
+											  					  interval,
+											  					  all_votes)
 				try:
 					action_data.append({'name': unused_actions[i].description,
 									    'id': unused_actions[i].key.id(),
@@ -513,10 +524,93 @@ class ActionsJSON(ViewBase):
 		self.response.out.write(json.dumps(action_data))
 
 
+
+class HeroJSON(ViewBase):
+	def get(self, show_id, vote_type):
+		show = ndb.Key(Show, int(show_id)).get()
+		# Get the player
+		player = show.get_player_by_interval(interval)
+		# Determine if we've already voted on this interval
+		live_vote = player.get().get_live_action_vote(interval, self.session.get('id'))
+		now = get_mountain_time()
+		# Add timezone for comparisons
+		now_tz = back_to_tz(now)
+		interval_vote_end = show.start_time_tz + datetime.timedelta(minutes=int(interval)) \
+							  + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
+		if now_tz > interval_vote_end:
+			player_action = show.get_player_action_by_interval(interval)
+			# If an action wasn't already chosen for this interval
+			if not player_action.action:
+				# Get the actions that were voted on this interval
+				interval_voted_actions = []
+				live_action_votes = LiveActionVote.query(
+										LiveActionVote.player == player,
+										LiveActionVote.interval == int(interval),
+										LiveActionVote.created == now.date()).fetch()
+				# Add the voted on actions to a list
+				for lav in live_action_votes:
+					interval_voted_actions.append(lav.action)
+				# If the actions were voted on
+				if interval_voted_actions:
+					# Get the most voted, un-used action
+					voted_action = Action.query(
+									Action.used == False,
+									Action.key.IN(interval_voted_actions),
+									).order(-Action.live_vote_value).get()
+				# If no live action votes were cast
+				# take the highest regular voted action that hasn't been used
+				else:
+					# Get the most voted, un-used action
+					voted_action = Action.query(
+									Action.used == False,
+									).order(-Action.vote_value).get()
+				# Set the player action
+				player_action.time_of_action = now
+				player_action.action = voted_action.key
+				player_action.put()
+				# Set the action as used
+				voted_action.used = True
+				voted_action.put()
+				percent = player.get().get_live_action_percentage(voted_action,
+											  					  interval,
+			  	     											  len(live_action_votes))
+				action_data = {'current_action': voted_action.description,
+							   'percent': percent}
+			else:
+				all_votes = player.get().get_all_live_action_count(interval)
+				percent = player.get().get_live_action_percentage(player_action.action,
+											  					  interval,
+											  					  all_votes)
+				action_data = {'current_action': player_action.action.get().description,
+							   'percent': percent}
+		elif not live_vote:
+			# Return un-used actions, sorted by vote
+			unused_actions = Action.query(Action.used == False,
+										  ).order(-Action.vote_value).fetch(3)
+			all_votes = player.get().get_all_live_action_count(interval)
+			action_data = []
+			for i in range(0, 3):
+				percent = player.get().get_live_action_percentage(unused_actions[i].key,
+											  					  interval,
+											  					  all_votes)
+				try:
+					action_data.append({'name': unused_actions[i].description,
+									    'id': unused_actions[i].key.id(),
+									    'percent': percent})
+				except IndexError:
+					pass
+		else:
+			action_data = {'voted': True}
+		self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
+		self.response.out.write(json.dumps(action_data))
+
+
+
 class MockObject(object):
 	def __init__(self, **kwargs):
 		for key, value in kwargs.items():
 			setattr(self, key, value)
+
 
 class JSTestPage(ViewBase):
 	@admin_required

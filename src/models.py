@@ -6,6 +6,13 @@ from google.appengine.ext import ndb
 from timezone import get_mountain_time, back_to_tz
 
 
+def get_vote_percentage(subset_count, all_count):
+	# If either of the two counts are zero, return zero percent
+	if subset_count == 0 or all_count == 0:
+		return 0
+	return int(math.floor(100 * float(subset_count)/float(all_count)))
+
+
 class Player(ndb.Model):
 	name = ndb.StringProperty(required=True)
 	photo_filename = ndb.StringProperty(required=True)
@@ -14,11 +21,44 @@ class Player(ndb.Model):
 	@property
 	def img_path(self):
 		return "/static/img/players/%s" % self.photo_filename
+	
+	@property
+	def get_live_action_vote(self, interval, session_id):
+		return LiveActionVote.query(
+					LiveActionVote.player == self.key,
+					LiveActionVote.interval == int(interval),
+					LiveActionVote.created == get_mountain_time().date(),
+					LiveActionVote.session_id == str(session_id)).get()
+
+	@property
+	def get_all_live_action_count(self, interval):
+		return LiveActionVote.query(
+						LiveActionVote.player == self.key,
+						LiveActionVote.interval == int(interval),
+						LiveActionVote.created == get_mountain_time().date()).count()
+
+	@property
+	def get_live_action_percentage(self, action, interval, all_votes):
+		action_votes = LiveActionVote.query(
+						LiveActionVote.action == action,
+						LiveActionVote.player == self.key,
+						LiveActionVote.interval == int(interval),
+						LiveActionVote.created == get_mountain_time().date()).count()
+		return get_vote_percentage(action_votes, all_votes)
+	
+	@property
+	def get_role_vote(self, show, role):
+		return RoleVote.query(
+					RoleVote.player == self.key,
+					RoleVote.show == show,
+					RoleVote.role == role).get()
 
 
 class Show(ndb.Model):
 	scheduled = ndb.DateTimeProperty()
 	theme = ndb.StringProperty()
+	style = ndb.StringProperty(required=True, choices=['interval', 'hero'])
+	act = ndb.StringProperty(required=True, choices=[1, 2])
 	length = ndb.IntegerProperty(required=True)
 	start_time = ndb.DateTimeProperty()
 	end_time = ndb.DateTimeProperty()
@@ -97,6 +137,11 @@ class Show(ndb.Model):
 		return super(Show, self).put(*args, **kwargs)
 
 
+class ShowPlayer(ndb.Model):
+	show = ndb.KeyProperty(kind=Show, required=True)
+	player = ndb.KeyProperty(kind=Player, required=True)
+
+
 class Action(ndb.Model):
 	description = ndb.StringProperty(required=True)
 	created_date = ndb.DateProperty(required=True)
@@ -105,63 +150,19 @@ class Action(ndb.Model):
 	live_vote_value = ndb.IntegerProperty(default=0)
 
 	def put(self, *args, **kwargs):
-		self.created_date =  get_mountain_time()
+		self.created_date = get_mountain_time()
 		return super(Action, self).put(*args, **kwargs)	
-
-
-class Theme(ndb.Model):
-	created_date = ndb.DateTimeProperty(required=True)
-	name = ndb.StringProperty(required=True)
-	vote_value = ndb.IntegerProperty(default=0)
-	
-	def put(self, *args, **kwargs):
-		self.created_date =  get_mountain_time()
-		return super(Theme, self).put(*args, **kwargs)
-	
-
-class PlayerAction(ndb.Model):
-	interval = ndb.IntegerProperty(required=True)
-	player = ndb.KeyProperty(kind=Player)
-	time_of_action = ndb.DateTimeProperty()
-	action = ndb.KeyProperty(kind=Action)
-
-	@property
-	def time_of_action_tz(self):
-		return back_to_tz(self.time_of_action)
-
-
-class ShowPlayer(ndb.Model):
-	show = ndb.KeyProperty(kind=Show, required=True)
-	player = ndb.KeyProperty(kind=Player, required=True)
-
-
-class ShowAction(ndb.Model):
-	show = ndb.KeyProperty(kind=Show, required=True)
-	player_action = ndb.KeyProperty(kind=PlayerAction, required=True)
 
 
 class ActionVote(ndb.Model):
 	action = ndb.KeyProperty(kind=Action, required=True)
-	value = ndb.IntegerProperty(required=True, choices=[1, -1])
 	session_id = ndb.StringProperty(required=True)
 	
 	def put(self, *args, **kwargs):
 		action = Action.query(Action.key == self.action).get()
-		action.vote_value += self.value
+		action.vote_value += 1
 		action.put()
 		return super(ActionVote, self).put(*args, **kwargs)
-
-
-class ThemeVote(ndb.Model):
-	theme = ndb.KeyProperty(kind=Theme, required=True)
-	value = ndb.IntegerProperty(required=True, choices=[1, -1])
-	session_id = ndb.StringProperty(required=True)
-
-	def put(self, *args, **kwargs):
-		theme = Theme.query(Theme.key == self.theme).get()
-		theme.vote_value += self.value
-		theme.put()
-		return super(ThemeVote, self).put(*args, **kwargs)
 
 
 class LiveActionVote(ndb.Model):
@@ -176,3 +177,145 @@ class LiveActionVote(ndb.Model):
 		action.live_vote_value += 1
 		action.put()
 		return super(LiveActionVote, self).put(*args, **kwargs)
+
+
+class PlayerAction(ndb.Model):
+	interval = ndb.IntegerProperty(required=True)
+	player = ndb.KeyProperty(kind=Player)
+	time_of_action = ndb.DateTimeProperty()
+	action = ndb.KeyProperty(kind=Action)
+
+	@property
+	def time_of_action_tz(self):
+		return back_to_tz(self.time_of_action)
+
+
+class ShowAction(ndb.Model):
+	show = ndb.KeyProperty(kind=Show, required=True)
+	player_action = ndb.KeyProperty(kind=PlayerAction, required=True)
+
+
+class Theme(ndb.Model):
+	created_date = ndb.DateTimeProperty(required=True)
+	name = ndb.StringProperty(required=True)
+	vote_value = ndb.IntegerProperty(default=0)
+	
+	def put(self, *args, **kwargs):
+		self.created_date = get_mountain_time()
+		return super(Theme, self).put(*args, **kwargs)
+
+
+class ThemeVote(ndb.Model):
+	theme = ndb.KeyProperty(kind=Theme, required=True)
+	session_id = ndb.StringProperty(required=True)
+
+	def put(self, *args, **kwargs):
+		theme = Theme.query(Theme.key == self.theme).get()
+		theme.vote_value += 1
+		theme.put()
+		return super(ThemeVote, self).put(*args, **kwargs)
+
+
+class Item(ndb.Model):
+	created_date = ndb.DateTimeProperty(required=True)
+	name = ndb.StringProperty(required=True)
+	vote_value = ndb.IntegerProperty(default=0)
+	live_vote_value = ndb.IntegerProperty(default=0)
+	
+	def put(self, *args, **kwargs):
+		self.created_date = get_mountain_time()
+		return super(Item, self).put(*args, **kwargs)
+	
+	@property
+	def get_live_item_vote(self, session_id):
+		return LiveItemVote.query(
+					LiveItemVote.item == self.key,
+					LiveItemVote.session_id == str(session_id)).get()
+
+
+class ItemVote(ndb.Model):
+	item = ndb.KeyProperty(kind=Item, required=True)
+	session_id = ndb.StringProperty(required=True)
+	
+	def put(self, *args, **kwargs):
+		item = Item.query(Item.key == self.item).get()
+		item.vote_value += 1
+		item.put()
+		return super(ItemVote, self).put(*args, **kwargs)
+
+
+class LiveItemVote(ndb.Model):
+	item = ndb.KeyProperty(kind=Item, required=True)
+	session_id = ndb.StringProperty(required=True)
+
+	def put(self, *args, **kwargs):
+		item = Item.query(Item.key == self.item).get()
+		item.live_vote_value += 1
+		item.put()
+		return super(LiveItemVote, self).put(*args, **kwargs)
+
+
+class WildcardCharacter(ndb.Model):
+	created_date = ndb.DateTimeProperty(required=True)
+	name = ndb.StringProperty(required=True)
+	vote_value = ndb.IntegerProperty(default=0)
+	live_vote_value = ndb.IntegerProperty(default=0)
+	
+	@property
+	def get_live_wc_vote(self, session_id):
+		return LiveWildcardCharacterVote.query(
+					LiveWildcardCharacterVote.wildcard_character == self.key,
+					LiveWildcardCharacterVote.session_id == str(session_id)).get()
+	
+	def put(self, *args, **kwargs):
+		self.created_date = get_mountain_time()
+		return super(WildcardCharacter, self).put(*args, **kwargs)
+
+
+class WildcardCharacterVote(ndb.Model):
+	wildcard_character = ndb.KeyProperty(kind=WildcardCharacter, required=True)
+	session_id = ndb.StringProperty(required=True)
+	
+	def put(self, *args, **kwargs):
+		wildcard_character = WildcardCharacter.query(
+			WildcardCharacter.key == self.wildcard_character).get()
+		wildcard_character.vote_value += 1
+		wildcard_character.put()
+		return super(WildcardCharacterVote, self).put(*args, **kwargs)
+
+
+class LiveWildcardCharacterVote(ndb.Model):
+	wildcard_character = ndb.KeyProperty(kind=WildcardCharacter, required=True)
+	session_id = ndb.StringProperty(required=True)
+
+	def put(self, *args, **kwargs):
+		wildcard_character = WildcardCharacter.query(
+			WildcardCharacter.key == self.wildcard_character).get()
+		wildcard_character.live_vote_value += 1
+		wildcard_character.put()
+		return super(LiveWildcardCharacterVote, self).put(*args, **kwargs)
+
+
+class RoleVote(ndb.Model):
+	show = ndb.KeyProperty(kind=Show, required=True)
+	player = ndb.KeyProperty(kind=Player, required=True)
+	role = ndb.StringProperty(required=True, choices=['hero',
+													   'villain',
+													   'shapeshifter'])
+	live_vote_value = ndb.IntegerProperty(default=0)
+
+	@property
+	def get_live_role_vote(self, session_id):
+		return LiveRoleVote.query(
+					LiveRoleVote.role_vote == self.key,
+					LiveRoleVote.session_id == str(session_id)).get()
+
+
+class LiveRoleVote(ndb.Model):
+	role_vote = ndb.KeyProperty(kind=RoleVote, required=True)
+	session_id = ndb.StringProperty(required=True)
+
+	def put(self, *args, **kwargs):
+		self.role_vote.live_vote_value += 1
+		self.role_vote.save()
+		return super(LiveRoleVote, self).put(*args, **kwargs)

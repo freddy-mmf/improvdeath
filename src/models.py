@@ -58,6 +58,51 @@ class Player(ndb.Model):
 					RoleVote.role == role).get()
 
 
+class Item(ndb.Model):
+	created_date = ndb.DateTimeProperty(required=True)
+	name = ndb.StringProperty(required=True)
+	used = ndb.BooleanProperty(default=False)
+	vote_value = ndb.IntegerProperty(default=0)
+	live_vote_value = ndb.IntegerProperty(default=0)
+	
+	@property
+	def get_live_item_vote(self, session_id):
+		return LiveItemVote.query(
+					LiveItemVote.item == self.key,
+					LiveItemVote.session_id == str(session_id)).get()
+	
+	def live_vote_percent(self, show):
+		all_count = LiveItemVote.query(LiveItemVote.show == show).count()
+		return get_vote_percentage(self.live_vote_value, all_count)
+	
+	def put(self, *args, **kwargs):
+		self.created_date = get_mountain_time()
+		return super(Item, self).put(*args, **kwargs)
+
+
+class WildcardCharacter(ndb.Model):
+	created_date = ndb.DateTimeProperty(required=True)
+	name = ndb.StringProperty(required=True)
+	used = ndb.BooleanProperty(default=False)
+	vote_value = ndb.IntegerProperty(default=0)
+	live_vote_value = ndb.IntegerProperty(default=0)
+	
+	@property
+	def get_live_wc_vote(self, session_id):
+		return LiveWildcardCharacterVote.query(
+					LiveWildcardCharacterVote.wildcard_character == self.key,
+					LiveWildcardCharacterVote.session_id == str(session_id)).get()
+	
+	def live_vote_percent(self, show):
+		all_count = LiveWildcardCharacterVote.query(
+			LiveWildcardCharacterVote.show == show).count()
+		return get_vote_percentage(self.live_vote_value, all_count)
+	
+	def put(self, *args, **kwargs):
+		self.created_date = get_mountain_time()
+		return super(WildcardCharacter, self).put(*args, **kwargs)
+
+
 class Show(ndb.Model):
 	scheduled = ndb.DateTimeProperty()
 	theme = ndb.StringProperty()
@@ -66,10 +111,10 @@ class Show(ndb.Model):
 	length = ndb.IntegerProperty(required=True)
 	start_time = ndb.DateTimeProperty()
 	end_time = ndb.DateTimeProperty()
-	item_vote_init = ndb.DateTimeProperty()
-	role_vote_init = ndb.DateTimeProperty()
-	wildcard_vote_init = ndb.DateTimeProperty()
-	shapeshifter_vote_init = ndb.DateTimeProperty()
+	item_vote_end = ndb.DateTimeProperty()
+	role_vote_end = ndb.DateTimeProperty()
+	wildcard_vote_end = ndb.DateTimeProperty()
+	shapeshifter_vote_end = ndb.DateTimeProperty()
 	item = ndb.KeyProperty(kind=Item)
 	hero = ndb.KeyProperty(kind=Player)
 	villain = ndb.KeyProperty(kind=Player)
@@ -261,28 +306,6 @@ class ThemeVote(ndb.Model):
 		return super(ThemeVote, self).put(*args, **kwargs)
 
 
-class Item(ndb.Model):
-	created_date = ndb.DateTimeProperty(required=True)
-	name = ndb.StringProperty(required=True)
-	used = ndb.BooleanProperty(default=False)
-	vote_value = ndb.IntegerProperty(default=0)
-	live_vote_value = ndb.IntegerProperty(default=0)
-	
-	@property
-	def get_live_item_vote(self, session_id):
-		return LiveItemVote.query(
-					LiveItemVote.item == self.key,
-					LiveItemVote.session_id == str(session_id)).get()
-	
-	def live_vote_percent(self, show):
-		all_count = LiveItemVote.query(LiveItemVote.show == show).count()
-		return get_vote_percentage(self.live_vote_value, all_count)
-	
-	def put(self, *args, **kwargs):
-		self.created_date = get_mountain_time()
-		return super(Item, self).put(*args, **kwargs)
-
-
 class ItemVote(ndb.Model):
 	item = ndb.KeyProperty(kind=Item, required=True)
 	session_id = ndb.StringProperty(required=True)
@@ -304,29 +327,6 @@ class LiveItemVote(ndb.Model):
 		item.live_vote_value += 1
 		item.put()
 		return super(LiveItemVote, self).put(*args, **kwargs)
-
-
-class WildcardCharacter(ndb.Model):
-	created_date = ndb.DateTimeProperty(required=True)
-	name = ndb.StringProperty(required=True)
-	used = ndb.BooleanProperty(default=False)
-	vote_value = ndb.IntegerProperty(default=0)
-	live_vote_value = ndb.IntegerProperty(default=0)
-	
-	@property
-	def get_live_wc_vote(self, session_id):
-		return LiveWildcardCharacterVote.query(
-					LiveWildcardCharacterVote.wildcard_character == self.key,
-					LiveWildcardCharacterVote.session_id == str(session_id)).get()
-	
-	def live_vote_percent(self, show):
-		all_count = LiveWildcardCharacterVote.query(
-			LiveWildcardCharacterVote.show == show).count()
-		return get_vote_percentage(self.live_vote_value, all_count)
-	
-	def put(self, *args, **kwargs):
-		self.created_date = get_mountain_time()
-		return super(WildcardCharacter, self).put(*args, **kwargs)
 
 
 class WildcardCharacterVote(ndb.Model):

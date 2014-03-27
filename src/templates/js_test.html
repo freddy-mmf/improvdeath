@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 
-{% block add_head %}{% include "show_poll_js.html" %}{% endblock %}
+{% block add_head %}
+	{% include "show_header.html" %}
+{% endblock %}
 
 {% block test-js-selected %}class="active"{% endblock %}
 
 {% block content %}
 	<div class="container-fluid">
-		{% include "show_voting.html" %}
+		{% include "interval_show_voting.html" %}
 	</div>
 {% endblock %}

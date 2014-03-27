@@ -1,0 +1,51 @@
+<link rel="stylesheet" type="text/css" href="{{css_path}}jquery.countdown.css">
+
+<script src="{{js_path}}jquery.playSound.js"></script>
+<script src="{{js_path}}jquery.plugin.min.js"></script>
+<script src="{{js_path}}jquery.countdown.min.js"></script>
+
+<script>
+	$( document ).ready(function() {
+		function is_defined(variable, dflt) {
+			return typeof variable === "undefined" ? dflt : variable;
+		}			
+		function progress(percent, $element, option_width) {
+			var p_percent = is_defined(percent, 0);
+			var p_option_width = is_defined(option_width, 0);
+			$element.width(p_option_width);
+			progressBarWidth = p_percent * p_option_width / 100;
+			$element.find('div').animate({ width: progressBarWidth }, 500).html(p_percent + "%&nbsp;");
+		}
+		function get_show_state() {
+			$.getJSON("/show_json/", function( data ) {
+				var show_state = data['state'];
+				var vote_display = data['display'];
+			});
+		}
+		{% include "interval_show_js.html" %}
+		// Hide all objects initially
+		$( "#init-players" ).hide();
+		$( "#player-action" ).hide();
+		// Hide voted action buttons until an action is voted
+		var voted_action_list = $(".voted-action-btn");
+		for (var i=0; i < voted_action_list.length; i++) {
+			$(voted_action_list[i]).hide();
+		}
+		{% if not mocked %}
+			setInterval(function(){
+				get_show_state();
+			},2000);
+		{% else %}
+		    var show_state = '{{show_state}}';
+		    var vote_display = '{{vote_display}}';
+		{% endif %}
+		if (show_state === 'interval') {
+			// Hide Nav Bar
+			$( "#top-nav-bar" ).hide();
+			run_interval_show();
+		}
+		if (show_state === 'role') {
+			run_interval_show();
+		}
+	});
+</script>

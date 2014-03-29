@@ -58,6 +58,17 @@ class Player(ndb.Model):
 					RoleVote.role == role).get()
 
 
+class Theme(ndb.Model):
+	created_date = ndb.DateTimeProperty(required=True)
+	name = ndb.StringProperty(required=True)
+	used = ndb.BooleanProperty(default=False)
+	vote_value = ndb.IntegerProperty(default=0)
+	
+	def put(self, *args, **kwargs):
+		self.created_date = get_mountain_time()
+		return super(Theme, self).put(*args, **kwargs)
+
+
 class Item(ndb.Model):
 	created_date = ndb.DateTimeProperty(required=True)
 	name = ndb.StringProperty(required=True)
@@ -105,7 +116,7 @@ class WildcardCharacter(ndb.Model):
 
 class Show(ndb.Model):
 	scheduled = ndb.DateTimeProperty()
-	theme = ndb.StringProperty()
+	theme = ndb.KeyProperty(kind=Theme)
 	style = ndb.StringProperty(required=True, choices=['interval', 'hero'])
 	act = ndb.StringProperty(required=True, choices=[1, 2])
 	length = ndb.IntegerProperty(required=True)
@@ -224,6 +235,21 @@ class Show(ndb.Model):
 				player_action.time_of_action = self.start_time + \
 									  datetime.timedelta(minutes=player_action.interval)
 				player_action.put()
+		# If a theme was specified, set the theme as used
+		if self.theme:
+			theme_entity = self.theme.get()
+			theme_entity.used = True
+			theme_entity.put()
+		# If an item was specified, set the item as used
+		if self.item:
+			item_entity = self.item.get()
+			item_entity.used = True
+			item_entity.put()
+		# If a character was specified, set the item as used
+		if self.wildcard_character:
+			wildcard_character_entity = self.wildcard_character.get()
+			wildcard_character_entity.used = True
+			wildcard_character_entity.put()
 		return super(Show, self).put(*args, **kwargs)
 
 
@@ -283,16 +309,6 @@ class PlayerAction(ndb.Model):
 class ShowAction(ndb.Model):
 	show = ndb.KeyProperty(kind=Show, required=True)
 	player_action = ndb.KeyProperty(kind=PlayerAction, required=True)
-
-
-class Theme(ndb.Model):
-	created_date = ndb.DateTimeProperty(required=True)
-	name = ndb.StringProperty(required=True)
-	vote_value = ndb.IntegerProperty(default=0)
-	
-	def put(self, *args, **kwargs):
-		self.created_date = get_mountain_time()
-		return super(Theme, self).put(*args, **kwargs)
 
 
 class ThemeVote(ndb.Model):

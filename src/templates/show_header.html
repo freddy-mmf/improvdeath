@@ -18,11 +18,11 @@
 		}
 		function get_show_state() {
 			$.getJSON("/show_json/", function( data ) {
-				var show_state = data['state'];
-				var vote_display = data['display'];
+				 return data
 			});
 		}
 		{% include "interval_show_js.html" %}
+		{% include "hero_show_js.html" %}
 		// Hide all objects initially
 		$( "#init-players" ).hide();
 		$( "#player-action" ).hide();
@@ -33,7 +33,9 @@
 		}
 		{% if not mocked %}
 			setInterval(function(){
-				get_show_state();
+				data = get_show_state();
+				var vote_display = data['display'];
+				var show_state = data['state'];
 			},2000);
 		{% else %}
 		    var show_state = '{{show_state}}';
@@ -45,7 +47,7 @@
 			run_interval_show();
 		}
 		if (show_state === 'role') {
-			run_interval_show();
+			run_role_vote();
 		}
 	});
 </script>

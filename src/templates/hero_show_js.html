@@ -66,8 +66,8 @@ function run_interval_show(){
 				// Pull from the json to get the voting options
 				$.get(interval_url, function( data ) {
 				{% else%}
-					var data = [{"name": "Option 1", "id": 47, "percent": 30},
-								{"name": "Option 2", "id": 72, "percent": 60},
+					var data = [{"name": "Option 1", "id": 47, "percent": 60},
+								{"name": "The longest option that ever was because you never know what people are going to vote for because they are crazy", "id": 72, "percent": 30},
 								{"name": "Option 3", "id": 53, "percent": 10}];
 				{% endif %}
 					// If the user has already voted
@@ -111,8 +111,8 @@ function run_interval_show(){
 				{% if not mocked %}
 				$.getJSON(interval_url, function( data ) {
 				{% else %}
-					var data = {"current_action": "Option 2",
-								"percent": "60",
+					var data = {"current_action": "These are all super long to try and test the bounds of how big this is",
+								"percent": "70",
 								};			   
 				{% endif %}
 					$(voted_action_select).html(data['current_action']);

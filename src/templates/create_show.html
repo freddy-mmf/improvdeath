@@ -31,7 +31,11 @@ $(document).ready(function(){
 		<div class="form-group">
 			<label class="col-md-2 control-label">Theme:</label>
 			<div class="col-sm-2">
-				<input type="text" class="form-control" name="theme">
+				<select name="theme_list" multiple class="form-control">
+				  {% for theme in themes %}
+					<option value="{{theme.key.id}}">{{theme.name}}</option>
+				  {% endfor %}
+				</select>
 			</div>
 		</div>
 		<div class="form-group">

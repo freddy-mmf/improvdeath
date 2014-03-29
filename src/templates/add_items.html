@@ -10,7 +10,7 @@
 
 {% block content %}
 	<div class="container-fluid">
-		{% if show_today %}
+		{% if future_show %}
 			<div class="row">
 				<div class="col-md-5 col-md-offset-1">
 					{% if created %}
@@ -63,7 +63,7 @@
 			</div>
 		{% else %}
 			<div class="row">
-				<div class="col-md-4 label label-info" style="font-size:large;">Sorry! There's no show scheduled today!</div>
+				<div class="col-md-4 label label-info" style="font-size:large;">Sorry! No future shows exist yet!</div>
 			</div>
 		{% endif %}
 	</div>

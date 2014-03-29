@@ -21,10 +21,11 @@
 import os
 import webapp2
 
-from views import (MainPage, ShowPage, CreateShow, AddPlayers, AddActions,
-				   AddThemes, DeleteShows, DeleteActions, DeleteThemes,
-				   ActionsJSON, JSTestPage, RobotsTXT, CurrentTime,
-				   ShowJSON)
+from views_base import RobotsTXT
+from user_views import (MainPage, ShowPage, AddActions, AddThemes,
+						AddItems, AddCharacters, OtherShows)
+from admin_views import (CreateShow, DeleteTools, JSTestPage, AddPlayers)
+from json_views import (ActionsJSON, CurrentTime, ShowJSON)
 
 
 config= {'webapp2_extras.sessions': {
@@ -34,19 +35,22 @@ config= {'webapp2_extras.sessions': {
 
 
 app = webapp2.WSGIApplication([
+	# Robots.txt
+	(r'/robots.txt', RobotsTXT),
+	# User pages
     (r'/', MainPage),
-    (r'/robots.txt', RobotsTXT),
     (r'/show/(\d+)/', ShowPage),
-    (r'/create_show/', CreateShow),
     (r'/add_actions/', AddActions),
-    (r'/add_players/', AddPlayers),
     (r'/add_themes/', AddThemes),
-    (r'/delete_shows/', DeleteShows),
-    (r'/delete_actions/', DeleteActions),
-    (r'/delete_themes/', DeleteThemes),
+    (r'/other_shows/', OtherShows),
+    # Admin URLS
+    (r'/create_show/', CreateShow),
+    (r'/add_players/', AddPlayers),
+    (r'/delete_tools/', DeleteTools),
+    (r'/js_test/', JSTestPage),
+    # JSON ENDPOINTS
     (r'/actions_json/(\d+)/(\d+)/', ActionsJSON),
     (r'/show_json/(\d+)/', ShowJSON),
-    (r'/js_test/', JSTestPage),
     (r'/current_time/', CurrentTime),
 ],
   config=config,

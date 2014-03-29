@@ -25,3 +25,9 @@ indexes:
   properties:
   - name: used
   - name: created_date
+
+- kind: Theme
+  properties:
+  - name: used
+  - name: vote_value
+    direction: desc

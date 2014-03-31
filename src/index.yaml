@@ -26,7 +26,19 @@ indexes:
   - name: used
   - name: created_date
 
+- kind: Item
+  properties:
+  - name: used
+  - name: vote_value
+    direction: desc
+
 - kind: Theme
+  properties:
+  - name: used
+  - name: vote_value
+    direction: desc
+
+- kind: WildcardCharacter
   properties:
   - name: used
   - name: vote_value

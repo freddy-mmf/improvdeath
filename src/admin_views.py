@@ -71,11 +71,13 @@ class CreateShow(ViewBase):
 class DeleteTools(ViewBase):
 	@admin_required
 	def get(self):
-		actions = Action.query(
-			Action.used == False).fetch()
 		context = {'shows': Show.query().fetch(),
-				   'actions': actions}
-		self.response.out.write(template.render(self.path('delete_shows.html'),
+				   'actions': Action.query(Action.used == False).fetch(),
+				   'items': Item.query(Item.used == False).fetch(),
+				   'characters': WildcardCharacter.query(
+				   					WildcardCharacter.used == False).fetch(),
+				   'themes': Theme.query(Theme.used == False).fetch()}
+		self.response.out.write(template.render(self.path('delete_tools.html'),
 												self.add_context(context)))
 
 	@admin_required

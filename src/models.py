@@ -117,8 +117,6 @@ class WildcardCharacter(ndb.Model):
 class Show(ndb.Model):
 	scheduled = ndb.DateTimeProperty()
 	theme = ndb.KeyProperty(kind=Theme)
-	style = ndb.StringProperty(required=True, choices=['interval', 'hero'])
-	act = ndb.StringProperty(required=True, choices=[1, 2])
 	length = ndb.IntegerProperty(required=True)
 	start_time = ndb.DateTimeProperty()
 	end_time = ndb.DateTimeProperty()

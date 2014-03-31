@@ -36,7 +36,7 @@
 					<li {% block add-theme-selected %}{% endblock %}><a href="/add_themes/"><strong>Themes</strong> Add/Vote</a></li>
 					<li {% block other-shows-selected %}{% endblock %}><a href="/other_shows/">Other Shows</a></li>
 					{% if is_admin %}
-						<li class="dropdown">
+						<li class="dropdown{% block admin-selected %}{% endblock %}">
     						<a class="dropdown-toggle" data-toggle="dropdown" href="#">
       							Admin <span class="caret"></span>
     						</a>

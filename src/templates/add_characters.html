@@ -6,26 +6,30 @@
 <link rel="stylesheet" href="{{css_path}}jquery.upvote.css">
 {% endblock %}
 
-{% block add-action-selected %}class="active"{% endblock %}
+{% block add-character-selected %}class="active"{% endblock %}
 
 {% block content %}
 	<div class="container-fluid">
-		{% if future_show %}
+		{% if created %}
 			<div class="row">
 				<div class="col-md-5 col-md-offset-1">
-					{% if created %}
-						<div class="label label-info" style="font-size:large;">Action Added Successfully!</div>
-					{% endif %}
-					<div class="panel panel-danger">
-						<div class="panel-heading x-large-font">Add Action</div>
+					<div class="label label-info" style="font-size:large;">Character Added Successfully!</div>
+				</div>
+			</div>
+		{% endif %}
+		{% if show_today %}
+			<div class="row">
+				<div class="col-md-5 col-md-offset-1">
+					<div class="panel panel-info">
+						<div class="panel-heading x-large-font">Add Character</div>
 						<div class="panel-body">
-							<form class="form-horizontal" role="form" action="/add_actions/" method="post">
+							<form class="form-horizontal" role="form" action="/add_characters/" method="post">
 								<div class="form-group">
 									<div class="col-md-9">
-										<input type="text" class="form-control" name="description">
+										<input type="text" class="form-control" name="name">
 									</div>
 									<div>
-										<button type="submit" class="btn btn-default">Add Action</button>
+										<button type="submit" class="btn btn-default">Add Character</button>
 									</div>
 								</div>
 							</form>
@@ -36,21 +40,21 @@
 			<div class="row">
 				<div class="col-md-5 col-md-offset-1">
 					<div class="panel panel-primary">
-						<div class="panel-heading x-large-font">Vote for Actions</div>
+						<div class="panel-heading x-large-font">Vote for Characters</div>
 						<div class="panel-body">
-							{% for action in actions %}
+							{% for character in characters %}
 								<div class="row">
 									<div class="col-md-1">
 										<div class="upvote">
-											<form action="/add_actions/" method="post">
-												<input type="hidden" name="upvote" value="{{action.key.id}}"/>
+											<form action="/add_characters/" method="post">
+												<input type="hidden" name="upvote" value="{{character.key.id}}"/>
 												<button class="upvote" type="submit"></button>
 											</form> 
-											<span class="count">&nbsp;&nbsp;{{action.vote_value}}</span>
+											<span class="count">&nbsp;&nbsp;{{character.vote_value}}</span>
 										</div>
 									</div>
 									<div class="col-md-10">
-										<span class="word-wrap" style="color:black;font-size:large;">&nbsp;{{action.description}}</span>
+										<span class="word-wrap" style="color:black;font-size:large;">&nbsp;{{character.name}}</span>
 									</div>
 								</div>
 								{% if not forloop.last %}
@@ -63,7 +67,7 @@
 			</div>
 		{% else %}
 			<div class="row">
-				<div class="col-md-4 label label-info" style="font-size:large;">Sorry! No future shows exist yet!</div>
+				<div class="col-md-4 label label-info" style="font-size:large;">Sorry! There's no show scheduled today!</div>
 			</div>
 		{% endif %}
 	</div>

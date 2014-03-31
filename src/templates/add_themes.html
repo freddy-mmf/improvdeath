@@ -10,12 +10,16 @@
 
 {% block content %}
 	<div class="container-fluid">
+		{% if created %}
+			<div class="row">
+				<div class="col-md-5 col-md-offset-1">
+					<div class="label label-info" style="font-size:large;">Theme Added Successfully!</div>
+				</div>
+			</div>
+		{% endif %}
 		<div class="row">
 			<div class="col-md-5 col-md-offset-1">
-				{% if created %}
-					<div class="label label-info" style="font-size:large;">Theme Added Successfully!</div>
-				{% endif %}
-				<div class="panel panel-success">
+				<div class="panel panel-warning">
 					<div class="panel-heading x-large-font">Add Theme</div>
 					<div class="panel-body">
 						<form class="form-horizontal" role="form" action="/add_themes/" method="post">

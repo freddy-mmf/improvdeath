@@ -44,7 +44,8 @@ app = webapp2.WSGIApplication([
     (r'/add_items/', AddItems),
     (r'/add_characters/', AddCharacters),
     (r'/add_themes/', AddThemes),
-    (r'/other_shows/', OtherShows),
+    (r'/other_shows/$', OtherShows),
+    (r'/other_shows/(\d+)/', OtherShows),
     # Admin URLS
     (r'/create_show/', CreateShow),
     (r'/add_players/', AddPlayers),

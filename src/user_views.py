@@ -58,8 +58,14 @@ class ShowPage(ViewBase):
 		show = ndb.Key(Show, int(show_key)).get()
 		available_actions = len(Action.query(
 							   Action.used == False).fetch())
+		available_items = bool(Item.query(
+							   Item.used == False).fetch())
+		available_characters = bool(WildcardCharacter.query(
+							   	WildcardCharacter.used == False).fetch())
 		context	= {'show': show,
 				   'available_actions': available_actions,
+				   'available_items': available_items,
+				   'available_characters': available_characters,
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
 				   'ROLE_AFTER_INTERVAL': ROLE_AFTER_INTERVAL,
@@ -98,6 +104,10 @@ class ShowPage(ViewBase):
 		# Admin is starting the shapeshifter vote
 		elif self.request.get('shapeshifter_vote') and self.context.get('is_admin', False):
 			show.shapeshifter_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting the lover vote
+		elif self.request.get('lover_vote') and self.context.get('is_admin', False):
+			show.lover_vote_init = get_mountain_time()
 			show.put()
 		# Get submitting an action vote for an interval
 		elif action_id and player_id and interval:
@@ -313,14 +323,21 @@ class AddThemes(ViewBase):
 
 
 class OtherShows(ViewBase):
-	def get(self):
-		tomorrow_start = get_tomorrow_start()
-		# Get the future shows
-		future_shows = Show.query(
-			Show.scheduled > tomorrow_start).order(Show.scheduled).filter()
-		# Get the previous shows
-		previous_shows = Show.query(Show.end_time != None).order(-Show.end_time).filter()
-		context = {'future_shows': future_shows,
-				   'previous_shows': previous_shows}
+	def get(self, show_id=None):
+		# If a show was specified
+		if show_id:
+			show = ndb.Key(Show, int(show_id)).get()
+			context = {'show': show}
+		else:
+			tomorrow_start = get_tomorrow_start()
+			# Get the future shows
+			future_shows = Show.query(
+				Show.scheduled > tomorrow_start).order(Show.scheduled).filter()
+			# Get the previous shows
+			previous_shows = Show.query(
+								Show.end_time != None).order(
+									-Show.end_time).filter()
+			context = {'future_shows': future_shows,
+					   'previous_shows': previous_shows}
 		self.response.out.write(template.render(self.path('other_shows.html'),
 												self.add_context(context)))

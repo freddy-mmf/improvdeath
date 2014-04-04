@@ -131,34 +131,33 @@ class ShowJSON(ViewBase):
                 percent = show.wildcard_character.get().live_vote_percent(show.key)
                 response_json['result'] = {'name': show.wildcard_character.get().name,
                                               'percent': percent}
-        # If a shapeshifter has been triggered
-        elif state == 'shapeshifter':
-            # If we're in the voting phase for the shapeshifter
+        # If a shapeshifter or lover has been triggered
+        elif state == 'shapeshifter' or state == 'lover':
+            # If we're in the voting phase for the shapeshifter/lover
             if display == 'voting':
                 response_json['options'] = []
                 # Loop through all the players in the show
                 for player in show.players:
                     player_dict = {'player_name': player.name}
-                    # Get the live voting percentage for a shapeshifter
-                    shapeshifter_vote = get_or_create_role_vote(show,
-                                                                player, 
-                                                                'shapeshifter')
-                    percent = shapeshifter_vote.live_role_vote_percent
-                    player_dict['shapeshifter_percent'] = percent
+                    # Get the live voting percentage for a shapeshifter/lover
+                    change_vote = get_or_create_role_vote(show, player, state)
+                    percent = change_vote.live_role_vote_percent
+                    player_dict['percent'] = percent
                     response_json['options'].append(player_dict)
             # If we are showing the results of the vote
             elif display == 'result':
-                # Set the shapeshifter if it isn't already set
-                if not show.shapeshifter:
-                    voted_shapeshifter = RoleVote.query(RoleVote.role == 'shapeshifter',
+                # Set the shapeshifter/lover if it isn't already set
+                if not getattr(show, state, None):
+                    voted_change = RoleVote.query(RoleVote.role == state,
                                                    RoleVote.show == show.key,
                                     ).order(-RoleVote.live_vote_value,
                                             -RoleVote.vote_value).get()
-                    show.voted_shapeshifter = voted_shapeshifter.player
+                    show.voted_change = voted_change.player
                     show.put()
-                shapeshifter_percent = voted_shapeshifter.live_role_vote_percent
-                response_json['result'] = {'shapeshifter': show.shapeshifter.get().name,
-                                              'shapeshifter_percent': shapeshifter_percent}
+                percent = voted_change.live_role_vote_percent
+                change_player = getattr(show, state, None)
+                response_json['result'] = {state: change_player.get().name,
+                                           'percent': percent}
         
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
         self.response.out.write(json.dumps(action_data))

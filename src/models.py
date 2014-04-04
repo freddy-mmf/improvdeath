@@ -124,13 +124,13 @@ class Show(ndb.Model):
 	role_vote_end = ndb.DateTimeProperty()
 	wildcard_vote_end = ndb.DateTimeProperty()
 	shapeshifter_vote_end = ndb.DateTimeProperty()
+	lover_vote_end = ndb.DateTimeProperty()
 	item = ndb.KeyProperty(kind=Item)
 	hero = ndb.KeyProperty(kind=Player)
 	villain = ndb.KeyProperty(kind=Player)
 	wildcard_character = ndb.KeyProperty(kind=WildcardCharacter)
 	shapeshifter = ndb.KeyProperty(kind=Player)
-	
-	
+	lover = ndb.KeyProperty(kind=Player)
 	
 	@property
 	def start_time_tz(self):
@@ -190,7 +190,7 @@ class Show(ndb.Model):
 		now = get_mountain_time()
 		# Get timezone for comparisons
 		now_tz = back_to_tz(now)
-		vote_type_list = ['item', 'role', 'wildcard', 'shapeshifter']
+		vote_type_list = ['item', 'role', 'wildcard', 'shapeshifter', 'lover']
 		# Go through all the vote times to see if they've started
 		for vote_type in vote_type_list:
 			if vote_type == 'role':
@@ -384,7 +384,8 @@ class RoleVote(ndb.Model):
 	player = ndb.KeyProperty(kind=Player, required=True)
 	role = ndb.StringProperty(required=True, choices=['hero',
 													  'villain',
-													  'shapeshifter'])
+													  'shapeshifter',
+													  'lover'])
 	live_vote_value = ndb.IntegerProperty(default=0)
 
 	@property
@@ -408,7 +409,8 @@ class LiveRoleVote(ndb.Model):
 	player = ndb.KeyProperty(kind=Player, required=True)
 	role = ndb.StringProperty(required=True, choices=['hero',
 													   'villain',
-													   'shapeshifter'])
+													   'shapeshifter',
+													   'lover'])
 	session_id = ndb.StringProperty(required=True)
 
 	def put(self, *args, **kwargs):

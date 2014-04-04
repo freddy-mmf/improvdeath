@@ -26,15 +26,6 @@ function run_interval_show(){
 		console.log(elapsed_minutes);
 		// If we've hit an interval
 		if ({% if mocked == 'default' %}false{% else %}elapsed_minutes in intervals{% endif %}) {
-			var hide_vote_buttons = "#po-" + elapsed_minutes + "-1-btn,"
-									+ "#po-"  + elapsed_minutes + "-2-btn,"
-									+ "#po-" + elapsed_minutes + "-3-btn,"
-									+ "#pb-" + elapsed_minutes + "-1,"
-									+ "#pb-" + elapsed_minutes + "-2,"
-									+ "#pb-" + elapsed_minutes + "-3,"
-									+ "#pa-row-" + elapsed_minutes + "-1,"
-									+ "#pa-row-" + elapsed_minutes + "-2,"
-									+ "#pa-row-" + elapsed_minutes + "-3";
 			// If the current player number is different than the interval player number
 			if (current_player !== intervals[elapsed_minutes]) {
 				// Set the current player number to the interval number
@@ -66,35 +57,21 @@ function run_interval_show(){
 				// Pull from the json to get the voting options
 				$.get(interval_url, function( data ) {
 				{% else%}
-					var data = [{"name": "Option 1", "id": 47, "percent": 30},
-								{"name": "Option 2", "id": 72, "percent": 60},
-								{"name": "Option 3", "id": 53, "percent": 10}];
+					var data = [{"name": "Option 1", "id": 47, "percent": 30,
+									'hidden': {'player_id': 1, 'interval': elapsed_minutes}},
+								{"name": "Option 2", "id": 72, "percent": 60,
+									'hidden': {'player_id': 2, 'interval': elapsed_minutes}},
+								{"name": "Option 3", "id": 53, "percent": 10,
+									'hidden': {'player_id': 2, 'interval': elapsed_minutes}}];
 				{% endif %}
 					// If the user has already voted
 					if ({% if sample == "voted" %}true{% else %}"voted" in data{% endif %}) {
-						// Hide the voting buttons
-						$(hide_vote_buttons).hide();
 						$(voted_action_select).html("Vote Submitted!");
 						$(voted_action_select).show();
 					}
 					// Otherwise, set the voting options
 					else {
-						for (var option_num=0; option_num<=2; option_num++) {
-							if (option_num < data.length) {
-								var action_name = data[option_num]['name'];
-								var action_id = data[option_num]['id'];
-								var action_percent = data[option_num]['percent'];
-								var player_action_prefix = "#po-" + elapsed_minutes + "-" + (option_num + 1);
-								var prog_bar_prefix = "#pb-" + elapsed_minutes + "-" + (option_num + 1);
-								$(player_action_prefix + "-act").attr('value', action_id);
-								$(player_action_prefix + "-btn").attr('value', action_name);
-								progress(action_percent,
-										 $(prog_bar_prefix),
-										 $(player_action_prefix + "-btn").width());
-							}
-						}
-						// Show the voting buttons
-						$(hide_vote_buttons).show();
+						add_options($('#pa-' + current_player), 'action_id', data);
 					}
 				{% if not mocked %}
 				});

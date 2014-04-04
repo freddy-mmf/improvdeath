@@ -21,8 +21,44 @@
 				 return data
 			});
 		}
+		function add_options(element_id, submit_name, option_data) {
+			var all_progress_bars = $(element_id).find('div.progress-bar');
+			console.log($(all_progress_bars).size());
+			if ( $(all_progress_bars).size() == 0 ) {
+				for (var option_num in option_data) {
+					var option_row = $('<div class="row"></div>');
+					var option_column = $('<div class="col-sm-12"></div>');
+					var option_form = $('<form action="/show/{{show.key.id}}/" method="post"></form>');
+					$(option_row).append($(option_column));
+					$(option_column).append($(option_form));
+					var option_dict = option_data[option_num];
+					$('<input type="hidden" name="' + submit_name + '" value="' + option_dict['id'] + '" />').appendTo($(option_form));
+					for (var k in option_dict['hidden']) {
+						if (typeof option_dict['hidden'][k] !== 'function') {
+							$('<input type="hidden" name="' + k + '" value="' + option_dict['hidden'][k] + '" />').appendTo($(option_form));
+						}
+					}
+					var option_btn = $('<input type="submit" class="btn btn-primary btn-block word-wrap" value="' + option_dict['name'] + '"/>');
+					option_btn.appendTo($(option_form));
+					var option_percent = $('<div class="progress-bar"><div></div></div>');
+					progress(option_dict['percent'], $(option_percent), $(option_btn).width());
+					$(option_form).append($(option_percent));
+					$(element_id).append($(option_row));
+				}
+			}
+			else {
+				$(all_progress_bars).each(function(index) {
+					console.log(option_data[index]['percent']);
+					progress(option_data[index]['percent'], $(this), $(this).prev().width());
+				});
+			}
+		}
+		function add_user_voted(attach_element) {
+		}
+		function add_voted_option(attach_element, option_name) {
+		}
 		{% include "interval_show_js.html" %}
-		{% include "hero_show_js.html" %}
+		{% comment %}{% include "hero_show_js.html" %}{% endcomment %}
 		// Hide all objects initially
 		$( "#init-players" ).hide();
 		$( "#player-action" ).hide();
@@ -41,13 +77,20 @@
 		    var show_state = '{{show_state}}';
 		    var vote_display = '{{vote_display}}';
 		{% endif %}
-		if (show_state === 'interval') {
-			// Hide Nav Bar
-			$( "#top-nav-bar" ).hide();
-			run_interval_show();
-		}
-		if (show_state === 'role') {
-			run_role_vote();
+		// Run the current show state
+		switch (show_state) {
+			case 'interval':
+				$( "#top-nav-bar" ).hide();
+				$( "#start-screen" ).hide();
+				run_interval_show();
+				break;
+			case 'role':
+				$( "#top-nav-bar" ).hide();
+				$( "#start-screen" ).hide();
+				//run_role_vote();
+				break;
+			default:
+				$( "#start-screen" ).show();
 		}
 	});
 </script>

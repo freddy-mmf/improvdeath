@@ -22,9 +22,10 @@ import os
 import webapp2
 
 from views_base import RobotsTXT
-from user_views import (MainPage, ShowPage, AddActions, AddThemes,
+from user_views import (MainPage, LiveVote, AddActions, AddThemes,
 						AddItems, AddCharacters, OtherShows)
-from admin_views import (CreateShow, DeleteTools, JSTestPage, AddPlayers)
+from admin_views import (ShowPage, CreateShow, DeleteTools,
+					     JSTestPage, AddPlayers)
 from json_views import (ActionsJSON, CurrentTime, ShowJSON)
 
 
@@ -40,6 +41,7 @@ app = webapp2.WSGIApplication([
 	# User pages
     (r'/', MainPage),
     (r'/show/(\d+)/', ShowPage),
+    (r'/live_vote/', LiveVote),
     (r'/add_actions/', AddActions),
     (r'/add_items/', AddItems),
     (r'/add_characters/', AddCharacters),
@@ -51,10 +53,8 @@ app = webapp2.WSGIApplication([
     (r'/add_players/', AddPlayers),
     (r'/delete_tools/', DeleteTools),
     (r'/js_test/', JSTestPage),
-    # JSON ENDPOINTS
-    (r'/actions_json/(\d+)/(\d+)/', ActionsJSON),
+    # JSON ENDPOINT
     (r'/show_json/(\d+)/', ShowJSON),
-    (r'/current_time/', CurrentTime),
 ],
   config=config,
   debug=True)

@@ -2,111 +2,88 @@ function run_interval_show(){
 	var vote_end_played = false;
 	var current_player = "";
 	var hide_players_key = "{% for player_action in show.player_actions %}#player-{{forloop.counter}}{% if not forloop.last %},{% endif %}{% endfor %}";
-	var start_time = new Date('{{show.start_time_tz|date:"F j, Y H:i:s"}}');
-	var current_time = new Date(start_time.getTime());
 	var intervals = {{% for player_action in show.player_actions %}
 						{{player_action.interval}}: "{{forloop.counter}}"{% if not forloop.last %},{% endif %}
 					 {% endfor %}};
 	// Hide all player divs
 	$(hide_players_key).hide();
-	// Run the interval change immediately
-	change_interval();
-	window.setInterval(function(){
-	  change_interval();
-	}, 1000);
-	function change_interval(){
-		$.getJSON("/current_time/", function( data ) {
-			current_time.setHours(data['hour'],
-								  data['minute'],
-								  data['second']);
-		});
-		var elapsed_millis = current_time - start_time;
-		var elapsed_total_seconds = parseInt(elapsed_millis / 1000);
-		var elapsed_minutes = parseInt(elapsed_total_seconds / 60){% if mocked %} + 1{% endif %};
-		console.log(elapsed_minutes);
-		// If we've hit an interval
-		if ({% if mocked == 'default' %}false{% else %}elapsed_minutes in intervals{% endif %}) {
-			// If the current player number is different than the interval player number
-			if (current_player !== intervals[elapsed_minutes]) {
-				// Set the current player number to the interval number
-				current_player = intervals[elapsed_minutes];
-				$("#player-" + current_player).show();
-				{% if is_admin %}$.playSound('{{host_url}}{{audio_path}}vote-chime');{% endif %}
-				// Set the vote end sound to false
-				vote_end_played = false;
-			}
-			// Get the vote action, progress bar, and countdown selectors
-			var voted_action_select = "#va-" + elapsed_minutes + "-btn";
-			var final_prog_bar = "#pb-" + elapsed_minutes + "-final";
-			var countdown_select = "#glowing-layout-" + elapsed_minutes;
-			// Get the exact minute start of the interval
-			var interval_start = new Date(start_time.getTime());
-			interval_start.setMinutes(start_time.getMinutes() + elapsed_minutes);
-			// Get the ending vote time of the interval
-			var vote_end = new Date(interval_start.getTime());
-			vote_end.setSeconds(interval_start.getSeconds() + {{VOTE_AFTER_INTERVAL}});
-			var interval_url = "/actions_json/{{show.key.id}}/" + elapsed_minutes + "/";
-			console.log(interval_url);
-			// If we're still in the {{VOTE_AFTER_INTERVAL}} second voting window
-			if ({% if not mocked or mocked == 'full' %}current_time <= vote_end{% else %}{% if mocked == 'vote' %}true{% endif %}{% if mocked == 'action' %}false{% endif %}{% endif %}) {
-				// Set up the clock
-				$(countdown_select).countdown({until: vote_end, compact: true, 
-					layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
-				$(countdown_select).show();
-				{% if not mocked %}
-				// Pull from the json to get the voting options
-				$.get(interval_url, function( data ) {
-				{% else%}
-					var data = [{"name": "Option 1", "id": 47, "percent": 30,
-									'hidden': {'player_id': 1, 'interval': elapsed_minutes}},
-								{"name": "Option 2", "id": 72, "percent": 60,
-									'hidden': {'player_id': 2, 'interval': elapsed_minutes}},
-								{"name": "Option 3", "id": 53, "percent": 10,
-									'hidden': {'player_id': 2, 'interval': elapsed_minutes}}];
-				{% endif %}
-					// If the user has already voted
-					if ({% if sample == "voted" %}true{% else %}"voted" in data{% endif %}) {
-						$(voted_action_select).html("Vote Submitted!");
-						$(voted_action_select).show();
-					}
-					// Otherwise, set the voting options
-					else {
-						add_options($('#pa-' + current_player), 'action_id', data);
-					}
-				{% if not mocked %}
-				});
-				{% endif %}
-			}
-			// The {{VOTE_AFTER_INTERVAL}} second window has passed
-			else {
-				if ( vote_end_played === false) {
-					{% if is_admin %}$.playSound('{{host_url}}{{audio_path}}action-chime');{% endif %}
-					vote_end_played = true;
-				}
-				$(countdown_select).hide();
-				$(hide_vote_buttons).hide();
-				{% if not mocked %}
-				$.getJSON(interval_url, function( data ) {
-				{% else %}
-					var data = {"current_action": "Option 2",
-								"percent": "60",
-								};			   
-				{% endif %}
-					$(voted_action_select).html(data['current_action']);
-					$(voted_action_select).show();
-					progress(data["percent"],
-							 $(final_prog_bar),
-							 $(voted_action_select).width());
-					$(final_prog_bar).show();
-				{% if not mocked %}
-				});
-				{% endif %}
-			}
-			$( "#player-action" ).show();
-			// Hide all player divs
-			$(hide_players_key).hide();
-			// Show the current player
-			$("#player-" + intervals[elapsed_minutes]).show();
+	// If we've hit an interval
+	if ({% if mocked == 'default' %}false{% else %}elapsed_minutes in intervals{% endif %}) {
+		// If the current player number is different than the interval player number
+		if (current_player !== intervals[elapsed_minutes]) {
+			// Set the current player number to the interval number
+			current_player = intervals[elapsed_minutes];
+			$("#player-" + current_player).show();
+			{% if is_admin %}$.playSound('{{host_url}}{{audio_path}}vote-chime');{% endif %}
+			// Set the vote end sound to false
+			vote_end_played = false;
 		}
+		// Get the vote action, progress bar, and countdown selectors
+		var voted_action_select = "#va-" + elapsed_minutes + "-btn";
+		var final_prog_bar = "#pb-" + elapsed_minutes + "-final";
+		var countdown_select = "#glowing-layout-" + elapsed_minutes;
+		// Get the exact minute start of the interval
+		var interval_start = new Date(start_time.getTime());
+		interval_start.setMinutes(start_time.getMinutes() + elapsed_minutes);
+		// Get the ending vote time of the interval
+		var vote_end = new Date(interval_start.getTime());
+		vote_end.setSeconds(interval_start.getSeconds() + {{VOTE_AFTER_INTERVAL}});
+		var interval_url = "/actions_json/{{show.key.id}}/" + elapsed_minutes + "/";
+		console.log(interval_url);
+		// If we're still in the {{VOTE_AFTER_INTERVAL}} second voting window
+		if ({% if not mocked or mocked == 'full' %}current_time <= vote_end{% else %}{% if mocked == 'vote' %}true{% endif %}{% if mocked == 'action' %}false{% endif %}{% endif %}) {
+			// Set up the clock
+			$(countdown_select).countdown({until: vote_end, compact: true, 
+				layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
+			$(countdown_select).show();
+			{% if not mocked %}
+			// Pull from the json to get the voting options
+			$.get(interval_url, function( data ) {
+			{% else%}
+			{% endif %}
+				// If the user has already voted
+				if ({% if sample == "voted" %}true{% else %}"voted" in data{% endif %}) {
+					$(voted_action_select).html("Vote Submitted!");
+					$(voted_action_select).show();
+				}
+				// Otherwise, set the voting options
+				else {
+					add_options($('#pa-' + current_player), 'action_id', data);
+				}
+			{% if not mocked %}
+			});
+			{% endif %}
+		}
+		// The {{VOTE_AFTER_INTERVAL}} second window has passed
+		else {
+			if ( vote_end_played === false) {
+				{% if is_admin %}$.playSound('{{host_url}}{{audio_path}}action-chime');{% endif %}
+				vote_end_played = true;
+			}
+			$(countdown_select).hide();
+			$(hide_vote_buttons).hide();
+			{% if not mocked %}
+			$.getJSON(interval_url, function( data ) {
+			{% else %}
+				var data = {"current_action": "Option 2",
+							"percent": "60",
+							};			   
+			{% endif %}
+				$(voted_action_select).html(data['current_action']);
+				$(voted_action_select).show();
+				progress(data["percent"],
+						 $(final_prog_bar),
+						 $(voted_action_select).width());
+				$(final_prog_bar).show();
+			{% if not mocked %}
+			});
+			{% endif %}
+		}
+		$( "#player-action" ).show();
+		// Hide all player divs
+		$(hide_players_key).hide();
+		// Show the current player
+		$("#player-" + intervals[elapsed_minutes]).show();
+		
 	}
 }

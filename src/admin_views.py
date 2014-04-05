@@ -10,7 +10,7 @@ from google.appengine.api import users
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
 					WildcardCharacter, WildcardCharacterVote,
-					VOTE_AFTER_INTERVAL, ROLE_AFTER_INTERVAL, DISPLAY_VOTED)
+					VOTE_AFTER_INTERVAL, DISPLAY_VOTED)
 from timezone import get_mountain_time, back_to_tz
 
 
@@ -23,6 +23,71 @@ def admin_required(func):
             return webapp2.redirect(redirect_uri, abort=True)
         return func(*args, **kwargs)
     return decorated_view
+
+
+class ShowPage(ViewBase):
+	@admin_required
+	def get(self, show_id):
+		show = ndb.Key(Show, int(show_id)).get()
+		available_actions = len(Action.query(
+							   Action.used == False).fetch())
+		available_items = bool(Item.query(
+							   Item.used == False).fetch())
+		available_characters = bool(WildcardCharacter.query(
+							   	WildcardCharacter.used == False).fetch())
+		context	= {'show': show,
+				   'now_tz': back_to_tz(get_mountain_time()),
+				   'available_actions': available_actions,
+				   'available_items': available_items,
+				   'available_characters': available_characters,
+				   'host_url': self.request.host_url,
+				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
+		self.response.out.write(template.render(self.path('show.html'),
+												self.add_context(context)))
+	
+	@admin_required
+	def post(self, show_id):
+		show = ndb.Key(Show, int(show_id)).get()
+		# Admin is starting the show
+		if self.request.get('start_show') and self.context.get('is_admin', False):
+			show.start_time = get_mountain_time()
+			show.put()
+		# Admin is starting item vote
+		elif self.request.get('item_vote') and self.context.get('is_admin', False):
+			show.item_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting role vote
+		elif self.request.get('role_vote') and self.context.get('is_admin', False):
+			show.role_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting wildcard vote
+		elif self.request.get('wildcard_vote') and self.context.get('is_admin', False):
+			show.wildcard_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting the shapeshifter vote
+		elif self.request.get('shapeshifter_vote') and self.context.get('is_admin', False):
+			show.shapeshifter_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting the lover vote
+		elif self.request.get('lover_vote') and self.context.get('is_admin', False):
+			show.lover_vote_init = get_mountain_time()
+			show.put()
+		available_actions = len(Action.query(
+							   Action.used == False).fetch())
+		available_items = bool(Item.query(
+							   Item.used == False).fetch())
+		available_characters = bool(WildcardCharacter.query(
+							   	WildcardCharacter.used == False).fetch())
+		context	= {'show': show,
+				   'now_tz': back_to_tz(get_mountain_time()),
+				   'available_actions': available_actions,
+				   'available_items': available_items,
+				   'available_characters': available_characters,
+				   'host_url': self.request.host_url,
+				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
+		self.response.out.write(template.render(self.path('show.html'),
+												self.add_context(context)))
+		
 
 
 class CreateShow(ViewBase):
@@ -236,54 +301,62 @@ class MockObject(object):
 class JSTestPage(ViewBase):
 	@admin_required
 	def get(self):
-		
-		player_freddy = MockObject(get = {'name':'Freddy',
-						 			'photo_filename': 'freddy.jpg',
-						 			'date_added': get_mountain_time().date()})
-		player_dan = MockObject(get = {'name':'Dan',
-						 			'photo_filename': 'dan.jpg',
-						 			'date_added': get_mountain_time().date()})
-		player_jeff = MockObject(get = {'name':'Jeff',
-						 			'photo_filename': 'jeff.jpg',
-						 			'date_added': get_mountain_time().date()})
-		player_list = [player_freddy, player_dan, player_jeff]
-		
-		start_time = back_to_tz(get_mountain_time())
-		end_time = start_time + datetime.timedelta(minutes=4)
+		state = self.request.get('state', 'interval')
+		display = self.request.get('display', 'voting')
+		available_mock = [1,2,3]
+		three_options = [{"name": "Option 1", "percent": 30},
+					    {"name": "Option 2", "percent": 60},
+					    {"name": "Option 3", "percent": 10}]
+		five_options = [{"name": "Option 1", "percent": 20},
+					   {"name": "Option 2", "percent": 50},
+					   {"name": "Option 3", "percent": 10}
+					   {"name": "Option 4", "percent": 15}
+					   {"name": "Option 5", "percent": 5}]
+		player_options = [{'photo_filename': 'freddy.jpg', 'percent': 5},
+		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
+		 				  {'photo_filename': 'freddy.jpg', 'percent': 15},
+		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
+		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
+		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
+		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
+		 				  {'photo_filename': 'freddy.jpg', 'percent': 5}]
 		show_mock = type('Show',
 						 (object,),
 						 dict(scheduled = get_mountain_time(),
 							  player_actions = [],
-							  theme = 'Pirates',
+							  theme = type('Theme', (object,), dict(name = 'Pirates')),
 							  length = 4,
 							  start_time = start_time,
 							  end_time = end_time,
 							  start_time_tz = start_time,
 							  end_time_tz = end_time,
-							  running = True))
-		available_actions = []
-		for i in range(1, 4):
-			
-			player_action_mock = MockObject(interval = i,
-							  player = player_list[i-1],
-							  time_of_action = get_mountain_time(),
-							  action = None)
-			show_mock.player_actions.append(player_action_mock)
-			action_mock = MockObject(description = 'Option %s' % i,
-						 created_date = get_mountain_time().date(),
-						 used = False,
-						 vote_value = 0,
-						 live_vote_value = 0)
-			available_actions.append(action_mock)
+							  running = False))
+		if state == 'interval':
+			show_mock.running = True
+			if display == 'voting:
+				mock_data = {'player_name': 'Freddy',
+				             'player_photo': 'freddy.jpg',
+				             'options': three_options}
+			else:
+				mock_data = {'voted': 'Option 2',
+				             'percent': 60}
+		elif state == 'hero':
+			if display == 'voting:
+				mock_data = {'player_name': 'Freddy',
+				             'player_photo': 'freddy.jpg',
+				             'options': three_options}
+			else:
+				mock_data = {'voted': 'Option 2',
+				             'percent': 60}
+		
+
 		context	= {'show': show_mock,
-				   'available_actions': available_actions,
+				   'now_tz': back_to_tz(get_mountain_time()),
+				   'available_actions': available_mock,
+				   'available_items': available_mock,
+				   'available_characters': available_mock,
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
-				   'ROLE_AFTER_INTERVAL': ROLE_AFTER_INTERVAL,
-				   'DISPLAY_VOTED': DISPLAY_VOTED,
-				   'mocked': self.request.GET.get('mock', 'full'),
-				   'sample': self.request.GET.get('sample'),
-				   'is_admin': self.request.GET.get('is_admin'),
-				   'show_state': self.request.GET.get('show_state', 'interval')}
+				   'mocked': True}
 		self.response.out.write(template.render(self.path('js_test.html'),
 												self.add_context(context)))

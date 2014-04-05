@@ -9,10 +9,16 @@
   			<hr/>
   			<div class="row">
 				<div class="btn-group-vertical col-md-12">
-					{% if current_show.running or current_show.scheduled and not current_show.end_time %}
-						<a class-"text-center" href="/show/{{current_show.key.id}}/">
-							<div class="btn btn-primary btn-block btn-lg home-show-btn">Live Show Voting!</div>
-						</a>
+					{% if current_show.running or current_show.scheduled %}
+						{% if is_admin %}
+							<a class-"text-center" href="/show/{{current_show.key.id}}/">
+								<div class="btn btn-primary btn-block btn-lg home-show-btn">Show Admin</div>
+							</a>
+						{% else %}
+							<a class-"text-center" href="/live_vote/">
+								<div class="btn btn-primary btn-block btn-lg home-show-btn">Live Show Voting!</div>
+							</a>
+						{% endif %}
 					{% else %}
 						<div class="btn btn-primary btn-block btn-lg header-btn">No Current Show</div>
 					{% endif %}

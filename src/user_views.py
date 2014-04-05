@@ -9,7 +9,7 @@ from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
 					LiveActionVote, Item, ItemVote,
 					LiveItemVote, WildcardCharacter, WildcardCharacterVote,
 					LiveWildcardCharacterVote, RoleVote, LiveRoleVote,
-					VOTE_AFTER_INTERVAL, ROLE_AFTER_INTERVAL, DISPLAY_VOTED)
+					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES)
 from timezone import get_mountain_time
 
 
@@ -34,83 +34,36 @@ def show_today():
 
 class MainPage(ViewBase):
 	def get(self):
-		today_start = get_today_start()
-		tomorrow_start = get_tomorrow_start()
-
 		# Get the current show
 		current_show = Show.query(
-			Show.scheduled >= today_start,
-			Show.scheduled < tomorrow_start).order(-Show.scheduled).get()
-		# Get the future shows
-		future_shows = Show.query(
-			Show.scheduled > tomorrow_start).order(Show.scheduled).filter()
-		# Get the previous shows
-		previous_shows = Show.query(Show.end_time != None).order(-Show.end_time).filter()
-		context = {'current_show': current_show,
-				   'future_shows': future_shows,
-				   'previous_shows': previous_shows}
+			Show.scheduled >= get_today_start(),
+			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
+		context = {'current_show': current_show}
 		self.response.out.write(template.render(self.path('home.html'),
 												self.add_context(context)))
 
 
-class ShowPage(ViewBase):
-	def get(self, show_key):
-		show = ndb.Key(Show, int(show_key)).get()
-		available_actions = len(Action.query(
-							   Action.used == False).fetch())
-		available_items = bool(Item.query(
-							   Item.used == False).fetch())
-		available_characters = bool(WildcardCharacter.query(
-							   	WildcardCharacter.used == False).fetch())
-		context	= {'show': show,
-				   'available_actions': available_actions,
-				   'available_items': available_items,
-				   'available_characters': available_characters,
-				   'host_url': self.request.host_url,
-				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
-				   'ROLE_AFTER_INTERVAL': ROLE_AFTER_INTERVAL,
-				   'DISPLAY_VOTED': DISPLAY_VOTED}
-		self.response.out.write(template.render(self.path('show.html'),
+class LiveVote(ViewBase):
+	def get(self):
+		# Get the current show
+		show = Show.query(
+			Show.scheduled >= get_today_start(),
+			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
+		context	= {'show': show}
+		self.response.out.write(template.render(self.path('live_vote.html'),
 												self.add_context(context)))
 
-	def post(self, show_key):
-		voted = False
-		voted_role = None
-		show = ndb.Key(Show, int(show_key)).get()
-		action_id = self.request.get('action_id')
-		player_id = self.request.get('player_id')
-		interval = self.request.get('interval')
-		item_id = self.request.get('item_id')
-		player_role = self.request.get('player_role')
-		wildcard_character_id = self.request.get('wildcard_character_id')
+	def post(self):
+		voted = True
+		# Get the current show
+		show = Show.query(
+			Show.scheduled >= get_today_start(),
+			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
+		vote_num = int(self.request.get('vote_num', '0'))
 		session_id = str(self.session.get('id'))
-		
-		# Admin is starting the show
-		if self.request.get('start_show') and self.context.get('is_admin', False):
-			show.start_time = get_mountain_time()
-			show.put()
-		# Admin is starting item vote
-		elif self.request.get('item_vote') and self.context.get('is_admin', False):
-			show.item_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting role vote
-		elif self.request.get('role_vote') and self.context.get('is_admin', False):
-			show.role_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting wildcard vote
-		elif self.request.get('wildcard_vote') and self.context.get('is_admin', False):
-			show.wildcard_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting the shapeshifter vote
-		elif self.request.get('shapeshifter_vote') and self.context.get('is_admin', False):
-			show.shapeshifter_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting the lover vote
-		elif self.request.get('lover_vote') and self.context.get('is_admin', False):
-			show.lover_vote_init = get_mountain_time()
-			show.put()
+		state = vote_options.get('state', 'default')
 		# Get submitting an action vote for an interval
-		elif action_id and player_id and interval:
+		if show.running:
 			voted = True
 			action = ndb.Key(Action, int(action_id))
 			player = ndb.Key(Player, int(player_id))
@@ -121,17 +74,11 @@ class ShowPage(ViewBase):
 							   interval=int(interval),
 							   created=get_mountain_time().date(),
 							   session_id=session_id).put()
-		# Submitting an item vote
-		elif item_id:
-			voted = True
-			item = ndb.Key(Item, int(item_id))
-			# If the user hasn't already voted for an item
-			if not item.get().get_live_item_vote(session_id):
-				LiveItemVote(item=item,
-							 created=get_mountain_time().date(),
-							 session_id=session_id).put()
+		else:
+			vote_options = show.current_vote_options()
+			voted_option = vote_options['options'][vote_num]
 		# Submitting a player role vote
-		elif player_id and player_role:
+		if state in ROLE_TYPES:
 			voted = True
 			player = ndb.Key(Player, int(player_id))
 			# If no role vote exists for this user
@@ -147,8 +94,17 @@ class ShowPage(ViewBase):
 						 	 player=player,
 						 	 role=player_role,
 						 	 session_id=session_id).put()
+		# Submitting an item vote
+		elif state == 'item':
+			voted = True
+			item = ndb.Key(Item, int(item_id))
+			# If the user hasn't already voted for an item
+			if not item.get().get_live_item_vote(session_id):
+				LiveItemVote(item=item,
+							 created=get_mountain_time().date(),
+							 session_id=session_id).put()
 		# Submitting a wildcard vote
-		elif wildcard_character_id:
+		elif state == 'wildcard':
 			voted = True
 			wildcard_character = ndb.Key(WildcardCharacter, int(wildcard_character_id))
 			# If the user hasn't already voted for a wildcard character
@@ -157,13 +113,9 @@ class ShowPage(ViewBase):
 				LiveWildcardCharacterVote(wildcard_character=wildcard_character,
 							 			  session_id=session_id).put()
 						   
-		context	= {'show': show,
-				   'host_url': self.request.host_url,
-				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
-				   'ROLE_AFTER_INTERVAL': ROLE_AFTER_INTERVAL,
-				   'DISPLAY_VOTED': DISPLAY_VOTED,
+		context	= {'vote_options': show.vote_options,
 				   'voted': voted}
-		self.response.out.write(template.render(self.path('show.html'),
+		self.response.out.write(template.render(self.path('live_vote.html'),
 												self.add_context(context)))
 
 

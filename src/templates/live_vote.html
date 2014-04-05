@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block live-vote-selected %}class="active"{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+	{% if show %}
+		{% for option in show.vote_options %}
+			<div class="row">
+				<div class="col-sm-8 col-sm-offset-2">
+					<form action="/live_vote/" method="post">
+						<input type="hidden" name="vote_num" value="{{option}}" />
+						<input type="submit" class="btn btn-primary btn-block word-wrap" value="{{forloop.counter}}"/>
+					</form>
+				</div>
+			</div>
+		{% endfor %}
+	{% else %}
+		<h1>Sorry, there isn't a show today!
+	{% endif %}
+</div>
+{% endblock %}

@@ -1,8 +1,8 @@
 <div id="default-screen">
 	<div class="row">
 		<div class="col-sm-4 col-sm-offset-3">
-			<h3 class="text-center" style="background-color:#003D7A;">Choose Your Own Adventure-prov<br/>{{host_domain}}
-				<br/><span class="medium-font">If options aren't displaying, click here: </span><a href="{{path_qs}}" class="btn btn-info large-font">Refresh</a>
+			<h3 class="text-center" style="background-color:#003D7A;">
+				Choose Your Own Adventure-prov<br/>{{host_domain}}
 			</h3>
 		</div>
 	</div>
@@ -23,16 +23,7 @@
 								</div>
 							</div>
 						</div>
-						<div id="pa-{{forloop.counter}}" class="panel-footer" style="background-color:black;">
-							{% comment %}
-							<div class="row">
-								<div class="col-sm-12">
-									<div id="va-{{player_action.interval}}-btn" class="btn btn-primary btn-block word-wrap x-large-font voted-action-btn">{% if voted %}Vote Submitted!{% endif %}</div>
-									<div id="pb-{{player_action.interval}}-final" class="progress-bar voted-action-btn"><div></div></div>
-								</div>
-							</div>
-							{% endcomment %}
-						</div>
+						<div id="pa-{{forloop.counter}}" class="panel-footer" style="background-color:black;"></div>
 					</div>
 				</div>
 			</div>

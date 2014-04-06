@@ -60,10 +60,6 @@ span.medium-font {
 	font-size:medium;
 }
 
-button.voted-action-btn {
-	cursor:default;
-}
-
 .progress-bar {
 	width: 400px;
 	height: 22px;

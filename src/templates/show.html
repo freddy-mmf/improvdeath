@@ -5,11 +5,10 @@
 {% endblock %}
 {% block content %}
 	<div class="container-fluid">
-		<div id="interval-show">
-			{% include "interval_show_voting.html" %}
-		</div>
-		{% if show.is_today and is_admin %}	
-			<div id="start-screen">
+		<div id="vote-show"></div>
+		<div id="default-screen"><h2>Adventure-prov Logo</h2></div>
+		{% if show.is_today %}	
+			<div id="vote-selection-screen">
 				<div class="row">
 					<div class="col-md-4 col-md-offset-4 text-center">
 						<h1>Choose Your Own Adventure-prov</h1>
@@ -76,10 +75,6 @@
 						</div>
 					</div>
 				{% endif %}
-			</div>
-		{% else %}
-			<div id="start-screen">
-				<h2>Adventure-prov Logo</h2>
 			</div>
 		{% endif %}
 	</div>

@@ -26,7 +26,7 @@ from user_views import (MainPage, LiveVote, AddActions, AddThemes,
 						AddItems, AddCharacters, OtherShows)
 from admin_views import (ShowPage, CreateShow, DeleteTools,
 					     JSTestPage, AddPlayers)
-from json_views import (ActionsJSON, CurrentTime, ShowJSON)
+from json_views import (ShowJSON)
 
 
 config= {'webapp2_extras.sessions': {

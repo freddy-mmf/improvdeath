@@ -238,7 +238,11 @@ class Show(ndb.Model):
                 display_end = vote_end + datetime.timedelta(seconds=DISPLAY_VOTED)
                 # If we're in the voting period of this type
                 if now_tz >= init_time_tz and now_tz <= vote_end:
-                    return {'state': vote_type, 'display': 'voting'}
+                    return {'state': vote_type, 'display': 'voting',
+                            # Set the end of the voting period
+                            'hour': vote_end.hour,
+                            'minute': vote_end.minute,
+                            'second': vote_end.second}
                 elif now_tz >= vote_end and now_tz <= display_end:
                     return {'state': vote_type, 'display': 'result'}
                     
@@ -336,7 +340,6 @@ class Show(ndb.Model):
         # Get the player
         player = self.get_player_by_interval(interval)
         action_data = {'state': 'interval',
-                       'player_name': player.name,
                        'player_photo': player.photo_filename}
         # Determine if we've already voted on this interval
         now = get_mountain_time()

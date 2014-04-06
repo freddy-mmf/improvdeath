@@ -10,7 +10,7 @@ from google.appengine.api import users
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
 					WildcardCharacter, WildcardCharacterVote,
-					VOTE_AFTER_INTERVAL, DISPLAY_VOTED)
+					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES)
 from timezone import get_mountain_time, back_to_tz
 
 
@@ -309,17 +309,17 @@ class JSTestPage(ViewBase):
 					    {"name": "Option 3", "percent": 10}]
 		five_options = [{"name": "Option 1", "percent": 20},
 					   {"name": "Option 2", "percent": 50},
-					   {"name": "Option 3", "percent": 10}
-					   {"name": "Option 4", "percent": 15}
+					   {"name": "Option 3", "percent": 10},
+					   {"name": "Option 4", "percent": 15},
 					   {"name": "Option 5", "percent": 5}]
 		player_options = [{'photo_filename': 'freddy.jpg', 'percent': 5},
-		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
-		 				  {'photo_filename': 'freddy.jpg', 'percent': 15},
-		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
-		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
-		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
-		 				  {'photo_filename': 'freddy.jpg', 'percent': 5},
-		 				  {'photo_filename': 'freddy.jpg', 'percent': 5}]
+		 				  {'photo_filename': 'dan.jpg', 'percent': 10},
+		 				  {'photo_filename': 'eric.jpg', 'percent': 15},
+		 				  {'photo_filename': 'brogan.jpg', 'percent': 5},
+		 				  {'photo_filename': 'denise.png', 'percent': 30},
+		 				  {'photo_filename': 'camilla.png', 'percent': 20},
+		 				  {'photo_filename': 'lindsay.png', 'percent': 10},
+		 				  {'photo_filename': 'jeff.jpg', 'percent': 5}]
 		show_mock = type('Show',
 						 (object,),
 						 dict(scheduled = get_mountain_time(),
@@ -331,24 +331,42 @@ class JSTestPage(ViewBase):
 							  start_time_tz = start_time,
 							  end_time_tz = end_time,
 							  running = False))
+		mock_data = {'state': state, 'display': display}
 		if state == 'interval':
 			show_mock.running = True
-			if display == 'voting:
-				mock_data = {'player_name': 'Freddy',
-				             'player_photo': 'freddy.jpg',
-				             'options': three_options}
+			if display == 'voting':
+				mock_data.update({'player_name': 'Freddy',
+				                  'player_photo': 'freddy.jpg',
+				                  'options': three_options})
 			else:
-				mock_data = {'voted': 'Option 2',
-				             'percent': 60}
-		elif state == 'hero':
-			if display == 'voting:
-				mock_data = {'player_name': 'Freddy',
-				             'player_photo': 'freddy.jpg',
-				             'options': three_options}
+				mock_data.update({'voted': three_options[1]['name'],
+				                  'percent': three_options[1]['percent']})
+		elif state == 'item':
+			show_mock.running = True
+			if display == 'voting':
+				mock_data.update({'options': five_options})
 			else:
-				mock_data = {'voted': 'Option 2',
-				             'percent': 60}
-		
+				mock_data.update({'voted': five_options[1]['name'],
+				                  'percent': five_options[1]['percent']})
+		elif state == 'wildcard':
+			show_mock.running = True
+			if display == 'voting':
+				mock_data.update({'options': five_options})
+			else:
+				mock_data.update({'voted': five_options[1]['name'],
+				                  'percent': five_options[1]['percent']})
+		elif state in ROLE_TYPES:
+			if display == 'voting':
+				mock_data.update({'options': player_options})
+			else:
+				mock_data.update({'voted': state,
+							 	  'photo_filename': player_options[0]['photo_filename'],
+				             	  'percent': player_options[0]['percent']})
+		# Add start of vote time
+		now_tz = back_to_tz(get_mountain_time())
+		mock_data['hour'] = now_tz.hours
+		mock_data['minute'] = now_tz.minutes
+		mock_data['second'] = now_tz.seconds
 
 		context	= {'show': show_mock,
 				   'now_tz': back_to_tz(get_mountain_time()),
@@ -357,6 +375,7 @@ class JSTestPage(ViewBase):
 				   'available_characters': available_mock,
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
-				   'mocked': True}
+				   'mocked': True,
+				   'mock_data': json.dumps(mock_data)}
 		self.response.out.write(template.render(self.path('js_test.html'),
 												self.add_context(context)))

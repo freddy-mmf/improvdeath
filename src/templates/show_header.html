@@ -5,111 +5,188 @@
 <script src="{{js_path}}jquery.countdown.min.js"></script>
 
 <script>
-	$( document ).ready(function() {
-		function is_defined(variable, dflt) {
-			return typeof variable === "undefined" ? dflt : variable;
-		}			
-		function progress(percent, $element, option_width) {
-			var p_percent = is_defined(percent, 0);
-			var p_option_width = is_defined(option_width, 0);
-			$element.width(p_option_width);
-			progressBarWidth = p_percent * p_option_width / 100;
-			$element.find('div').animate({ width: progressBarWidth }, 500).html(p_percent + "%&nbsp;");
+$( document ).ready(function() {
+	function is_defined(variable, dflt) {
+		return typeof variable === "undefined" ? dflt : variable;
+	}
+	function isEmpty( el ){
+      return !$.trim(el.html())
+  	}
+	function progress(percent, $element, option_width) {
+		var p_percent = is_defined(percent, 0);
+		var p_option_width = is_defined(option_width, 0);
+		$element.width(p_option_width);
+		progressBarWidth = p_percent * p_option_width / 100;
+		$element.find('div').animate({ width: progressBarWidth }, 500).html(p_percent + "%&nbsp;");
+	}
+	function capitaliseFirstLetter(string) {
+		return string.charAt(0).toUpperCase() + string.slice(1);
+	}
+	function get_show_state() {
+		$.getJSON("/show_json/", function( voting_data ) {
+			 return voting_data
+		});
+	}
+	function add_options(element_id, option_data) {
+		var all_progress_bars = $(element_id).find('div.progress-bar');
+		// If the options haven't been created, create and display them
+		if ( $(all_progress_bars).size() == 0 ) {
+			for (var option_num in option_data) {
+				var option_row = $('<div class="row"></div>');
+				var option_column = $('<div class="col-sm-12"></div>');
+				// Create the button with the option name on it
+				var option_btn = $('<button class="btn btn-primary btn-block word-wrap">' + option_dict['name'] + '</button>');
+				option_btn.appendTo($(option_column));
+				// Create the progress bar html
+				var option_percent = $('<div class="progress-bar"><div></div></div>');
+				// Attach a progress bar below the option button
+				progress(option_dict['percent'], $(option_percent), $(option_btn).width());
+				$(option_column).append($(option_percent));
+				// Attach the row to the given element, and the column to the row
+				$(element_id).append($(option_row));
+				$(option_row).append($(option_column));
+			}
 		}
-		function get_show_state() {
-			$.getJSON("/show_json/", function( data ) {
-				 return data
+		// Otherwise, updated the options with their current progress
+		else {
+			// Loop through all the progress bars
+			$(all_progress_bars).each(function(index) {
+				// Update the progress bars in order of how the options are listed
+				progress(option_data[index]['percent'], $(this), $(this).prev().width());
 			});
 		}
-		function add_options(element_id, submit_name, option_data) {
-			var all_progress_bars = $(element_id).find('div.progress-bar');
-			// If the options haven't been created, create and display them
-			if ( $(all_progress_bars).size() == 0 ) {
-				for (var option_num in option_data) {
-					var option_row = $('<div class="row"></div>');
-					var option_column = $('<div class="col-sm-12"></div>');
-					// Create the button with the option name on it
-					var option_btn = $('<button class="btn btn-primary btn-block word-wrap">' + option_dict['name'] + '</button>');
-					option_btn.appendTo($(option_column));
-					// Create the progress bar html
-					var option_percent = $('<div class="progress-bar"><div></div></div>');
-					// Attach a progress bar below the option button
-					progress(option_dict['percent'], $(option_percent), $(option_btn).width());
-					$(option_column).append($(option_percent));
-					// Attach the row to the given element, and the column to the row
-					$(element_id).append($(option_row));
-					$(option_row).append($(option_column));
-				}
-			}
-			// Otherwise, updated the options with their current progress
-			else {
-				// Loop through all the progress bars
-				$(all_progress_bars).each(function(index) {
-					// Update the progress bars in order of how the options are listed
-					progress(option_data[index]['percent'], $(this), $(this).prev().width());
-				});
-			}
+	}
+	function create_voted_option(element_id, voted_dict) {
+		var option_row = $('<div class="row"></div>');
+		var option_column = $('<div class="col-sm-12"></div>');
+		// Create the button with the option name on it
+		var option_btn = $('<button class="btn btn-primary btn-block word-wrap x-large-font">' + voted_dict['voted'] + '</button>');
+		option_btn.appendTo($(option_column));
+		// Create the progress bar html
+		var option_percent = $('<div class="progress-bar"><div></div></div>');
+		// Attach a progress bar below the option button
+		progress(voted_dict['percent'], $(option_percent), $(option_btn).width());
+		$(option_column).append($(option_percent));
+		// Attach the row to the given element, and the column to the row
+		$(element_id).append($(option_row));
+		$(option_row).append($(option_column));
+	}
+	function create_vote_panel(element_id, voting_data) {
+		var state = voting_data['state'];
+		var panel_body = $('<div class="panel-body"></div>');
+		var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
+		// Vote heading
+		if (voting_data['role'] === true) {
+			var capitalized_role = capitaliseFirstLetter(voting_data['role']);
+			var panel = $('<div class="panel panel-primary"></div>');
+			var panel_header = $('<div class="panel-heading">' + capitalized_role + ' Vote</div>');
 		}
-		function add_voted_option(attach_element, voted_dict) {
-			var option_row = $('<div class="row"></div>');
-			var option_column = $('<div class="col-sm-12"></div>');
-			// Create the button with the option name on it
-			var option_btn = $('<button class="btn btn-primary btn-block word-wrap x-large-font voted-action-btn">' + voted_dict['voted'] + '</button>');
-			option_btn.appendTo($(option_column));
-			// Create the progress bar html
-			var option_percent = $('<div class="progress-bar voted-action-btn"><div></div></div>');
-			// Attach a progress bar below the option button
-			progress(voted_dict['percent'], $(option_percent), $(option_btn).width());
-			$(option_column).append($(option_percent));
-			// Attach the row to the given element, and the column to the row
-			$(element_id).append($(option_row));
-			$(option_row).append($(option_column));
+		else {
+			var countdown_row = $('<div class="row"></div>');
+			var countdown_column = $('<div class="col-sm-4 col-sm-offset-4">');
+			var countdown_timer = $('<span class="countdown glowingLayout"></span>');
+			if (state == 'interval') {
+				var panel = $('<div class="panel panel-danger"></div>');
+				var panel_header = $('<div class="panel-heading">Action Vote</div>');
+				var thumbnail_row = $('<div class="row text-center"></div>');
+				var thumbnail_img = $('<img src="{{player_image_path}}' + voting_data['player_photo'] + '" class="img-responsive img-thumbnail">');
+				
+			}
+			if (state == 'item') {
+				var panel = $('<div class="panel panel-success"></div>');
+				var panel_header = $('<div class="panel-heading">Item Vote</div>');
+			}
+			if (state == 'wildcard') {
+				var panel = $('<div class="panel panel-info"></div>');
+				var panel_header = $('<div class="panel-heading">Character Vote</div>');
+			}
+			// Set up the vote start time
+			var vote_end = new Date('{{now_tz|date:"F j, Y H:i:s"}}');
+			vote_end.setHours(voting_data['hour'], voting_data['minute'], voting_data['second']);
+			// Set up the countdown clock
+			$(countdown_timer).countdown({until: vote_end, compact: true,
+				layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
 		}
-		{% include "interval_show_js.html" %}
-		{% comment %}{% include "hero_show_js.html" %}{% endcomment %}
-		// Hide all objects initially
-		$( "#init-players" ).hide();
-		$( "#player-action" ).hide();
-		var current_time = new Date('{{now_tz|date:"F j, Y H:i:s"}}');
-		(function show_loop(){
+		// If we're currently in the voting state
+		if (voting_data['display'] == 'voting') {
+			add_options(panel_footer, voting_data['options']);
+		}
+		else {
+			create_voted_option(panel_footer, voting_data);
+		}
+		
+		return panel
+	}
+	{% include "interval_show_js.html" %}
+	{% comment %}{% include "hero_show_js.html" %}{% endcomment %}
+	// Hide all objects initially
+	$( "#init-players" ).hide();
+	$( "#player-action" ).hide();
+	var current_display = '';
+	(function show_loop(){
+		// Open the setTimeout
+		{% if not mocked %}
 		   setTimeout(function(){
 			   $.ajax({
 				   url: '/show_json/{{show.key.id}}/',
 				   success: function( response ){
-					    // do something with the response
-					   	{% if not mocked %}
-							data = get_show_state();
-							
-							current_time.setHours(data['hour'], data['minute'], data['second']);
-							
-						{% else %}
-							var show_state = '{{show_state}}';
-							var vote_display = '{{vote_display}}';
-							var d = new Date();
-							current_time.setHours(d.getHours(), d.getMinutes(), d.getSeconds());
-					    {% endif %}
-					    var vote_display = data['display'];
-						var show_state = data['state'];
-						var option_data = data['options'];
-					    $( "#top-nav-bar" ).hide();
-						$( "#start-screen" ).hide();
-						// Run the current show state
-						if (show_state == 'interval') {
-							run_interval_show();
-						}
-						else {
-							if (show_state != 'default') {
-								run_vote();
-							}
-							else {
-								$( "#top-nav-bar" ).hide();
-								$( "#start-screen" ).show();
-							}
-						}
-					    show_loop(); // recurse
+						// do something with the response
+						var voting_data = get_show_state();
+						
+		{% else %}
+			var voting_data = {{mock_data}};
+		{% endif %}
+		// If we've changed the display, play a sound
+		if (voting_data['display'] != current_display) {
+			if (voting_data['display'] == 'voting') {
+				// play the opening vote sound
+				$.playSound('{{host_url}}{{audio_path}}vote-chime');
+			}
+			else {
+				if (voting_data['display'] == 'result') {
+					// play the result sound
+					$.playSound('{{host_url}}{{audio_path}}action-chime');
+				}
+			}
+			current_display = voting_data['display'];
+		}
+		// Hide the nav bar and vote selection screen
+		$("#top-nav-bar").hide();
+		$("#vote-selection-screen").hide();
+		var vote_show = $("#vote-show").hide();
+		// Run the role vote state
+		if ('role' in voting_data) {
+			$("#vote-show").hide();
+			if (voting_data['display'] == 'voting') {
+				// Show role voting options
+				create_role_voting(vote_show, voting_data);
+			}
+			else {
+				// Do display vote
+				create_vote_panel(vote_show, voting_data);
+			}
+		}
+		// Run all other vote states
+		else {
+			// If we are showing the initial page with all the vote possibilities
+			if (voting_data['state'] == 'default') {
+				// Show default voting selection screen
+				$("#top-nav-bar").show();
+				$("#vote-selection-screen").show();
+			}
+			// We're showing an actual voting screen
+			else {
+				$(vote_show).show();
+				create_vote_panel(vote_show, voting_data);
+			}
+		}
+		show_loop(); // recurse
+		// Close the setTimeout
+		{% if not mocked %}
 				   }
-			   });
-		   }, 1000);
-		})();
-	});
+		   	   });
+	   	   }, 1000);
+	   	{% endif %}
+	})();
+});
 </script>

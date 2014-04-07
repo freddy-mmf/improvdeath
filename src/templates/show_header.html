@@ -32,6 +32,7 @@ $( document ).ready(function() {
 		// If the options haven't been created, create and display them
 		if ( $(all_progress_bars).size() == 0 ) {
 			for (var option_num in option_data) {
+				var option_dict = option_data[option_num];
 				var option_row = $('<div class="row"></div>');
 				var option_column = $('<div class="col-sm-12"></div>');
 				// Create the button with the option name on it
@@ -117,8 +118,6 @@ $( document ).ready(function() {
 		
 		return panel
 	}
-	{% include "interval_show_js.html" %}
-	{% comment %}{% include "hero_show_js.html" %}{% endcomment %}
 	// Hide all objects initially
 	$( "#init-players" ).hide();
 	$( "#player-action" ).hide();
@@ -134,7 +133,7 @@ $( document ).ready(function() {
 						var voting_data = get_show_state();
 						
 		{% else %}
-			var voting_data = {{mock_data}};
+			var voting_data = {{mock_data|safe}};
 		{% endif %}
 		// If we've changed the display, play a sound
 		if (voting_data['display'] != current_display) {
@@ -180,12 +179,19 @@ $( document ).ready(function() {
 				create_vote_panel(vote_show, voting_data);
 			}
 		}
-		show_loop(); // recurse
 		// Close the setTimeout
 		{% if not mocked %}
+				   		show_loop(); // recurse
 				   }
 		   	   });
 	   	   }, 1000);
+	   	{% else %}
+	   		function sleep(millis, callback) {
+				setTimeout(function()
+						{ callback(); }
+				, millis);
+			}
+			sleep(1000, show_loop);
 	   	{% endif %}
 	})();
 });

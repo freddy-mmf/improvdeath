@@ -61,43 +61,63 @@ class LiveVote(ViewBase):
 			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
 		vote_num = int(self.request.get('vote_num', '0'))
 		session_id = str(self.session.get('id'))
-		state = vote_options.get('state', 'default')
-		# Get submitting an action vote for an interval
+		# Determine which show type we're voting for
 		if show.running:
+			# Interval
+			vote_data = show.current_action_options()
+		else:
+			# Hero
+			vote_data = show.current_vote_options()
+		# If we're in the voting period
+		if vote_data.get('display') == 'voting':
+			state = vote_data['state']
+			voted_option = vote_data['options'][vote_num]
+		else:
+			state = None
+		# Submitting an interval vote
+		if state == 'interval':
 			voted = True
-			action = ndb.Key(Action, int(action_id))
-			player = ndb.Key(Player, int(player_id))
+			action = ndb.Key(Action, int(voted_option['id'])).get()
+			player = ndb.Key(Player, int(vote_data['player_id'])).get()
 			# If the user hasn't already voted
 			if not player.get().get_live_action_vote(interval, session_id):
 				LiveActionVote(action=action,
 							   player=player,
-							   interval=int(interval),
+							   interval=int(vote_data['interval']),
 							   created=get_mountain_time().date(),
 							   session_id=session_id).put()
-		else:
-			vote_options = show.current_vote_options()
-			voted_option = vote_options['options'][vote_num]
 		# Submitting a player role vote
-		if state in ROLE_TYPES:
+		elif state in ROLE_TYPES:
 			voted = True
-			player = ndb.Key(Player, int(player_id))
+			player = ndb.Key(Player, int(voted_option['id']))
 			# If no role vote exists for this user
 			if not player.get().get_role_vote(show, player_role):
 				# Create an initial Role vote
 				role_vote = RoleVote(show=show,
 						 			 player=player,
-						 			 role=player_role).put()
+						 			 role=state).put()
 			# If the user hasn't already submitted a live role vote
 			if not role_vote.get().get_live_role_vote(session_id):
 				# Create the live role vote
 				LiveRoleVote(show=show,
 						 	 player=player,
-						 	 role=player_role,
+						 	 role=state,
 						 	 session_id=session_id).put()
+		# Submitting an incident vote
+		elif state == 'incident':
+			voted = True
+			action = ndb.Key(Action, int(voted_option['id']))
+			# If the user hasn't already voted for the incident
+			if not show.hero.get().get_live_action_vote(0, session_id):
+				LiveActionVote(action=action,
+							   player=show.hero,
+							   interval=0,
+							   created=get_mountain_time().date(),
+							   session_id=session_id).put()
 		# Submitting an item vote
 		elif state == 'item':
 			voted = True
-			item = ndb.Key(Item, int(item_id))
+			item = ndb.Key(Item, int(voted_option['id']))
 			# If the user hasn't already voted for an item
 			if not item.get().get_live_item_vote(session_id):
 				LiveItemVote(item=item,
@@ -106,14 +126,15 @@ class LiveVote(ViewBase):
 		# Submitting a wildcard vote
 		elif state == 'wildcard':
 			voted = True
-			wildcard_character = ndb.Key(WildcardCharacter, int(wildcard_character_id))
+			wildcard_character = ndb.Key(WildcardCharacter, int(voted_option['id']))
 			# If the user hasn't already voted for a wildcard character
 			if not wildcard_character.get().get_live_wc_vote(session_id):
 				# Add the live vote for the wildcard character
 				LiveWildcardCharacterVote(wildcard_character=wildcard_character,
 							 			  session_id=session_id).put()
 						   
-		context	= {'vote_options': show.vote_options,
+		context	= {'show': show,
+				   'vote_options': show.vote_options,
 				   'voted': voted}
 		self.response.out.write(template.render(self.path('live_vote.html'),
 												self.add_context(context)))
@@ -122,7 +143,8 @@ class LiveVote(ViewBase):
 class AddActions(ViewBase):
 	def get(self):
 		actions = Action.query(
-			Action.used == False).order(-Action.vote_value).fetch()
+			Action.used == False).order(-Action.vote_value,
+										Action.created).fetch()
 		context = {'actions': actions,
 				   'show_today': show_today()}
 		self.response.out.write(template.render(self.path('add_actions.html'),
@@ -147,11 +169,14 @@ class AddActions(ViewBase):
 		if action:
 			context['actions'] = Action.query(Action.used == False,
 											  Action.key != action.key,
-											  ).order(Action.key, -Action.vote_value).fetch()
+											  ).order(Action.key,
+											  		  -Action.vote_value,
+											  		  Action.created).fetch()
 			context['actions'].append(action)
 		else:
 			context['actions'] = Action.query(Action.used == False
-											 ).order(-Action.vote_value).fetch()
+											 ).order(-Action.vote_value,
+											 		 Action.created).fetch()
 			
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
@@ -160,7 +185,8 @@ class AddActions(ViewBase):
 class AddItems(ViewBase):
 	def get(self):
 		items = Item.query(
-			Item.used == False).order(-Item.vote_value).fetch()
+			Item.used == False).order(-Item.vote_value,
+									  Item.created).fetch()
 		context = {'items': items,
 				   'show_today': show_today()}
 		self.response.out.write(template.render(self.path('add_items.html'),
@@ -185,11 +211,14 @@ class AddItems(ViewBase):
 		if item:
 			context['items'] = Item.query(Item.used == False,
 											  Item.key != item.key,
-											  ).order(Item.key, -Item.vote_value).fetch()
+											  ).order(Item.key,
+											          -Item.vote_value,
+											          Item.created).fetch()
 			context['items'].append(item)
 		else:
 			context['items'] = Item.query(Item.used == False
-											 ).order(-Item.vote_value).fetch()
+											 ).order(-Item.vote_value,
+											         Item.created).fetch()
 			
 		self.response.out.write(template.render(self.path('add_items.html'),
 												self.add_context(context)))
@@ -198,7 +227,8 @@ class AddItems(ViewBase):
 class AddCharacters(ViewBase):
 	def get(self):
 		characters = WildcardCharacter.query(
-			WildcardCharacter.used == False).order(-WildcardCharacter.vote_value).fetch()
+			WildcardCharacter.used == False).order(-WildcardCharacter.vote_value,
+			                                       WildcardCharacter.created).fetch()
 		context = {'characters': characters,
 				   'show_today': show_today()}
 		self.response.out.write(template.render(self.path('add_characters.html'),
@@ -225,11 +255,13 @@ class AddCharacters(ViewBase):
 							       WildcardCharacter.used == False,
 								   WildcardCharacter.key != character.key,
 								   ).order(WildcardCharacter.key,
-								           -WildcardCharacter.vote_value).fetch()
+								           -WildcardCharacter.vote_value,
+								           WildcardCharacter.created).fetch()
 			context['characters'].append(character)
 		else:
 			context['characters'] = WildcardCharacter.query(WildcardCharacter.used == False
-											 ).order(-WildcardCharacter.vote_value).fetch()
+											 ).order(-WildcardCharacter.vote_value,
+											         WildcardCharacter.created).fetch()
 			
 		self.response.out.write(template.render(self.path('add_characters.html'),
 												self.add_context(context)))
@@ -238,7 +270,8 @@ class AddCharacters(ViewBase):
 class AddThemes(ViewBase):
 	def get(self):
 		themes = Theme.query(
-					Theme.used == False).order(-Theme.vote_value).fetch()
+					Theme.used == False).order(-Theme.vote_value,
+											   Theme.created).fetch()
 		context = {'themes': themes}
 		self.response.out.write(template.render(self.path('add_themes.html'),
 												self.add_context(context)))
@@ -263,11 +296,14 @@ class AddThemes(ViewBase):
 		if theme:
 			# Have to sort first by theme key, since we query on it. Dumb...
 			themes = Theme.query(Theme.key != theme.key
-								).order(Theme.key, -Theme.vote_value).fetch()
+								).order(Theme.key,
+										-Theme.vote_value,
+										Theme.created).fetch()
 			context['themes'] = themes
 			context['themes'].append(theme)
 		else:
-			themes = Theme.query().order(-Theme.vote_value).fetch()
+			themes = Theme.query().order(-Theme.vote_value,
+										 Theme.created).fetch()
 			context['themes'] = themes
 			
 		self.response.out.write(template.render(self.path('add_themes.html'),

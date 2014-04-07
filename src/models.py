@@ -11,9 +11,10 @@ WILDCARD_AMOUNT = 5
 ITEM_AMOUNT = 5
 ROLE_TYPES = ['hero', 'villain', 'shapeshifter', 'lover']
 VOTE_TYPES = list(ROLE_TYPES)
-VOTE_TYPES += ['item', 'wildcard']
+VOTE_TYPES += ['item', 'wildcard', 'incident']
 VOTE_OPTIONS = 5
 ACTION_OPTIONS = 3
+INCIDENT_AMOUNT = 5
 
 
 def get_vote_percentage(subset_count, all_count):
@@ -64,19 +65,31 @@ class Player(ndb.Model):
                     RoleVote.role == role).get()
 
 
+class Action(ndb.Model):
+    description = ndb.StringProperty(required=True)
+    created = ndb.DateProperty(required=True)
+    used = ndb.BooleanProperty(default=False)
+    vote_value = ndb.IntegerProperty(default=0)
+    live_vote_value = ndb.IntegerProperty(default=0)
+
+    def put(self, *args, **kwargs):
+        self.created = get_mountain_time()
+        return super(Action, self).put(*args, **kwargs)
+
+
 class Theme(ndb.Model):
-    created_date = ndb.DateTimeProperty(required=True)
+    created = ndb.DateTimeProperty(required=True)
     name = ndb.StringProperty(required=True)
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
     
     def put(self, *args, **kwargs):
-        self.created_date = get_mountain_time()
+        self.created = get_mountain_time()
         return super(Theme, self).put(*args, **kwargs)
 
 
 class Item(ndb.Model):
-    created_date = ndb.DateTimeProperty(required=True)
+    created = ndb.DateTimeProperty(required=True)
     name = ndb.StringProperty(required=True)
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
@@ -93,12 +106,12 @@ class Item(ndb.Model):
         return get_vote_percentage(self.live_vote_value, all_count)
     
     def put(self, *args, **kwargs):
-        self.created_date = get_mountain_time()
+        self.created = get_mountain_time()
         return super(Item, self).put(*args, **kwargs)
 
 
 class WildcardCharacter(ndb.Model):
-    created_date = ndb.DateTimeProperty(required=True)
+    created = ndb.DateTimeProperty(required=True)
     name = ndb.StringProperty(required=True)
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
@@ -116,7 +129,7 @@ class WildcardCharacter(ndb.Model):
         return get_vote_percentage(self.live_vote_value, all_count)
     
     def put(self, *args, **kwargs):
-        self.created_date = get_mountain_time()
+        self.created = get_mountain_time()
         return super(WildcardCharacter, self).put(*args, **kwargs)
 
 
@@ -129,9 +142,11 @@ class Show(ndb.Model):
     item_vote_init = ndb.DateTimeProperty()
     hero_vote_init = ndb.DateTimeProperty()
     villain_vote_init = ndb.DateTimeProperty()
+    incident_vote_init = ndb.DateTimeProperty()
     wildcard_vote_init = ndb.DateTimeProperty()
     shapeshifter_vote_init = ndb.DateTimeProperty()
     lover_vote_init = ndb.DateTimeProperty()
+    incident = ndb.KeyProperty(kind=Action)
     item = ndb.KeyProperty(kind=Item)
     hero = ndb.KeyProperty(kind=Player)
     villain = ndb.KeyProperty(kind=Player)
@@ -257,11 +272,13 @@ class Show(ndb.Model):
             # If we're in the voting phase for an item
             if display == 'voting':
                 items = Item.query(Item.used == False,
-                           ).order(-Item.vote_value).fetch(ITEM_AMOUNT)
+                           ).order(-Item.vote_value,
+                                   Item.created).fetch(ITEM_AMOUNT)
                 vote_options['options'] = []
                 for item in items:
                     percent = item.live_vote_percent(show.key)
                     vote_options['options'].append({'name': item.name,
+                                                    'id': item.key.id(),
                                                     'percent': percent})
             # If we are showing the results of the vote
             elif display == 'result':
@@ -269,7 +286,8 @@ class Show(ndb.Model):
                 if not show.item:
                     voted_item = Item.query(Item.used == False,
                                      ).order(-Item.live_vote_value,
-                                             -Item.vote_value).get()
+                                             -Item.vote_value,
+                                             Item.created).get()
                     show.item = voted_item.key
                     show.put()
                     # Set the item as used
@@ -282,11 +300,13 @@ class Show(ndb.Model):
             # If we're in the voting phase for a wildcard character
             if display == 'voting':
                 wcs = WildcardCharacter.query(WildcardCharacter.used == False,
-                          ).order(-WildcardCharacter.vote_value).fetch(WILDCARD_AMOUNT)
+                          ).order(-WildcardCharacter.vote_value,
+                                  WildcardCharacter.created).fetch(WILDCARD_AMOUNT)
                 vote_options['options'] = []
                 for wc in wcs:
                     percent = wc.live_vote_percent(show.key)
                     vote_options['options'].append({'name': wc.name,
+                                                    'id': wc.key.id(),
                                                     'percent': percent})
             # If we are showing the results of the vote
             elif display == 'result':
@@ -294,7 +314,8 @@ class Show(ndb.Model):
                 if not show.wildcard_character:
                     voted_wc = WildcardCharacter.query(WildcardCharacter.used == False,
                                    ).order(-WildcardCharacter.live_vote_value,
-                                           -WildcardCharacter.vote_value).get()
+                                           -WildcardCharacter.vote_value,
+                                           WildcardCharacter.created).get()
                     show.wildcard_character = voted_wc.key
                     show.put()
                     # Set the wildcard character as used
@@ -302,6 +323,35 @@ class Show(ndb.Model):
                     voted_wc.put()
                 percent = show.wildcard_character.get().live_vote_percent(show.key)
                 vote_options['voted'] = show.wildcard_character.get().name
+                vote_options['percent'] = percent
+        # If an incident has been triggered
+        elif state == 'incident':
+            # If we're in the voting phase for an incident
+            if display == 'voting':
+                actions = Action.query(Action.used == False,
+                          ).order(-Action.vote_value,
+                                  Action.created).fetch(INCIDENT_AMOUNT)
+                vote_options['options'] = []
+                for action in actions:
+                    percent = action.live_vote_percent(show.key)
+                    vote_options['options'].append({'name': action.description,
+                                                    'id': action.key.id(),
+                                                    'percent': percent})
+            # If we are showing the results of the vote
+            elif display == 'result':
+                # Set the most voted incident if it isn't already set
+                if not show.incident:
+                    voted_incident = Action.query(Action.used == False,
+                                   ).order(-Action.live_vote_value,
+                                           -Action.vote_value,
+                                           Action.created).get()
+                    show.incident = voted_incident.key
+                    show.put()
+                    # Set the Action as used
+                    voted_incident.used = True
+                    voted_incident.put()
+                percent = show.incident.get().live_vote_percent(show.key)
+                vote_options['voted'] = show.incident.get().description
                 vote_options['percent'] = percent
         # If a role vote has been triggered
         elif state in ROLE_TYPES:
@@ -315,6 +365,7 @@ class Show(ndb.Model):
                         # Get the live voting percentage for a role
                         change_vote = get_or_create_role_vote(show, player, state)
                         player_dict = {'photo_filename': player.photo_filename,
+                                       'id': player.key.id(),
                                        'percent': change_vote.live_role_vote_percent}
                         vote_options['options'].append(player_dict)
             # If we are showing the results of the vote
@@ -340,6 +391,8 @@ class Show(ndb.Model):
         # Get the player
         player = self.get_player_by_interval(interval)
         action_data = {'state': 'interval',
+                       'interval': interval,
+                       'player_id': player.key.id(),
                        'player_photo': player.photo_filename}
         # Determine if we've already voted on this interval
         now = get_mountain_time()
@@ -367,14 +420,16 @@ class Show(ndb.Model):
                     voted_action = Action.query(
                                        Action.used == False,
                                        Action.key.IN(interval_voted_actions),
-                                       ).order(-Action.live_vote_value).get()
+                                       ).order(-Action.live_vote_value,
+                                               Action.created).get()
                 # If no live action votes were cast
                 # take the highest regular voted action that hasn't been used
                 else:
                     # Get the most voted, un-used action
                     voted_action = Action.query(
                                        Action.used == False,
-                                       ).order(-Action.vote_value).get()
+                                       ).order(-Action.vote_value,
+                                               Action.created).get()
                 # Set the player action
                 player_action.time_of_action = now
                 player_action.action = voted_action.key
@@ -398,7 +453,8 @@ class Show(ndb.Model):
             action_data['display'] = 'voting'
             # Return un-used actions, sorted by vote
             unused_actions = Action.query(Action.used == False,
-                                 ).order(-Action.vote_value).fetch(ACTION_OPTIONS)
+                                 ).order(-Action.vote_value,
+                                         Action.created).fetch(ACTION_OPTIONS)
             all_votes = player.get().get_all_live_action_count(interval)
             action_data['options'] = []
             for i in range(0, ACTION_OPTIONS):
@@ -408,6 +464,7 @@ class Show(ndb.Model):
                 try:
                     action_data['options'].append({
                                         'name': unused_actions[i].description,
+                                        'id': unused_actions[i].key.id(),
                                         'percent': percent})
                 except IndexError:
                     pass
@@ -436,34 +493,12 @@ class Show(ndb.Model):
             theme_entity = self.theme.get()
             theme_entity.used = True
             theme_entity.put()
-        # If an item was specified, set the item as used
-        if self.item:
-            item_entity = self.item.get()
-            item_entity.used = True
-            item_entity.put()
-        # If a character was specified, set the item as used
-        if self.wildcard_character:
-            wildcard_character_entity = self.wildcard_character.get()
-            wildcard_character_entity.used = True
-            wildcard_character_entity.put()
         return super(Show, self).put(*args, **kwargs)
 
 
 class ShowPlayer(ndb.Model):
     show = ndb.KeyProperty(kind=Show, required=True)
     player = ndb.KeyProperty(kind=Player, required=True)
-
-
-class Action(ndb.Model):
-    description = ndb.StringProperty(required=True)
-    created_date = ndb.DateProperty(required=True)
-    used = ndb.BooleanProperty(default=False)
-    vote_value = ndb.IntegerProperty(default=0)
-    live_vote_value = ndb.IntegerProperty(default=0)
-
-    def put(self, *args, **kwargs):
-        self.created_date = get_mountain_time()
-        return super(Action, self).put(*args, **kwargs)    
 
 
 class ActionVote(ndb.Model):
@@ -580,10 +615,7 @@ def get_or_create_role_vote(show, player, role):
 class RoleVote(ndb.Model):
     show = ndb.KeyProperty(kind=Show, required=True)
     player = ndb.KeyProperty(kind=Player, required=True)
-    role = ndb.StringProperty(required=True, choices=['hero',
-                                                      'villain',
-                                                      'shapeshifter',
-                                                      'lover'])
+    role = ndb.StringProperty(required=True, choices=ROLE_TYPES)
     live_vote_value = ndb.IntegerProperty(default=0)
 
     @property
@@ -605,10 +637,7 @@ class RoleVote(ndb.Model):
 class LiveRoleVote(ndb.Model):
     show = ndb.KeyProperty(kind=Show, required=True)
     player = ndb.KeyProperty(kind=Player, required=True)
-    role = ndb.StringProperty(required=True, choices=['hero',
-                                                       'villain',
-                                                       'shapeshifter',
-                                                       'lover'])
+    role = ndb.StringProperty(required=True, choices=ROLE_TYPES)
     session_id = ndb.StringProperty(required=True)
 
     def put(self, *args, **kwargs):

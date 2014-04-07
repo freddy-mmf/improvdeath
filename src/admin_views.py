@@ -1,4 +1,5 @@
 import datetime
+import json
 from functools import wraps
 
 from views_base import ViewBase
@@ -56,9 +57,17 @@ class ShowPage(ViewBase):
 		elif self.request.get('item_vote') and self.context.get('is_admin', False):
 			show.item_vote_init = get_mountain_time()
 			show.put()
-		# Admin is starting role vote
-		elif self.request.get('role_vote') and self.context.get('is_admin', False):
-			show.role_vote_init = get_mountain_time()
+		# Admin is starting hero vote
+		elif self.request.get('hero_vote') and self.context.get('is_admin', False):
+			show.hero_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting villain vote
+		elif self.request.get('villain_vote') and self.context.get('is_admin', False):
+			show.villain_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting incident vote
+		elif self.request.get('incident_vote') and self.context.get('is_admin', False):
+			show.incident_vote_init = get_mountain_time()
 			show.put()
 		# Admin is starting wildcard vote
 		elif self.request.get('wildcard_vote') and self.context.get('is_admin', False):
@@ -304,6 +313,8 @@ class JSTestPage(ViewBase):
 		state = self.request.get('state', 'interval')
 		display = self.request.get('display', 'voting')
 		available_mock = [1,2,3]
+		start_time = back_to_tz(get_mountain_time())
+		end_time = start_time + datetime.timedelta(minutes=4)
 		three_options = [{"name": "Option 1", "percent": 30},
 					    {"name": "Option 2", "percent": 60},
 					    {"name": "Option 3", "percent": 10}]
@@ -330,7 +341,8 @@ class JSTestPage(ViewBase):
 							  end_time = end_time,
 							  start_time_tz = start_time,
 							  end_time_tz = end_time,
-							  running = False))
+							  running = False,
+							  is_today = True))
 		mock_data = {'state': state, 'display': display}
 		if state == 'interval':
 			show_mock.running = True
@@ -364,9 +376,9 @@ class JSTestPage(ViewBase):
 				             	  'percent': player_options[0]['percent']})
 		# Add start of vote time
 		now_tz = back_to_tz(get_mountain_time())
-		mock_data['hour'] = now_tz.hours
-		mock_data['minute'] = now_tz.minutes
-		mock_data['second'] = now_tz.seconds
+		mock_data['hour'] = now_tz.hour
+		mock_data['minute'] = now_tz.minute
+		mock_data['second'] = now_tz.second
 
 		context	= {'show': show_mock,
 				   'now_tz': back_to_tz(get_mountain_time()),

@@ -30,6 +30,11 @@ a.white-link,a.white-link:visited,a.white-link:hover {
 	text-decoration:none;
 }
 
+input.white-input,input.white-input:visited,input.white-input:hover {
+	color: white;
+	text-decoration:none;
+}
+
 div.header-btn,div.header-btn:hover {
 	font-size:x-large;
 	cursor:default;

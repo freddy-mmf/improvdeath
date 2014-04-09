@@ -11,7 +11,7 @@ from google.appengine.api import users
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
 					WildcardCharacter, WildcardCharacterVote,
-					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES)
+					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES, VOTE_TYPES)
 from timezone import get_mountain_time, back_to_tz
 
 
@@ -227,8 +227,8 @@ class DeleteTools(ViewBase):
 				if show.item:
 					show.item.key.delete()
 				# Delete the character used in the show, if it existed
-				if show.wildcard_character:
-					show.wildcard_character.key.delete()
+				if show.wildcard:
+					show.wildcard.key.delete()
 				show.delete()
 				deleted = 'Show(s)'
 		# Delete ALL un-used things
@@ -256,7 +256,7 @@ class DeleteTools(ViewBase):
 			for unused_character in unused_characters:
 				# Get all the related character votes and delete them
 				character_votes = WildcardCharacterVote.query(
-									WildcardCharacterVote.wildcard_character == unused_character.key).fetch()
+									WildcardCharacterVote.wildcard == unused_character.key).fetch()
 				for cv in character_votes:
 					cv.key.delete()
 				# Delete the un-used characters
@@ -312,6 +312,7 @@ class JSTestPage(ViewBase):
 	def get(self):
 		state = self.request.get('state', 'interval')
 		display = self.request.get('display', 'voting')
+		votes_used = self.request.get('votes_used', '')
 		available_mock = [1,2,3]
 		start_time = back_to_tz(get_mountain_time())
 		end_time = start_time + datetime.timedelta(minutes=4)
@@ -351,17 +352,23 @@ class JSTestPage(ViewBase):
 				                  'player_photo': 'freddy.jpg',
 				                  'options': three_options})
 			else:
-				mock_data.update({'voted': three_options[1]['name'],
+				mock_data.update({'player_name': 'Freddy',
+				                  'player_photo': 'freddy.jpg',
+								  'voted': three_options[1]['name'],
 				                  'percent': three_options[1]['percent']})
 		elif state == 'item':
-			show_mock.running = True
 			if display == 'voting':
 				mock_data.update({'options': five_options})
 			else:
 				mock_data.update({'voted': five_options[1]['name'],
 				                  'percent': five_options[1]['percent']})
 		elif state == 'wildcard':
-			show_mock.running = True
+			if display == 'voting':
+				mock_data.update({'options': five_options})
+			else:
+				mock_data.update({'voted': five_options[1]['name'],
+				                  'percent': five_options[1]['percent']})
+		elif state == 'incident':
 			if display == 'voting':
 				mock_data.update({'options': five_options})
 			else:
@@ -374,11 +381,17 @@ class JSTestPage(ViewBase):
 				mock_data.update({'voted': state,
 							 	  'photo_filename': player_options[0]['photo_filename'],
 				             	  'percent': player_options[0]['percent']})
+		# Add used vote types
+		for vt in VOTE_TYPES:
+			if vt in votes_used:
+				setattr(show_mock, vt, True)
+		
 		# Add start of vote time
 		now_tz = back_to_tz(get_mountain_time())
-		mock_data['hour'] = now_tz.hour
-		mock_data['minute'] = now_tz.minute
-		mock_data['second'] = now_tz.second
+		end_vote_time = now_tz + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
+		mock_data['hour'] = end_vote_time.hour
+		mock_data['minute'] = end_vote_time.minute
+		mock_data['second'] = end_vote_time.second
 
 		context	= {'show': show_mock,
 				   'now_tz': back_to_tz(get_mountain_time()),

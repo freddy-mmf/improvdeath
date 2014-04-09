@@ -120,7 +120,7 @@ class WildcardCharacter(ndb.Model):
     @property
     def get_live_wc_vote(self, session_id):
         return LiveWildcardCharacterVote.query(
-                    LiveWildcardCharacterVote.wildcard_character == self.key,
+                    LiveWildcardCharacterVote.wildcard == self.key,
                     LiveWildcardCharacterVote.session_id == str(session_id)).get()
     
     def live_vote_percent(self, show):
@@ -150,7 +150,7 @@ class Show(ndb.Model):
     item = ndb.KeyProperty(kind=Item)
     hero = ndb.KeyProperty(kind=Player)
     villain = ndb.KeyProperty(kind=Player)
-    wildcard_character = ndb.KeyProperty(kind=WildcardCharacter)
+    wildcard = ndb.KeyProperty(kind=WildcardCharacter)
     shapeshifter = ndb.KeyProperty(kind=Player)
     lover = ndb.KeyProperty(kind=Player)
     
@@ -261,7 +261,7 @@ class Show(ndb.Model):
                 elif now_tz >= vote_end and now_tz <= display_end:
                     return {'state': vote_type, 'display': 'result'}
                     
-        return {'state': 'default'}
+        return {'state': 'default', 'display': 'default'}
 
     def current_vote_options(self):
         vote_options = self.current_vote_state.copy()
@@ -311,18 +311,18 @@ class Show(ndb.Model):
             # If we are showing the results of the vote
             elif display == 'result':
                 # Set the most voted wildcard character if it isn't already set
-                if not show.wildcard_character:
+                if not show.wildcard:
                     voted_wc = WildcardCharacter.query(WildcardCharacter.used == False,
                                    ).order(-WildcardCharacter.live_vote_value,
                                            -WildcardCharacter.vote_value,
                                            WildcardCharacter.created).get()
-                    show.wildcard_character = voted_wc.key
+                    show.wildcard = voted_wc.key
                     show.put()
                     # Set the wildcard character as used
                     voted_wc.used = True
                     voted_wc.put()
-                percent = show.wildcard_character.get().live_vote_percent(show.key)
-                vote_options['voted'] = show.wildcard_character.get().name
+                percent = show.wildcard.get().live_vote_percent(show.key)
+                vote_options['voted'] = show.wildcard.get().name
                 vote_options['percent'] = percent
         # If an incident has been triggered
         elif state == 'incident':
@@ -577,27 +577,27 @@ class LiveItemVote(ndb.Model):
 
 
 class WildcardCharacterVote(ndb.Model):
-    wildcard_character = ndb.KeyProperty(kind=WildcardCharacter, required=True)
+    wildcard = ndb.KeyProperty(kind=WildcardCharacter, required=True)
     session_id = ndb.StringProperty(required=True)
     
     def put(self, *args, **kwargs):
-        wildcard_character = WildcardCharacter.query(
-            WildcardCharacter.key == self.wildcard_character).get()
-        wildcard_character.vote_value += 1
-        wildcard_character.put()
+        wildcard = WildcardCharacter.query(
+            WildcardCharacter.key == self.wildcard).get()
+        wildcard.vote_value += 1
+        wildcard.put()
         return super(WildcardCharacterVote, self).put(*args, **kwargs)
 
 
 class LiveWildcardCharacterVote(ndb.Model):
-    wildcard_character = ndb.KeyProperty(kind=WildcardCharacter, required=True)
+    wildcard = ndb.KeyProperty(kind=WildcardCharacter, required=True)
     show = ndb.KeyProperty(kind=Show, required=True)
     session_id = ndb.StringProperty(required=True)
 
     def put(self, *args, **kwargs):
-        wildcard_character = WildcardCharacter.query(
-            WildcardCharacter.key == self.wildcard_character).get()
-        wildcard_character.live_vote_value += 1
-        wildcard_character.put()
+        wildcard = WildcardCharacter.query(
+            WildcardCharacter.key == self.wildcard).get()
+        wildcard.live_vote_value += 1
+        wildcard.put()
         return super(LiveWildcardCharacterVote, self).put(*args, **kwargs)
 
 

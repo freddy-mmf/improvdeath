@@ -29,7 +29,7 @@ from admin_views import (ShowPage, CreateShow, DeleteTools,
 from json_views import (ShowJSON)
 
 
-config= {'webapp2_extras.sessions': {
+config = {'webapp2_extras.sessions': {
     	     'secret_key': '8djs1qjs3jsm'
     	     }
     	}

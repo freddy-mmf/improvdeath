@@ -126,11 +126,11 @@ class LiveVote(ViewBase):
 		# Submitting a wildcard vote
 		elif state == 'wildcard':
 			voted = True
-			wildcard_character = ndb.Key(WildcardCharacter, int(voted_option['id']))
+			wildcard = ndb.Key(WildcardCharacter, int(voted_option['id']))
 			# If the user hasn't already voted for a wildcard character
-			if not wildcard_character.get().get_live_wc_vote(session_id):
+			if not wildcard.get().get_live_wc_vote(session_id):
 				# Add the live vote for the wildcard character
-				LiveWildcardCharacterVote(wildcard_character=wildcard_character,
+				LiveWildcardCharacterVote(wildcard=wildcard,
 							 			  session_id=session_id).put()
 						   
 		context	= {'show': show,
@@ -245,10 +245,10 @@ class AddCharacters(ViewBase):
 		elif upvote:
 			character_key = ndb.Key(WildcardCharacter, int(upvote)).get().key
 			av = WildcardCharacterVote.query(
-					WildcardCharacterVote.wildcard_character == character_key,
+					WildcardCharacterVote.wildcard == character_key,
 					WildcardCharacterVote.session_id == str(self.session.get('id', '0'))).get()
 			if not av:
-				WildcardCharacterVote(wildcard_character=character_key,
+				WildcardCharacterVote(wildcard=character_key,
 					  	   session_id=str(self.session.get('id'))).put()
 		if character:
 			context['characters'] = WildcardCharacter.query(

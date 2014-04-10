@@ -42,7 +42,7 @@ $( document ).ready(function() {
 				var option_row = $('<div class="row"></div>');
 				var option_column = $('<div class="col-sm-12"></div>');
 				// Create the button with the option name on it
-				var option_btn = $('<button class="btn btn-primary btn-block word-wrap">' + cur_num + '. ' + option_dict['name'] + '</button>');
+				var option_btn = $('<button class="btn btn-primary btn-block vote-option-font word-wrap">' + cur_num + '. ' + option_dict['name'] + '</button>');
 				option_btn.appendTo($(option_column));
 				// Create the progress bar html
 				var option_percent = $('<div class="progress-bar" style="width: 0;"><div></div></div>');
@@ -101,7 +101,7 @@ $( document ).ready(function() {
 			if (state == 'interval') {
 				var panel = $('<div class="panel panel-danger"></div>');
 				var panel_header = $('<div class="panel-heading text-center x-large-font">Action Vote</div>');
-				var thumbnail_column = $('<div class="col-sm-6 col-sm-offset-3"></div>');
+				var thumbnail_column = $('<div class="col-sm-4 col-sm-offset-4"></div>');
 				var thumbnail_img = $('<img src="{{player_image_path}}' + voting_data['player_photo'] + '" class="img-responsive img-thumbnail" />');
 				// Add the thumbnail row to the panel body
 				$(panel_body).append($(panel_body_row));
@@ -157,7 +157,7 @@ $( document ).ready(function() {
 		return panel
 	}
 	
-	function create_player_panels(element_id, voting_data, update_percent_only) {
+	function create_role_panels(element_id, voting_data, update_percent_only) {
 		var state = voting_data['state'];
 		update_percent_only = typeof update_percent_only !== 'undefined' ? update_percent_only : false;
 		// Create the entire panel
@@ -166,6 +166,61 @@ $( document ).ready(function() {
 			var panel = $('<div class="panel panel-primary"></div>');
 			var panel_header = $('<div class="panel-heading">' + capitalized_role + ' Vote</div>');
 		}
+		
+		// If we're currently in the voting state
+		if (voting_data['display'] == 'voting') {
+			// Add the countdown timer to the countdown column
+			$(countdown_column).append($(countdown_timer));
+			// Add the timer to the panel body
+			$(panel_body_row).append($(countdown_column));
+		}
+		// We're in the voting result state
+		else {
+			create_voted_role(element_id, voting_data);
+		}
+	}
+	
+	function create_voted_role(element_id, voted_dict) {
+		var capitalized_role = capitaliseFirstLetter(voted_dict['voted']);
+		var row = $('<div class="row"></div>');
+		var column = $('<div class="col-sm-6 col-sm-offset-2"></div>');
+		var panel = $('<div class="panel panel-primary"></div>');
+		var panel_body = $('<div class="panel-body"></div>');
+		var panel_body_row = $('<div class="row"></div>');
+		var thumbnail_column = $('<div class="col-sm-6 col-sm-offset-3"></div>');
+		var thumbnail_img = $('<img src="{{player_image_path}}' + voted_dict['photo_filename'] + '" class="img-responsive img-thumbnail" />');
+		var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
+		var role_row = $('<div class="row"></div>');
+		var role_column = $('<div class="col-sm-12"></div>');
+		// Create the button with the option name on it
+		var role_btn = $('<button class="btn btn-primary btn-block word-wrap x-large-font">' + capitalized_role + '</button>');
+		role_btn.appendTo($(role_column));
+		// Create the progress bar html
+		var role_percent = $('<div class="progress-bar" style="width: 0;"><div></div></div>');
+		$(role_column).append($(role_percent));
+		// Add the row to the element
+		$(element_id).append($(row));
+		// Add the column to the row
+		$(row).append($(column));
+		// Add the panel to the column
+		$(column).append($(panel));
+		// Add the panel body to the panel
+		$(panel).append($(panel_body));
+		// Add the thumbnail row to the panel body
+		$(panel_body).append($(panel_body_row));
+		// Add the thumbnail column to the panel body row
+		$(panel_body_row).append($(thumbnail_column));
+		// Add the player thumbnail image to the thumbnail row
+		$(thumbnail_column).append($(thumbnail_img));
+		// Add the panel footer to the panel
+		$(panel).append($(panel_footer));
+		// Attach the row to the panel footer
+		$(panel_footer).append($(role_row));
+		// Attach the role column to the role row
+		$(role_row).append($(role_column));
+		
+		// Attach a progress bar below the option button
+		progress(voted_dict['percent'], $(role_percent), $(role_percent).prev().width());
 	}
 	
 	// Hide all objects initially
@@ -192,29 +247,30 @@ $( document ).ready(function() {
 		
 		// If we've changed the display
 		if (voting_data['display'] != current_display) {
-			if (voting_data['display'] == 'voting') {
+			if (voting_data['display'] != 'default') {
 				// Hide the nav bar and vote selection screen
 				$("#top-nav-bar").hide();
 				$("#vote-selection-screen").hide();
 				// Show the voting screen
 				$("#current-vote").show();
-				// play the opening vote sound
-				$.playSound('{{host_url}}{{audio_path}}vote-chime');
-				// Create the voting screen
-				create_vote_panel("#current-vote", voting_data);
+				if (voting_data['display'] == 'voting') {
+					// play the opening vote sound
+					$.playSound('{{host_url}}{{audio_path}}vote-chime');
+				}
+				if (voting_data['display'] == 'result') {
+					// play the result sound
+					$.playSound('{{host_url}}{{audio_path}}action-chime');
+				}
+				if ('role' in voting_data) {
+					// Create the role voting screens
+					create_role_panels("#current-vote", voting_data);
+				}
+				else {
+					// Create the voting screen
+					create_vote_panel("#current-vote", voting_data);
+				}
 			}
-			if (voting_data['display'] == 'result') {
-				// Hide the nav bar and vote selection screen
-				$("#top-nav-bar").hide();
-				$("#vote-selection-screen").hide();
-				// Show the voting screen
-				$("#current-vote").show();
-				// play the result sound
-				$.playSound('{{host_url}}{{audio_path}}action-chime');
-				// Create the voting result
-				create_vote_panel("#current-vote", voting_data);
-			}
-			if (voting_data['display'] == 'default') {
+			else {
 				// Show the voting screen
 				$("#current-vote").hide();
 				// Show the nav bar and vote selection screen
@@ -226,8 +282,14 @@ $( document ).ready(function() {
 		}
 		
 		if (voting_data['display'] == 'voting') {
-			// Update the percentages of the voting screen
-			create_vote_panel("#current-vote", voting_data, true);
+			if ('role' in voting_data) {
+				// Update the percentages of the role voting screens
+				create_role_panels("#current-vote", voting_data, true);
+			}
+			else {
+				// Update the percentages of the other voting screens
+				create_vote_panel("#current-vote", voting_data, true);
+			}
 		}
 		
 		// Close the setTimeout

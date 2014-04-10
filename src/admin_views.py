@@ -324,11 +324,11 @@ class JSTestPage(ViewBase):
 					   {"name": "Option 3", "percent": 10},
 					   {"name": "Option 4", "percent": 15},
 					   {"name": "Option 5", "percent": 5}]
-		player_options = [{'photo_filename': 'freddy.jpg', 'percent': 5},
+		player_options = [{'photo_filename': 'freddy.jpg', 'percent': 30},
 		 				  {'photo_filename': 'dan.jpg', 'percent': 10},
 		 				  {'photo_filename': 'eric.jpg', 'percent': 15},
 		 				  {'photo_filename': 'brogan.jpg', 'percent': 5},
-		 				  {'photo_filename': 'denise.png', 'percent': 30},
+		 				  {'photo_filename': 'denise.png', 'percent': 5},
 		 				  {'photo_filename': 'camilla.png', 'percent': 20},
 		 				  {'photo_filename': 'lindsay.png', 'percent': 10},
 		 				  {'photo_filename': 'jeff.jpg', 'percent': 5}]
@@ -378,7 +378,8 @@ class JSTestPage(ViewBase):
 			if display == 'voting':
 				mock_data.update({'options': player_options})
 			else:
-				mock_data.update({'voted': state,
+				mock_data.update({'role': True,
+								  'voted': state,
 							 	  'photo_filename': player_options[0]['photo_filename'],
 				             	  'percent': player_options[0]['percent']})
 		# Add used vote types

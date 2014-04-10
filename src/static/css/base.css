@@ -57,6 +57,10 @@ button.x-large-font {
 	font-size:x-large;
 }
 
+button.vote-option-font {
+	font-size:large;
+}
+
 a.large-font {
 	font-size:large;
 }

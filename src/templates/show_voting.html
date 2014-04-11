@@ -14,21 +14,26 @@
 	
 	{% if show.is_today %}	
 		<div id="vote-selection-screen">
+			
 			<div class="row">
-				<div class="col-md-4 col-md-offset-4 text-center">
-					<h3><a href="/" class="white-link">Choose Your Own Adventure-prov</a></h3>
+				<div class="col-md-4 col-md-offset-3">
+					<hr/>
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="test_vote" value="True">
+						<input type="submit" class="btn btn-default btn-block btn-lg" value="Start the Live Voting Test">
+					</form>
 					<hr/>
 				</div>
 			</div>
 			
 			<div class="row">
-				<div class="col-md-4 col-md-offset-4">
+				<div class="col-md-4 col-md-offset-3">
 					<form action="/show/{{show.key.id}}/" method="post">
 						<input type="hidden" name="start_show" value="True">
 						{% if available_actions >= show.player_actions|length %}
-							<input type="submit" class="btn btn-block btn-lg header-btn white-input" style="background-color:#003D7A;"  value="Start the Interval Show">
+							<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#003D7A;"  value="Start the Interval Show">
 						{% else %}
-							<div class="btn btn-danger btn-block btn-lg header-btn">Need more actions to start Interval Show</div>
+							<div class="btn btn-danger btn-block btn-lg">Need more actions to start Interval Show</div>
 						{% endif %}
 					</form>
 					<hr/>
@@ -37,10 +42,10 @@
 
 			{% if not show.hero %}
 				<div class="row">
-					<div class="col-md-4 col-md-offset-4">
+					<div class="col-md-4 col-md-offset-3">
 						<form action="/show/{{show.key.id}}/" method="post">
 							<input type="hidden" name="hero_vote" value="True">
-							<input type="submit" class="btn btn-primary btn-block btn-lg header-btn" value="Start the Hero Vote">
+							<input type="submit" class="btn btn-primary btn-block btn-lg" value="Start the Hero Vote">
 						</form>
 					</div>
 				</div>
@@ -48,10 +53,10 @@
 			
 			{% if not show.villain %}
 				<div class="row">
-					<div class="col-md-4 col-md-offset-4">
+					<div class="col-md-4 col-md-offset-3">
 						<form action="/show/{{show.key.id}}/" method="post">
 							<input type="hidden" name="villain_vote" value="True">
-							<input type="submit" class="btn btn-block btn-lg header-btn white-input" style="background-color:#6916E6;" value="Start the Villain Vote">
+							<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#6916E6;" value="Start the Villain Vote">
 						</form>
 					</div>
 				</div>
@@ -59,13 +64,13 @@
 			
 			{% if not show.incident %}
 				<div class="row">
-					<div class="col-md-4 col-md-offset-4">
+					<div class="col-md-4 col-md-offset-3">
 						<form action="/show/{{show.key.id}}/" method="post">
 							<input type="hidden" name="incident_vote" value="True">
 							{% if available_actions %}
-								<input type="submit" class="btn btn-danger btn-block btn-lg header-btn" value="Start the Incident Vote">
+								<input type="submit" class="btn btn-danger btn-block btn-lg" value="Start the Incident Vote">
 							{% else %}
-								<div class="btn btn-success btn-block btn-lg header-btn">Need more Actions to start Incident Vote</div>
+								<div class="btn btn-success btn-block btn-lg">Need more Actions to start Incident Vote</div>
 							{% endif %}
 						</form>
 					</div>
@@ -74,13 +79,13 @@
 			
 			{% if not show.item %}
 				<div class="row">
-					<div class="col-md-4 col-md-offset-4">
+					<div class="col-md-4 col-md-offset-3">
 						<form action="/show/{{show.key.id}}/" method="post">
 							<input type="hidden" name="item_vote" value="True">
 							{% if available_items %}
-								<input type="submit" class="btn btn-success btn-block btn-lg header-btn" value="Start the Item Vote">
+								<input type="submit" class="btn btn-success btn-block btn-lg" value="Start the Item Vote">
 							{% else %}
-								<div class="btn btn-success btn-block btn-lg header-btn">Need more items to start Item Vote</div>
+								<div class="btn btn-success btn-block btn-lg">Need more items to start Item Vote</div>
 							{% endif %}
 						</form>
 					</div>
@@ -89,13 +94,13 @@
 			
 			{% if not show.wildcard %}
 				<div class="row">
-					<div class="col-md-4 col-md-offset-4">
+					<div class="col-md-4 col-md-offset-3">
 						<form action="/show/{{show.key.id}}/" method="post">
 							<input type="hidden" name="wildcard_vote" value="True">
 							{% if available_characters %}
-								<input type="submit" class="btn btn-info btn-block btn-lg header-btn" value="Start the Character Vote">
+								<input type="submit" class="btn btn-info btn-block btn-lg" value="Start the Character Vote">
 							{% else %}
-								<div class="btn btn-info btn-block btn-lg header-btn">Need more characters to start Character Vote</div>
+								<div class="btn btn-info btn-block btn-lg">Need more characters to start Character Vote</div>
 							{% endif %}
 						</form>
 					</div>
@@ -104,10 +109,10 @@
 			
 			{% if not show.shapeshifter %}
 				<div class="row">
-					<div class="col-md-4 col-md-offset-4">
+					<div class="col-md-4 col-md-offset-3">
 						<form action="/show/{{show.key.id}}/" method="post">
 							<input type="hidden" name="shapeshifter_vote" value="True">
-							<input type="submit" class="btn btn-warning btn-block btn-lg header-btn" value="Start the Shapeshifter Vote">
+							<input type="submit" class="btn btn-warning btn-block btn-lg" value="Start the Shapeshifter Vote">
 						</form>
 					</div>
 				</div>

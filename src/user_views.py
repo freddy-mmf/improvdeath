@@ -9,6 +9,7 @@ from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
 					LiveActionVote, Item, ItemVote,
 					LiveItemVote, WildcardCharacter, WildcardCharacterVote,
 					LiveWildcardCharacterVote, RoleVote, LiveRoleVote,
+					VotingTest, LiveVotingTest,
 					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES)
 from timezone import get_mountain_time
 
@@ -64,10 +65,10 @@ class LiveVote(ViewBase):
 		# Determine which show type we're voting for
 		if show.running:
 			# Interval
-			vote_data = show.current_action_options()
+			vote_data = show.current_action_options(show)
 		else:
 			# Hero
-			vote_data = show.current_vote_options()
+			vote_data = show.current_vote_options(show)
 		# If we're in the voting period
 		if vote_data.get('display') == 'voting':
 			state = vote_data['state']
@@ -113,6 +114,14 @@ class LiveVote(ViewBase):
 							   player=show.hero,
 							   interval=0,
 							   created=get_mountain_time().date(),
+							   session_id=session_id).put()
+		# Submitting an item vote
+		elif state == 'test':
+			voted = True
+			test = ndb.Key(VotingTest, int(voted_option['id']))
+			# If the user hasn't already voted for an item
+			if not test.get().get_live_item_vote(session_id):
+				LiveVotingTest(test=test,
 							   session_id=session_id).put()
 		# Submitting an item vote
 		elif state == 'item':

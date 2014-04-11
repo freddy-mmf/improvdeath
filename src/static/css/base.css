@@ -70,7 +70,8 @@ span.medium-font {
 }
 
 .progress-bar {
-	width: 400px;
+	font-size: large;
+	width: 0px;
 	height: 22px;
 	border: 1px solid #111;
 	background-color: #595959;

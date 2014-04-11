@@ -14,8 +14,8 @@ class ShowJSON(ViewBase):
         show = ndb.Key(Show, int(show_id)).get()
         # If the interval show is running
         if show.running:
-            vote_options = show.current_action_options()
+            vote_options = show.current_action_options(show)
         else:
-            vote_options = show.current_vote_options()
+            vote_options = show.current_vote_options(show)
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
         self.response.out.write(json.dumps(vote_options))

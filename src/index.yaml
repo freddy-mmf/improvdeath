@@ -22,6 +22,13 @@ indexes:
   - name: vote_value
     direction: desc
   - name: created
+
+- kind: Action
+  properties:
+  - name: used
+  - name: vote_value
+    direction: desc
+  - name: created
     direction: desc
 
 - kind: CauseOfDeath
@@ -39,6 +46,13 @@ indexes:
   - name: used
   - name: vote_value
     direction: desc
+
+- kind: Item
+  properties:
+  - name: used
+  - name: vote_value
+    direction: desc
+  - name: created
 
 - kind: Theme
   properties:
@@ -72,3 +86,10 @@ indexes:
   - name: used
   - name: vote_value
     direction: desc
+
+- kind: WildcardCharacter
+  properties:
+  - name: used
+  - name: vote_value
+    direction: desc
+  - name: created

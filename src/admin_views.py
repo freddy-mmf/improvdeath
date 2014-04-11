@@ -11,6 +11,7 @@ from google.appengine.api import users
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
 					WildcardCharacter, WildcardCharacterVote,
+					VotingTest, LiveVotingTest,
 					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES, VOTE_TYPES)
 from timezone import get_mountain_time, back_to_tz
 
@@ -52,6 +53,24 @@ class ShowPage(ViewBase):
 		# Admin is starting the show
 		if self.request.get('start_show') and self.context.get('is_admin', False):
 			show.start_time = get_mountain_time()
+			show.put()
+		# Admin is starting item vote
+		elif self.request.get('test_vote') and self.context.get('is_admin', False):
+			show.test = None
+			# Delete all live voting test votes
+			for lvt in LiveVotingTest.query().fetch():
+				lvt.key.delete()
+			# Delete all voting test objects
+			for vt in VotingTest.query().fetch():
+				vt.key.delete()
+			# Create a set of five test votes
+			VotingTest(name="I'M JAZZED! START THE SHOW ALREADY!").put()
+			VotingTest(name="I'm VERY interested in... whatever this is...").put()
+			VotingTest(name="Present").put()
+			VotingTest(name="Meh").put()
+			VotingTest(name="If you notice me sleeping in the audience, try and keep it down. Thanks.").put()
+
+			show.test_vote_init = get_mountain_time()
 			show.put()
 		# Admin is starting item vote
 		elif self.request.get('item_vote') and self.context.get('is_admin', False):
@@ -103,7 +122,8 @@ class CreateShow(ViewBase):
 	@admin_required
 	def get(self):
 		context = {'players': Player.query().fetch(),
-				   'themes': Theme.query(Theme.used == False).fetch()}
+				   'themes': Theme.query(Theme.used == False,
+				   				).order(-Theme.vote_value).fetch()}
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
 
@@ -158,9 +178,10 @@ class DeleteTools(ViewBase):
 	def post(self):
 		deleted = None
 		unused_deleted = False
-		show_list = int(self.request.get('show_list'))
+		show_list = self.request.get_all('show_list')
 		action_list = self.request.get_all('action_list')
 		item_list = self.request.get_all('item_list')
+		character_list = self.request.get_all('character_list')
 		theme_list = self.request.get_all('theme_list')
 		delete_unused = self.request.get_all('delete_unused')
 		# If action(s) were deleted
@@ -206,9 +227,9 @@ class DeleteTools(ViewBase):
 			deleted = 'Theme(s)'
 		# If show(s) were deleted
 		if show_list:
-			for show_id in show_list:
-				show = ndb.Key(Show, int(show_id))
-				show_actions = ShowAction.query(ShowAction.show == show).fetch()
+			for show in show_list:
+				show_entity = ndb.Key(Show, int(show)).get()
+				show_actions = ShowAction.query(ShowAction.show == show_entity.key).fetch()
 				# Delete the actions that occurred within the show
 				for show_action in show_actions:
 					action = show_action.player_action.get().action
@@ -217,19 +238,19 @@ class DeleteTools(ViewBase):
 					show_action.player_action.delete()
 					show_action.key.delete()
 				# Delete player associations to the show
-				show_players = ShowPlayer.query(ShowPlayer.show == show).fetch()
+				show_players = ShowPlayer.query(ShowPlayer.show == show_entity.key).fetch()
 				for show_player in show_players:
 					show_player.key.delete()
 				# Delete the theme used in the show, if it existed
-				if show.theme:
-					show.theme.key.delete()
+				if show_entity.theme:
+					show_entity.theme.delete()
 				# Delete the item used in the show, if it existed
-				if show.item:
-					show.item.key.delete()
+				if show_entity.item:
+					show_entity.item.delete()
 				# Delete the character used in the show, if it existed
-				if show.wildcard:
-					show.wildcard.key.delete()
-				show.delete()
+				if show_entity.wildcard:
+					show_entity.wildcard.delete()
+				show_entity.key.delete()
 				deleted = 'Show(s)'
 		# Delete ALL un-used things
 		if delete_unused:
@@ -355,32 +376,46 @@ class JSTestPage(ViewBase):
 				mock_data.update({'player_name': 'Freddy',
 				                  'player_photo': 'freddy.jpg',
 								  'voted': three_options[1]['name'],
+								  'count': three_options[1]['percent'],
 				                  'percent': three_options[1]['percent']})
+		elif state == 'test':
+			if display == 'voting':
+				mock_data.update({'options': five_options})
+			else:
+				mock_data.update({'voted': five_options[1]['name'],
+								  'count': five_options[1]['percent'],
+				                  'percent': five_options[1]['percent']})
 		elif state == 'item':
 			if display == 'voting':
 				mock_data.update({'options': five_options})
 			else:
 				mock_data.update({'voted': five_options[1]['name'],
+								  'count': five_options[1]['percent'],
 				                  'percent': five_options[1]['percent']})
 		elif state == 'wildcard':
 			if display == 'voting':
 				mock_data.update({'options': five_options})
 			else:
 				mock_data.update({'voted': five_options[1]['name'],
+								  'count': five_options[1]['percent'],
 				                  'percent': five_options[1]['percent']})
 		elif state == 'incident':
 			if display == 'voting':
 				mock_data.update({'options': five_options})
 			else:
 				mock_data.update({'voted': five_options[1]['name'],
+							      'count': five_options[1]['percent'],
 				                  'percent': five_options[1]['percent']})
 		elif state in ROLE_TYPES:
 			if display == 'voting':
-				mock_data.update({'options': player_options})
+				player_num = int(self.request.get('players', '8'))
+				mock_data.update({'role': True,
+								  'options': player_options[:player_num]})
 			else:
 				mock_data.update({'role': True,
 								  'voted': state,
 							 	  'photo_filename': player_options[0]['photo_filename'],
+							 	  'count': player_options[0]['percent'],
 				             	  'percent': player_options[0]['percent']})
 		# Add used vote types
 		for vt in VOTE_TYPES:

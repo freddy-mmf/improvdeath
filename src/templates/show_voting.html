@@ -40,83 +40,83 @@
 				</div>
 			</div>
 
-			{% if not show.hero %}
-				<div class="row">
-					<div class="col-md-4 col-md-offset-3">
-						<form action="/show/{{show.key.id}}/" method="post">
-							<input type="hidden" name="hero_vote" value="True">
-							<input type="submit" class="btn btn-primary btn-block btn-lg" value="Start the Hero Vote">
-						</form>
-					</div>
+			<div id="hero-vote" class="row">
+				<div class="col-md-4 col-md-offset-3">
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="hero_vote" value="True">
+						<input type="submit" class="btn btn-primary btn-block btn-lg" value="Start the Hero Vote">
+					</form>
 				</div>
-			{% endif %}
+			</div>
 			
-			{% if not show.villain %}
-				<div class="row">
-					<div class="col-md-4 col-md-offset-3">
-						<form action="/show/{{show.key.id}}/" method="post">
-							<input type="hidden" name="villain_vote" value="True">
-							<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#6916E6;" value="Start the Villain Vote">
-						</form>
-					</div>
+			<div id="villain-vote" class="row">
+				<div class="col-md-4 col-md-offset-3">
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="villain_vote" value="True">
+						<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#6916E6;" value="Start the Villain Vote">
+					</form>
 				</div>
-			{% endif %}
+			</div>
 			
-			{% if not show.incident %}
-				<div class="row">
-					<div class="col-md-4 col-md-offset-3">
-						<form action="/show/{{show.key.id}}/" method="post">
-							<input type="hidden" name="incident_vote" value="True">
-							{% if available_actions %}
-								<input type="submit" class="btn btn-danger btn-block btn-lg" value="Start the Incident Vote">
-							{% else %}
-								<div class="btn btn-success btn-block btn-lg">Need more Actions to start Incident Vote</div>
-							{% endif %}
-						</form>
-					</div>
+			<div id="incident-vote" class="row">
+				<div class="col-md-4 col-md-offset-3">
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="incident_vote" value="True">
+						{% if available_actions %}
+							<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#A30000;" value="Start the Incident Vote">
+						{% else %}
+							<div class="btn btn-success btn-block btn-lg">Need more Actions to start Incident Vote</div>
+						{% endif %}
+					</form>
 				</div>
-			{% endif %}
+			</div>
+		
 			
-			{% if not show.item %}
-				<div class="row">
-					<div class="col-md-4 col-md-offset-3">
-						<form action="/show/{{show.key.id}}/" method="post">
-							<input type="hidden" name="item_vote" value="True">
-							{% if available_items %}
-								<input type="submit" class="btn btn-success btn-block btn-lg" value="Start the Item Vote">
-							{% else %}
-								<div class="btn btn-success btn-block btn-lg">Need more items to start Item Vote</div>
-							{% endif %}
-						</form>
-					</div>
+			<div id="item-vote" class="row">
+				<div class="col-md-4 col-md-offset-3">
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="item_vote" value="True">
+						{% if available_items %}
+							<input type="submit" class="btn btn-success btn-block btn-lg" value="Start the Item Vote">
+						{% else %}
+							<div class="btn btn-success btn-block btn-lg">Need more items to start Item Vote</div>
+						{% endif %}
+					</form>
 				</div>
-			{% endif %}
+			</div>
 			
-			{% if not show.wildcard %}
-				<div class="row">
-					<div class="col-md-4 col-md-offset-3">
-						<form action="/show/{{show.key.id}}/" method="post">
-							<input type="hidden" name="wildcard_vote" value="True">
-							{% if available_characters %}
-								<input type="submit" class="btn btn-info btn-block btn-lg" value="Start the Character Vote">
-							{% else %}
-								<div class="btn btn-info btn-block btn-lg">Need more characters to start Character Vote</div>
-							{% endif %}
-						</form>
-					</div>
+			<div id="lover-vote" class="row">
+				<div class="col-md-4 col-md-offset-3">
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="lover_vote" value="True">
+						<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#FF3399;" value="Start the Lover Vote">
+					</form>
 				</div>
-			{% endif %}
+			</div>
+		
 			
-			{% if not show.shapeshifter %}
-				<div class="row">
-					<div class="col-md-4 col-md-offset-3">
-						<form action="/show/{{show.key.id}}/" method="post">
-							<input type="hidden" name="shapeshifter_vote" value="True">
-							<input type="submit" class="btn btn-warning btn-block btn-lg" value="Start the Shapeshifter Vote">
-						</form>
-					</div>
+			<div id="wildcard-vote" class="row">
+				<div class="col-md-4 col-md-offset-3">
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="wildcard_vote" value="True">
+						{% if available_characters %}
+							<input type="submit" class="btn btn-info btn-block btn-lg" value="Start the Character Vote">
+						{% else %}
+							<div class="btn btn-info btn-block btn-lg">Need more characters to start Character Vote</div>
+						{% endif %}
+					</form>
 				</div>
-			{% endif %}
+			</div>
+			
+			<div id="shapeshifter-vote" class="row">
+				<div class="col-md-4 col-md-offset-3">
+					<form action="/show/{{show.key.id}}/" method="post">
+						<input type="hidden" name="shapeshifter_vote" value="True">
+						<input type="submit" class="btn btn-warning btn-block btn-lg" value="Start the Shapeshifter Vote">
+					</form>
+				</div>
+			</div>
+
 		</div>
 	{% endif %}
 </div>

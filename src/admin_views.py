@@ -210,7 +210,7 @@ class DeleteTools(ViewBase):
 				character_entity = ndb.Key(WildcardCharacter, int(character)).get()
 				# Get all the related character votes and delete them
 				character_votes = WildcardCharacterVote.query(
-								WildcardCharacterVote.character == character_entity.key).fetch()
+								WildcardCharacterVote.wildcard == character_entity.key).fetch()
 				for av in character_votes:
 					av.key.delete()
 				character_entity.key.delete()
@@ -271,7 +271,7 @@ class DeleteTools(ViewBase):
 				for iv in item_votes:
 					iv.key.delete()
 				# Delete the un-used items
-				unused_items.key.delete()
+				unused_item.key.delete()
 			# Delete Un-used Characters
 			unused_characters = WildcardCharacter.query(WildcardCharacter.used == False).fetch()
 			for unused_character in unused_characters:

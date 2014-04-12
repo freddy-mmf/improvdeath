@@ -81,7 +81,7 @@ class LiveVote(ViewBase):
 			action = ndb.Key(Action, int(voted_option['id'])).get()
 			player = ndb.Key(Player, int(vote_data['player_id'])).get()
 			# If the user hasn't already voted
-			if not player.get().get_live_action_vote(interval, session_id):
+			if not player.get().get_live_action_vote(show, interval, session_id):
 				LiveActionVote(action=action,
 							   player=player,
 							   interval=int(vote_data['interval']),
@@ -109,10 +109,10 @@ class LiveVote(ViewBase):
 			voted = True
 			action = ndb.Key(Action, int(voted_option['id']))
 			# If the user hasn't already voted for the incident
-			if not show.hero.get().get_live_action_vote(0, session_id):
+			if not action.get().get_live_action_vote(session_id):
 				LiveActionVote(action=action,
 							   player=show.hero,
-							   interval=0,
+							   interval=-1,
 							   created=get_mountain_time().date(),
 							   session_id=session_id).put()
 		# Submitting an item vote
@@ -120,7 +120,7 @@ class LiveVote(ViewBase):
 			voted = True
 			test = ndb.Key(VotingTest, int(voted_option['id']))
 			# If the user hasn't already voted for an item
-			if not test.get().get_live_item_vote(session_id):
+			if not test.get().get_live_test_vote(session_id):
 				LiveVotingTest(test=test,
 							   session_id=session_id).put()
 		# Submitting an item vote

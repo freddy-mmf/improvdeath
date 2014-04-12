@@ -6,7 +6,7 @@ from google.appengine.ext import ndb
 from timezone import get_mountain_time, back_to_tz
 
 VOTE_AFTER_INTERVAL = 8
-DISPLAY_VOTED = 5
+DISPLAY_VOTED = 8
 WILDCARD_AMOUNT = 5
 ITEM_AMOUNT = 5
 ROLE_TYPES = ['hero', 'villain', 'shapeshifter', 'lover']
@@ -34,21 +34,19 @@ class Player(ndb.Model):
         return "/static/img/players/%s" % self.photo_filename
     
     @property
-    def get_live_action_vote(self, interval, session_id):
+    def get_live_action_vote(self, show, interval, session_id):
         return LiveActionVote.query(
                     LiveActionVote.player == self.key,
                     LiveActionVote.interval == int(interval),
-                    LiveActionVote.created == get_mountain_time().date(),
+                    LiveActionVote.show == show,
                     LiveActionVote.session_id == str(session_id)).get()
 
-    @property
     def get_all_live_action_count(self, interval):
         return LiveActionVote.query(
                         LiveActionVote.player == self.key,
                         LiveActionVote.interval == int(interval),
                         LiveActionVote.created == get_mountain_time().date()).count()
 
-    @property
     def get_live_action_percentage(self, action, interval, all_votes):
         action_votes = LiveActionVote.query(
                         LiveActionVote.action == action,
@@ -71,6 +69,17 @@ class Action(ndb.Model):
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
+    
+    @property
+    def get_live_action_vote(self, session_id):
+        return LiveActionVote.query(
+                    LiveActionVote.action == self.key,
+                    LiveActionVote.session_id == str(session_id)).get()
+    
+    def live_vote_percent(self, show):
+        all_count = LiveActionVote.query(LiveActionVote.show == show,
+                                         LiveActionVote.interval == -1).count()
+        return get_vote_percentage(self.live_vote_value, all_count)
 
     def put(self, *args, **kwargs):
         self.created = get_mountain_time()
@@ -93,7 +102,7 @@ class VotingTest(ndb.Model):
     live_vote_value = ndb.IntegerProperty(default=0)
     
     @property
-    def get_live_item_vote(self, session_id):
+    def get_live_test_vote(self, session_id):
         return LiveVotingTest.query(
                     LiveVotingTest.item == self.key,
                     LiveVotingTest.session_id == str(session_id)).get()
@@ -187,6 +196,8 @@ class Show(ndb.Model):
         for pa in self.player_actions:
             if pa.interval == int(interval):
                 return pa
+        raise ValueError(
+            "Player action for this interval doesn't exists, interval: %s" % interval)
     
     def get_player_by_interval(self, interval):
         pa = self.get_player_action_by_interval(interval)
@@ -222,12 +233,12 @@ class Show(ndb.Model):
             minutes_elapsed = (delta.seconds//60)%60
             max_interval = 0
             # Look through the player actions
-            for pa in player_actions:
+            for pa in self.player_actions:
                 # If we're at or past the minutes elapsed
                 # And this is the furthest along interval we've found
                 if minutes_elapsed >= pa.interval and pa.interval > max_interval:
                     # Set it to the furthest interval we've reached
-                    max_interval = minutes_elapsed
+                    max_interval = interval
             # Return the furthest interval we've reached
             return max_interval
         return None
@@ -252,6 +263,7 @@ class Show(ndb.Model):
     
     @property
     def current_vote_state(self):
+        state_dict = {'state': 'default', 'display': 'default', 'used_types': []}
         now = get_mountain_time()
         # Get timezone for comparisons
         now_tz = back_to_tz(now)
@@ -270,15 +282,22 @@ class Show(ndb.Model):
                 display_end = vote_end + datetime.timedelta(seconds=DISPLAY_VOTED)
                 # If we're in the voting period of this type
                 if now_tz >= init_time_tz and now_tz <= vote_end:
-                    return {'state': vote_type, 'display': 'voting',
+                    state_dict.update(
+                           {'state': vote_type, 'display': 'voting',
                             # Set the end of the voting period
                             'hour': vote_end.hour,
                             'minute': vote_end.minute,
-                            'second': vote_end.second}
+                            'second': vote_end.second})
                 elif now_tz >= vote_end and now_tz <= display_end:
-                    return {'state': vote_type, 'display': 'result'}
+                    state_dict.update({'state': vote_type, 'display': 'result'})
+        
+        # Get the list of used vote types
+        for vt in VOTE_TYPES:
+            # If the vote type has been used
+            if getattr(self, vt, None):
+                state_dict['used_types'].append(vt)
                     
-        return {'state': 'default', 'display': 'default'}
+        return state_dict
 
     def current_vote_options(self, show):
         vote_options = self.current_vote_state.copy()
@@ -404,7 +423,8 @@ class Show(ndb.Model):
                 vote_options['options'] = []
                 # Loop through all the players in the show
                 for player in show.players:
-                    if player != show.hero:
+                    # Make sure the user isn't already the hero
+                    if player.key != show.hero:
                         # Get the live voting percentage for a role
                         change_vote = get_or_create_role_vote(show, player, state)
                         player_dict = {'photo_filename': player.photo_filename,
@@ -413,20 +433,27 @@ class Show(ndb.Model):
                         vote_options['options'].append(player_dict)
             # If we are showing the results of the vote
             elif display == 'result':
+                role_player = getattr(show, state, None)
                 # Set the role if it isn't already set
-                if not getattr(show, state, None):
+                if not role_player:
                     voted_role = RoleVote.query(RoleVote.role == state,
                                                 RoleVote.show == show.key,
                                                 RoleVote.player != show.hero,
-                                     ).order(-RoleVote.live_vote_value,
-                                             -RoleVote.vote_value).get()
+                                     ).order(RoleVote.player,
+                                             -RoleVote.live_vote_value).get()
+                    # Setting role for the show
                     setattr(show, state, voted_role.player)
                     show.put()
+                    # Getting the player selected for the role
+                    role_player = voted_role.player
+                else:
+                    voted_role = RoleVote.query(RoleVote.role == state,
+                                                RoleVote.show == show.key,
+                                                RoleVote.player == role_player).get()
                 percent = voted_role.live_role_vote_percent
-                change_player = getattr(show, state, None)
                 vote_options['voted'] = state.title()
-                vote_options['photo_filename'] = change_player.get().photo_filename
-                vote_options['count'] = getattr(show, state, None).get().live_vote_value
+                vote_options['photo_filename'] = role_player.get().photo_filename
+                vote_options['count'] = voted_role.live_vote_value
                 vote_options['percent'] = percent
         return vote_options
 
@@ -436,8 +463,8 @@ class Show(ndb.Model):
         player = self.get_player_by_interval(interval)
         action_data = {'state': 'interval',
                        'interval': interval,
-                       'player_id': player.key.id(),
-                       'player_photo': player.photo_filename}
+                       'player_id': player.id(),
+                       'player_photo': player.get().photo_filename}
         # Determine if we've already voted on this interval
         now = get_mountain_time()
         # Add timezone for comparisons
@@ -484,17 +511,17 @@ class Show(ndb.Model):
                 percent = player.get().get_live_action_percentage(voted_action,
                                                                     interval,
                                                                      len(live_action_votes))
-                action_data = {'voted': voted_action.description,
-                               'count': voted_action.live_vote_value,
-                               'percent': percent}
+                action_data.update({'voted': voted_action.description,
+                                    'count': voted_action.live_vote_value,
+                                    'percent': percent})
             else:
                 all_votes = player.get().get_all_live_action_count(interval)
                 percent = player.get().get_live_action_percentage(player_action.action,
                                                                     interval,
                                                                     all_votes)
-                action_data = {'voted': player_action.action.get().description,
-                               'count': player_action.action.get().live_vote_value,
-                               'percent': percent}
+                action_data.update({'voted': player_action.action.get().description,
+                                    'count': player_action.action.get().live_vote_value,
+                                    'percent': percent})
         elif now_tz < interval_vote_end:
             action_data['display'] = 'voting'
             # Return un-used actions, sorted by vote
@@ -561,6 +588,7 @@ class ActionVote(ndb.Model):
 class LiveActionVote(ndb.Model):
     action = ndb.KeyProperty(kind=Action, required=True)
     player = ndb.KeyProperty(kind=Player, required=True)
+    show = ndb.KeyProperty(kind=Show, required=True)
     interval = ndb.IntegerProperty(required=True)
     session_id = ndb.StringProperty(required=True)
     created = ndb.DateProperty(required=True)
@@ -664,9 +692,9 @@ def get_or_create_role_vote(show, player, role):
                                RoleVote.player == player.key,
                                RoleVote.role == role).get()
     if not role_vote:
-        role_vote = RoleVote(show=show,
-                 player=player,
-                 role=role).put().get()
+        role_vote = RoleVote(show=show.key,
+                             player=player.key,
+                             role=role).put().get()
     return role_vote
 
 

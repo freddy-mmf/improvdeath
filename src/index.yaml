@@ -13,6 +13,15 @@ indexes:
 - kind: Action
   properties:
   - name: used
+  - name: live_vote_value
+    direction: desc
+  - name: vote_value
+    direction: desc
+  - name: created
+
+- kind: Action
+  properties:
+  - name: used
   - name: vote_value
     direction: desc
 
@@ -44,6 +53,15 @@ indexes:
 - kind: Item
   properties:
   - name: used
+  - name: live_vote_value
+    direction: desc
+  - name: vote_value
+    direction: desc
+  - name: created
+
+- kind: Item
+  properties:
+  - name: used
   - name: vote_value
     direction: desc
 
@@ -54,6 +72,14 @@ indexes:
     direction: desc
   - name: created
 
+- kind: RoleVote
+  properties:
+  - name: role
+  - name: show
+  - name: player
+  - name: live_vote_value
+    direction: desc
+
 - kind: Theme
   properties:
   - name: used
@@ -77,6 +103,15 @@ indexes:
 
 - kind: Theme
   properties:
+  - name: vote_value
+    direction: desc
+  - name: created
+
+- kind: WildcardCharacter
+  properties:
+  - name: used
+  - name: live_vote_value
+    direction: desc
   - name: vote_value
     direction: desc
   - name: created

@@ -85,8 +85,8 @@ $( document ).ready(function() {
 	function create_vote_panel(element_id, voting_data, update_percent_only) {
 		var state = voting_data['state'];
 		update_percent_only = typeof update_percent_only !== 'undefined' ? update_percent_only : false;
-		// Create the entire panel
-		if (update_percent_only === false) {
+		// Create the entire panel if the panel is empty
+		if (update_percent_only === false || $(element_id).children().length == 0) {
 			var row = $('<div class="row"></div>');
 			var column = $('<div class="col-sm-6 col-sm-offset-2"></div>');
 			var panel_body = $('<div class="panel-body"></div>');
@@ -142,7 +142,7 @@ $( document ).ready(function() {
 			// Add the panel footer to the panel
 			$(panel).append($(panel_footer));
 		}
-		// Just fetch the footer of the pre-created panel
+		// Just fetch the footer and update percentages
 		else {
 			var panel_footer = $(element_id).find("div.panel-footer");
 		}
@@ -335,6 +335,11 @@ $( document ).ready(function() {
 		   setTimeout(function(){
 			   $.ajax({
 				   url: show_json_url,
+				   error: function(voting_data){
+				   			console.log("Voting data fetching error!");
+				   			console.log(voting_data);
+				   			show_loop(); // recurse
+				   		  },
 				   success: function(voting_data){
 
 		{% else %}
@@ -343,6 +348,7 @@ $( document ).ready(function() {
 		
 		// If we've changed the display
 		if (voting_data['display'] != current_display) {
+			// IF we're not on the select the vote types screen
 			if (voting_data['display'] != 'default') {
 				// Hide the nav bar and vote selection screen
 				$("#top-nav-bar").hide();
@@ -350,10 +356,14 @@ $( document ).ready(function() {
 				// Show the voting screen
 				$("#current-vote").show();
 				if (voting_data['display'] == 'voting') {
+					// Delete the current voting display
+					$("#current-vote").empty();
 					// play the opening vote sound
 					$.playSound('{{host_url}}{{audio_path}}vote-chime');
 				}
 				if (voting_data['display'] == 'result') {
+					// Delete the current voting display
+					$("#current-vote").empty();
 					// play the result sound
 					$.playSound('{{host_url}}{{audio_path}}action-chime');
 				}
@@ -366,12 +376,18 @@ $( document ).ready(function() {
 					create_vote_panel("#current-vote", voting_data);
 				}
 			}
+			// If we're on the select vote types screen
 			else {
 				// Show the voting screen
 				$("#current-vote").hide();
 				// Show the nav bar and vote selection screen
 				$("#top-nav-bar").hide();
 				$("#vote-selection-screen").show();
+				// Loop through and hide the types that are already used
+				var used_types = voting_data['used_types'];
+				for (var used_index in used_types) {
+					$('#' + used_types[used_index] + '-vote').hide();
+				}
 			}
 			
 			current_display = voting_data['display'];

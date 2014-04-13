@@ -238,7 +238,7 @@ class Show(ndb.Model):
                 # And this is the furthest along interval we've found
                 if minutes_elapsed >= pa.interval and pa.interval > max_interval:
                     # Set it to the furthest interval we've reached
-                    max_interval = interval
+                    max_interval = pa.interval
             # Return the furthest interval we've reached
             return max_interval
         return None
@@ -283,13 +283,18 @@ class Show(ndb.Model):
                 # If we're in the voting period of this type
                 if now_tz >= init_time_tz and now_tz <= vote_end:
                     state_dict.update(
-                           {'state': vote_type, 'display': 'voting',
+                           {'state': vote_type,
+                            'display': 'voting',
                             # Set the end of the voting period
                             'hour': vote_end.hour,
                             'minute': vote_end.minute,
                             'second': vote_end.second})
                 elif now_tz >= vote_end and now_tz <= display_end:
-                    state_dict.update({'state': vote_type, 'display': 'result'})
+                    state_dict.update({'state': vote_type,
+                                       'display': 'result',
+                                       'hour': vote_end.hour,
+                                       'minute': vote_end.minute,
+                                       'second': vote_end.second})
         
         # Get the list of used vote types
         for vt in VOTE_TYPES:
@@ -461,16 +466,20 @@ class Show(ndb.Model):
         interval = self.current_interval
         # Get the player
         player = self.get_player_by_interval(interval)
-        action_data = {'state': 'interval',
-                       'interval': interval,
-                       'player_id': player.id(),
-                       'player_photo': player.get().photo_filename}
         # Determine if we've already voted on this interval
         now = get_mountain_time()
         # Add timezone for comparisons
         now_tz = back_to_tz(now)
         interval_vote_end = self.start_time_tz + datetime.timedelta(minutes=int(interval)) \
                               + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
+        action_data = {'state': 'interval',
+                       'interval': interval,
+                       'player_id': player.id(),
+                       'player_photo': player.get().photo_filename,
+                       'hour': interval_vote_end.hour,
+                       'minute': interval_vote_end.minute,
+                       'second': interval_vote_end.second}
+        
         if now_tz > interval_vote_end:
             action_data['display'] = 'result'
             player_action = self.get_player_action_by_interval(interval)
@@ -508,17 +517,17 @@ class Show(ndb.Model):
                 # Set the action as used
                 voted_action.used = True
                 voted_action.put()
-                percent = player.get().get_live_action_percentage(voted_action,
-                                                                    interval,
-                                                                     len(live_action_votes))
+                percent = player.get().get_live_action_percentage(voted_action.key,
+                                                                  interval,
+                                                                  len(live_action_votes))
                 action_data.update({'voted': voted_action.description,
                                     'count': voted_action.live_vote_value,
                                     'percent': percent})
             else:
                 all_votes = player.get().get_all_live_action_count(interval)
                 percent = player.get().get_live_action_percentage(player_action.action,
-                                                                    interval,
-                                                                    all_votes)
+                                                                  interval,
+                                                                  all_votes)
                 action_data.update({'voted': player_action.action.get().description,
                                     'count': player_action.action.get().live_vote_value,
                                     'percent': percent})
@@ -531,10 +540,11 @@ class Show(ndb.Model):
             all_votes = player.get().get_all_live_action_count(interval)
             action_data['options'] = []
             for i in range(0, ACTION_OPTIONS):
-                percent = player.get().get_live_action_percentage(unused_actions[i].key,
-                                                                    interval,
-                                                                    all_votes)
                 try:
+                    percent = player.get().get_live_action_percentage(
+                                                                  unused_actions[i].key,
+                                                                  interval,
+                                                                  all_votes)
                     action_data['options'].append({
                                         'name': unused_actions[i].description,
                                         'id': unused_actions[i].key.id(),

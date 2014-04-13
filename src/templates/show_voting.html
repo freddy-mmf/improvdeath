@@ -4,7 +4,7 @@
 		<div class="row">
 			<div class="col-sm-6 col-sm-offset-2">
 				<h3 class="text-center" style="background-color:#003D7A;">
-					Choose Your Own Adventure-prov<br/>{{host_domain}} (Text: 23343)
+					<a href="/" class="white-link">Choose Your Own Adventure-prov</a><br/>{{host_domain}} (Text: 23343)
 				</h3>
 			</div>
 		</div>
@@ -33,7 +33,7 @@
 						{% if available_actions >= show.player_actions|length %}
 							<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#003D7A;"  value="Start the Interval Show">
 						{% else %}
-							<div class="btn btn-danger btn-block btn-lg">Need more actions to start Interval Show</div>
+							<div class="btn btn-block btn-lg" style="background-color:#003D7A;">Need more actions to start Interval Show</div>
 						{% endif %}
 					</form>
 					<hr/>
@@ -65,7 +65,7 @@
 						{% if available_actions %}
 							<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#A30000;" value="Start the Incident Vote">
 						{% else %}
-							<div class="btn btn-success btn-block btn-lg">Need more Actions to start Incident Vote</div>
+							<div class="btn btn-block btn-lg" style="background-color:#A30000;">Need more Actions to start Incident Vote</div>
 						{% endif %}
 					</form>
 				</div>

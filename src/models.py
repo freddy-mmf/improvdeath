@@ -33,7 +33,6 @@ class Player(ndb.Model):
     def img_path(self):
         return "/static/img/players/%s" % self.photo_filename
     
-    @property
     def get_live_action_vote(self, show, interval, session_id):
         return LiveActionVote.query(
                     LiveActionVote.player == self.key,
@@ -70,7 +69,6 @@ class Action(ndb.Model):
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    @property
     def get_live_action_vote(self, session_id):
         return LiveActionVote.query(
                     LiveActionVote.action == self.key,
@@ -101,7 +99,6 @@ class VotingTest(ndb.Model):
     name = ndb.StringProperty(required=True)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    @property
     def get_live_test_vote(self, session_id):
         return LiveVotingTest.query(
                     LiveVotingTest.item == self.key,
@@ -119,7 +116,6 @@ class Item(ndb.Model):
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    @property
     def get_live_item_vote(self, session_id):
         return LiveItemVote.query(
                     LiveItemVote.item == self.key,
@@ -141,7 +137,6 @@ class WildcardCharacter(ndb.Model):
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    @property
     def get_live_wc_vote(self, session_id):
         return LiveWildcardCharacterVote.query(
                     LiveWildcardCharacterVote.wildcard == self.key,
@@ -721,7 +716,6 @@ class RoleVote(ndb.Model):
             LiveRoleVote.role == self.role).count()
         return get_vote_percentage(self.live_vote_value, all_count)
 
-    @property
     def get_live_role_vote(self, session_id):
         return LiveRoleVote.query(
                     LiveRoleVote.show == self.show,

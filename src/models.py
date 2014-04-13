@@ -1,4 +1,5 @@
 import datetime
+import math
 import random
 
 from google.appengine.ext import ndb
@@ -101,7 +102,7 @@ class VotingTest(ndb.Model):
     
     def get_live_test_vote(self, session_id):
         return LiveVotingTest.query(
-                    LiveVotingTest.item == self.key,
+                    LiveVotingTest.test == self.key,
                     LiveVotingTest.session_id == str(session_id)).get()
     
     def live_vote_percent(self, show):

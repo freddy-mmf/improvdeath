@@ -94,13 +94,13 @@ class LiveVote(ViewBase):
 			# If no role vote exists for this user
 			if not player.get().get_role_vote(show, player_role):
 				# Create an initial Role vote
-				role_vote = RoleVote(show=show,
+				role_vote = RoleVote(show=show.key,
 						 			 player=player,
 						 			 role=state).put()
 			# If the user hasn't already submitted a live role vote
 			if not role_vote.get().get_live_role_vote(session_id):
 				# Create the live role vote
-				LiveRoleVote(show=show,
+				LiveRoleVote(show=show.key,
 						 	 player=player,
 						 	 role=state,
 						 	 session_id=session_id).put()
@@ -122,6 +122,7 @@ class LiveVote(ViewBase):
 			# If the user hasn't already voted for an item
 			if not test.get().get_live_test_vote(session_id):
 				LiveVotingTest(test=test,
+							   show=show.key,
 							   session_id=session_id).put()
 		# Submitting an item vote
 		elif state == 'item':

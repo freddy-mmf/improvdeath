@@ -72,7 +72,10 @@ class LiveVote(ViewBase):
 		# If we're in the voting period
 		if vote_data.get('display') == 'voting':
 			state = vote_data['state']
-			voted_option = vote_data['options'][vote_num]
+			try:
+				voted_option = vote_data['options'][vote_num]
+			except IndexError:
+				state = None
 		else:
 			state = None
 		# Submitting an interval vote

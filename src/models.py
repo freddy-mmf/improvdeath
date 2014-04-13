@@ -34,12 +34,11 @@ class Player(ndb.Model):
     def img_path(self):
         return "/static/img/players/%s" % self.photo_filename
     
-    def get_live_action_vote(self, show, interval, session_id):
-        return LiveActionVote.query(
-                    LiveActionVote.player == self.key,
+    def get_live_action_vote_exists(self, show, interval, session_id):
+        return bool(LiveActionVote.query(
                     LiveActionVote.interval == int(interval),
                     LiveActionVote.show == show,
-                    LiveActionVote.session_id == str(session_id)).get()
+                    LiveActionVote.session_id == str(session_id)).get())
 
     def get_all_live_action_count(self, interval):
         return LiveActionVote.query(
@@ -55,11 +54,10 @@ class Player(ndb.Model):
                         LiveActionVote.created == get_mountain_time().date()).count()
         return get_vote_percentage(action_votes, all_votes)
     
-    @property
     def get_role_vote(self, show, role):
         return RoleVote.query(
                     RoleVote.player == self.key,
-                    RoleVote.show == show,
+                    RoleVote.show == show.key,
                     RoleVote.role == role).get()
 
 
@@ -70,10 +68,10 @@ class Action(ndb.Model):
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    def get_live_action_vote(self, session_id):
-        return LiveActionVote.query(
-                    LiveActionVote.action == self.key,
-                    LiveActionVote.session_id == str(session_id)).get()
+    def get_live_action_vote_exists(self, show, interval, session_id):
+        return bool(LiveActionVote.query(
+                    LiveActionVote.show == show,
+                    LiveActionVote.session_id == str(session_id)).get())
     
     def live_vote_percent(self, show):
         all_count = LiveActionVote.query(LiveActionVote.show == show,
@@ -100,10 +98,10 @@ class VotingTest(ndb.Model):
     name = ndb.StringProperty(required=True)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    def get_live_test_vote(self, session_id):
-        return LiveVotingTest.query(
-                    LiveVotingTest.test == self.key,
-                    LiveVotingTest.session_id == str(session_id)).get()
+    def get_live_test_vote_exists(self, show, session_id):
+        return bool(LiveVotingTest.query(
+                    LiveVotingTest.show == show,
+                    LiveVotingTest.session_id == str(session_id)).get())
     
     def live_vote_percent(self, show):
         all_count = LiveVotingTest.query(LiveVotingTest.show == show).count()
@@ -117,10 +115,10 @@ class Item(ndb.Model):
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    def get_live_item_vote(self, session_id):
-        return LiveItemVote.query(
-                    LiveItemVote.item == self.key,
-                    LiveItemVote.session_id == str(session_id)).get()
+    def get_live_item_vote_exists(self, show, session_id):
+        return bool(LiveItemVote.query(
+                    LiveItemVote.show == show,
+                    LiveItemVote.session_id == str(session_id)).get())
     
     def live_vote_percent(self, show):
         all_count = LiveItemVote.query(LiveItemVote.show == show).count()
@@ -138,10 +136,10 @@ class WildcardCharacter(ndb.Model):
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
     
-    def get_live_wc_vote(self, session_id):
-        return LiveWildcardCharacterVote.query(
-                    LiveWildcardCharacterVote.wildcard == self.key,
-                    LiveWildcardCharacterVote.session_id == str(session_id)).get()
+    def get_live_wc_vote_exists(self, show, session_id):
+        return bool(LiveWildcardCharacterVote.query(
+                    LiveWildcardCharacterVote.show == show,
+                    LiveWildcardCharacterVote.session_id == str(session_id)).get())
     
     def live_vote_percent(self, show):
         all_count = LiveWildcardCharacterVote.query(
@@ -437,11 +435,15 @@ class Show(ndb.Model):
                 role_player = getattr(show, state, None)
                 # Set the role if it isn't already set
                 if not role_player:
-                    voted_role = RoleVote.query(RoleVote.role == state,
+                    role_votes = RoleVote.query(RoleVote.role == state,
                                                 RoleVote.show == show.key,
-                                                RoleVote.player != show.hero,
-                                     ).order(RoleVote.player,
-                                             -RoleVote.live_vote_value).get()
+                                     ).order(-RoleVote.live_vote_value).fetch()
+                    # Grab the first player, making sure they aren't already the hero
+                    for rv in role_votes:
+                        if rv != show.hero:
+                            # We've found the voted role, break out of the loop
+                            voted_role = rv
+                            break
                     # Setting role for the show
                     setattr(show, state, voted_role.player)
                     show.put()
@@ -717,12 +719,11 @@ class RoleVote(ndb.Model):
             LiveRoleVote.role == self.role).count()
         return get_vote_percentage(self.live_vote_value, all_count)
 
-    def get_live_role_vote(self, session_id):
-        return LiveRoleVote.query(
-                    LiveRoleVote.show == self.show,
-                    LiveRoleVote.player == self.player,
-                    LiveRoleVote.role == self.role,
-                    LiveRoleVote.session_id == str(session_id)).get()
+    def get_live_role_vote_exists(self, show, role, session_id):
+        return bool(LiveRoleVote.query(
+                    LiveRoleVote.show == show,
+                    LiveRoleVote.role == role,
+                    LiveRoleVote.session_id == str(session_id)).get())
 
 
 class LiveRoleVote(ndb.Model):
@@ -736,5 +737,5 @@ class LiveRoleVote(ndb.Model):
                                    RoleVote.player == self.player,
                                    RoleVote.role == self.role).get()
         role_vote.live_vote_value += 1
-        role_vote.save()
+        role_vote.put()
         return super(LiveRoleVote, self).put(*args, **kwargs)

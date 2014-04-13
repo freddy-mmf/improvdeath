@@ -76,6 +76,13 @@ indexes:
   properties:
   - name: role
   - name: show
+  - name: live_vote_value
+    direction: desc
+
+- kind: RoleVote
+  properties:
+  - name: role
+  - name: show
   - name: player
   - name: live_vote_value
     direction: desc

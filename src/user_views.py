@@ -65,7 +65,7 @@ class LiveVote(ViewBase):
 		# Determine which show type we're voting for
 		if show.running:
 			# Interval
-			vote_data = show.current_action_options(show)
+			vote_data = show.current_action_options()
 		else:
 			# Hero
 			vote_data = show.current_vote_options(show)
@@ -78,27 +78,32 @@ class LiveVote(ViewBase):
 		# Submitting an interval vote
 		if state == 'interval':
 			voted = True
-			action = ndb.Key(Action, int(voted_option['id'])).get()
-			player = ndb.Key(Player, int(vote_data['player_id'])).get()
+			interval = int(vote_data['interval'])
+			action = ndb.Key(Action, int(voted_option['id']))
+			player = ndb.Key(Player, int(vote_data['player_id']))
 			# If the user hasn't already voted
-			if not player.get().get_live_action_vote(show, interval, session_id):
+			if not player.get().get_live_action_vote_exists(show.key, interval, session_id):
 				LiveActionVote(action=action,
 							   player=player,
-							   interval=int(vote_data['interval']),
+							   show=show.key,
+							   interval=interval,
 							   created=get_mountain_time().date(),
 							   session_id=session_id).put()
 		# Submitting a player role vote
 		elif state in ROLE_TYPES:
 			voted = True
 			player = ndb.Key(Player, int(voted_option['id']))
+			role_vote = player.get().get_role_vote(show, state)
 			# If no role vote exists for this user
-			if not player.get().get_role_vote(show, player_role):
+			if not role_vote:
 				# Create an initial Role vote
 				role_vote = RoleVote(show=show.key,
 						 			 player=player,
 						 			 role=state).put()
+			else:
+				role_vote = role_vote.key
 			# If the user hasn't already submitted a live role vote
-			if not role_vote.get().get_live_role_vote(session_id):
+			if not role_vote.get().get_live_role_vote_exists(show.key, state, session_id):
 				# Create the live role vote
 				LiveRoleVote(show=show.key,
 						 	 player=player,
@@ -106,13 +111,15 @@ class LiveVote(ViewBase):
 						 	 session_id=session_id).put()
 		# Submitting an incident vote
 		elif state == 'incident':
+			interval = -1
 			voted = True
 			action = ndb.Key(Action, int(voted_option['id']))
 			# If the user hasn't already voted for the incident
-			if not action.get().get_live_action_vote(session_id):
+			if not action.get().get_live_action_vote_exists(show.key, interval, session_id):
 				LiveActionVote(action=action,
+							   show=show.key,
 							   player=show.hero,
-							   interval=-1,
+							   interval=interval,
 							   created=get_mountain_time().date(),
 							   session_id=session_id).put()
 		# Submitting an item vote
@@ -120,7 +127,7 @@ class LiveVote(ViewBase):
 			voted = True
 			test = ndb.Key(VotingTest, int(voted_option['id']))
 			# If the user hasn't already voted for an item
-			if not test.get().get_live_test_vote(session_id):
+			if not test.get().get_live_test_vote_exists(show.key, session_id):
 				LiveVotingTest(test=test,
 							   show=show.key,
 							   session_id=session_id).put()
@@ -129,18 +136,19 @@ class LiveVote(ViewBase):
 			voted = True
 			item = ndb.Key(Item, int(voted_option['id']))
 			# If the user hasn't already voted for an item
-			if not item.get().get_live_item_vote(session_id):
+			if not item.get().get_live_item_vote_exists(show.key, session_id):
 				LiveItemVote(item=item,
-							 created=get_mountain_time().date(),
+							 show=show.key,
 							 session_id=session_id).put()
 		# Submitting a wildcard vote
 		elif state == 'wildcard':
 			voted = True
 			wildcard = ndb.Key(WildcardCharacter, int(voted_option['id']))
 			# If the user hasn't already voted for a wildcard character
-			if not wildcard.get().get_live_wc_vote(session_id):
+			if not wildcard.get().get_live_wc_vote_exists(show.key, session_id):
 				# Add the live vote for the wildcard character
 				LiveWildcardCharacterVote(wildcard=wildcard,
+										  show=show.key,
 							 			  session_id=session_id).put()
 						   
 		context	= {'show': show,

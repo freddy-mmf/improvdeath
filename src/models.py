@@ -6,7 +6,7 @@ from google.appengine.ext import ndb
 
 from timezone import get_mountain_time, back_to_tz
 
-VOTE_AFTER_INTERVAL = 8
+VOTE_AFTER_INTERVAL = 12
 DISPLAY_VOTED = 8
 WILDCARD_AMOUNT = 5
 ITEM_AMOUNT = 5

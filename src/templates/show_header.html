@@ -65,7 +65,7 @@ $( document ).ready(function() {
 		if (state == 'interval') {
 			var panel = $('<div class="panel panel-danger"></div>');
 			var panel_header = $('<div class="panel-heading text-center x-large-font">Action Vote</div>');
-			var thumbnail_column = $('<div class="col-sm-4 col-sm-offset-4"></div>');
+			var thumbnail_column = $('<div class="col-sm-4 col-sm-offset-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>');
 			var thumbnail_img = $('<img src="{{player_image_path}}' + voting_data['player_photo'] + '" class="img-responsive img-thumbnail" />');
 			// Add the thumbnail column to the panel body row
 			$(element_id).append($(thumbnail_column)); //panel_body_row
@@ -96,7 +96,7 @@ $( document ).ready(function() {
 	
 	function create_voted_option(element_id, voted_dict) {
 		var row = $('<div class="row"></div>');
-		var column = $('<div class="col-sm-6 col-sm-offset-2"></div>');
+		var column = $('<div class="col-sm-11"></div>');
 		var panel_body = $('<div class="panel-body"></div>');
 		var panel_body_row = $('<div class="row"></div>');
 		panel_components = create_panel_components(panel_body_row, voted_dict);
@@ -105,12 +105,12 @@ $( document ).ready(function() {
 		panel_header = panel_components['panel_header'];
 		thumbnail_column = panel_components['thumbnail_column'];
 		// Enlarge the player image
-		$(thumbnail_column).attr("class", "col-sm-6 col-sm-offset-3");
+		$(thumbnail_column).attr("class", "col-sm-6 col-sm-offset-4");
 		var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
 		var option_row = $('<div class="row"></div>');
 		var option_column = $('<div class="col-sm-12"></div>');
 		// Create the button with the option name on it
-		var option_btn = $('<button class="btn btn-primary btn-block word-wrap x-large-font">' + voted_dict['voted'] + '</button>');
+		var option_btn = $('<button class="btn btn-primary btn-block word-wrap vote-option-font">' + voted_dict['voted'] + '</button>');
 		// Add the option button to the option column
 		$(option_column).append($(option_btn));
 		// Create the progress bar html
@@ -118,7 +118,7 @@ $( document ).ready(function() {
 		$(option_column).append($(option_percent));
 		var count_row = $('<div class="row text-center"></div>');
 		// Create the button that shows the count of votes
-		var option_count = $('<button class="btn btn-danger word-wrap x-large-font">' + voted_dict['count'] + ' Votes!</button>');
+		var option_count = $('<button class="btn btn-danger word-wrap vote-option-font">' + voted_dict['count'] + ' Votes!</button>');
 		$(count_row).append($(option_count));
 		// Add the row to the element
 		$(element_id).append($(row));
@@ -127,7 +127,7 @@ $( document ).ready(function() {
 		// Add the panel to the column
 		$(column).append($(panel));
 		// Add the panel header to the panel
-		$(panel).append($(panel_header));
+		//$(panel).append($(panel_header));
 		// Add the panel body to the panel
 		$(panel).append($(panel_body));
 		// Add the thumbnail row to the panel body
@@ -150,7 +150,7 @@ $( document ).ready(function() {
 			// Create the entire panel if the panel is empty
 			if (update_percent_only === false || $(element_id).children().length == 0) {
 				var row = $('<div class="row"></div>');
-				var column = $('<div class="col-sm-6 col-sm-offset-2"></div>');
+				var column = $('<div class="col-sm-11"></div>');
 				var panel_body = $('<div class="panel-body"></div>');
 				var panel_body_row = $('<div class="row"></div>');
 				var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
@@ -173,7 +173,7 @@ $( document ).ready(function() {
 				// Add the panel to the column
 				$(column).append($(panel));
 				// Add the panel header to the panel
-				$(panel).append($(panel_header));
+				//$(panel).append($(panel_header));
 				// Add the panel body to the panel
 				$(panel).append($(panel_body));
 				// Add the thumbnail row to the panel body
@@ -210,7 +210,7 @@ $( document ).ready(function() {
 			if (update_percent_only === false) {
 				var capitalized_role = capitaliseFirstLetter(state);
 				var row = $('<div class="row"></div>');
-				var column = $('<div class="col-sm-6 col-sm-offset-2"></div>');
+				var column = $('<div class="col-sm-11"></div>');
 				var panel = $('<div class="panel panel-primary"></div>');
 				var panel_header = $('<div class="panel-heading text-center x-large-font">' + capitalized_role + ' Vote</div>');
 				var panel_body = $('<div class="panel-body"></div>');
@@ -229,9 +229,9 @@ $( document ).ready(function() {
 				// Create the player rows and columns
 				for (var option_num in option_data) {
 					var player_number = parseInt(option_num) + 1;
-					var player_column = $('<div class="col-sm-3"></div>');
+					var player_column = $('<div class="col-sm-2"></div>');
 					var player_img = $('<img src="{{player_image_path}}' + option_data[option_num]['photo_filename'] + '" class="img-responsive img-thumbnail" />');
-					var player_btn = $('<button class="btn btn-default btn-block vote-option-font word-wrap x-large-font">' + player_number + '</button>');
+					var player_btn = $('<button class="btn btn-default btn-block vote-option-font word-wrap vote-option-font">' + player_number + '</button>');
 					var player_percent = $(PROGRESS_BAR_ELEMENT);
 					// Add the player image to the player column
 					$(player_column).append($(player_img));
@@ -266,7 +266,7 @@ $( document ).ready(function() {
 				// Add the panel to the column
 				$(column).append($(panel));
 				// Add the panel header to the panel
-				$(panel).append($(panel_header));
+				//$(panel).append($(panel_header));
 				// Add the panel body to the panel
 				$(panel).append($(panel_body));
 				// Add the thumbnail row to the panel body
@@ -306,25 +306,25 @@ $( document ).ready(function() {
 	function create_voted_role(element_id, voted_dict) {
 		var capitalized_role = capitaliseFirstLetter(voted_dict['voted']);
 		var row = $('<div class="row"></div>');
-		var column = $('<div class="col-sm-6 col-sm-offset-2"></div>');
+		var column = $('<div class="col-sm-11"></div>');
 		var panel = $('<div class="panel panel-primary"></div>');
 		var panel_body = $('<div class="panel-body"></div>');
 		var panel_body_row = $('<div class="row"></div>');
-		var thumbnail_column = $('<div class="col-sm-6 col-sm-offset-3"></div>');
+		var thumbnail_column = $('<div class="col-sm-6 col-sm-offset-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>');
 		var thumbnail_img = $('<img src="{{player_image_path}}' + voted_dict['photo_filename'] + '" class="img-responsive img-thumbnail" />');
 		var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
 		var role_row = $('<div class="row"></div>');
 		var role_column = $('<div class="col-sm-12"></div>');
 		var count_row = $('<div class="row text-center"></div>');
 		// Create the button with the option name on it
-		var role_btn = $('<button class="btn btn-primary btn-block word-wrap x-large-font">' + capitalized_role + '</button>');
+		var role_btn = $('<button class="btn btn-primary btn-block word-wrap vote-option-font">' + capitalized_role + '</button>');
 		// Add the role button to the role column
 		$(role_column).append($(role_btn));
 		// Create the progress bar html
 		var role_percent = $(PROGRESS_BAR_ELEMENT);
 		$(role_column).append($(role_percent));
 		// Create the button that shows the count of votes
-		var role_count = $('<button class="btn btn-danger word-wrap x-large-font">' + voted_dict['count'] + ' Votes!</button>');
+		var role_count = $('<button class="btn btn-danger word-wrap vote-option-font">' + voted_dict['count'] + ' Votes!</button>');
 		$(count_row).append($(role_count));
 		// Add the row to the element
 		$(element_id).append($(row));

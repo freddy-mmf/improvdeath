@@ -337,9 +337,9 @@ class JSTestPage(ViewBase):
 		available_mock = [1,2,3]
 		start_time = back_to_tz(get_mountain_time())
 		end_time = start_time + datetime.timedelta(minutes=4)
-		three_options = [{"name": "Option 1", "percent": 30},
-					    {"name": "Option 2", "percent": 60},
-					    {"name": "Option 3", "percent": 10}]
+		three_options = [{"name": "Walks into a house", "percent": 30},
+					    {"name": "Something else crazy long, so forget about what you know about options lenghts", "percent": 60},
+					    {"name": "Here is a super long option that nobody could have ever guessed because they never dreamed of such things", "percent": 10}]
 		five_options = [{"name": "Option 1", "percent": 20},
 					   {"name": "Option 2", "percent": 50},
 					   {"name": "Option 3", "percent": 10},

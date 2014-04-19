@@ -65,7 +65,7 @@ $( document ).ready(function() {
 		if (state == 'interval') {
 			var panel = $('<div class="panel panel-danger"></div>');
 			var panel_header = $('<div class="panel-heading text-center x-large-font">Action Vote</div>');
-			var thumbnail_column = $('<div class="col-sm-4 col-sm-offset-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>');
+			var thumbnail_column = $('<div class="col-sm-2 col-sm-offset-4 voting-interval-thumbnail"></div>');
 			var thumbnail_img = $('<img src="{{player_image_path}}' + voting_data['player_photo'] + '" class="img-responsive img-thumbnail" />');
 			// Add the thumbnail column to the panel body row
 			$(element_id).append($(thumbnail_column)); //panel_body_row
@@ -105,7 +105,7 @@ $( document ).ready(function() {
 		panel_header = panel_components['panel_header'];
 		thumbnail_column = panel_components['thumbnail_column'];
 		// Enlarge the player image
-		$(thumbnail_column).attr("class", "col-sm-6 col-sm-offset-4");
+		$(thumbnail_column).attr("class", "col-sm-6 col-sm-offset-4 result-thumbnail");
 		var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
 		var option_row = $('<div class="row"></div>');
 		var option_column = $('<div class="col-sm-12"></div>');
@@ -154,7 +154,7 @@ $( document ).ready(function() {
 				var panel_body = $('<div class="panel-body"></div>');
 				var panel_body_row = $('<div class="row"></div>');
 				var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
-				var countdown_column = $('<div class="col-sm-3 col-sm-offset-5"></div>');
+				var countdown_column = $('<div class="col-sm-3 col-sm-offset-5 countdown-position"></div>');
 				var countdown_timer = $('<span class="countdown glowingLayout"></span>');
 				// Set up the vote start time
 				var vote_end = new Date('{{now_tz|date:"F j, Y H:i:s"}}');
@@ -216,7 +216,7 @@ $( document ).ready(function() {
 				var panel_body = $('<div class="panel-body"></div>');
 				var panel_body_row = $('<div class="row"></div>');
 				var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
-				var countdown_column = $('<div class="col-sm-3 col-sm-offset-5"></div>');
+				var countdown_column = $('<div class="col-sm-3 col-sm-offset-5 countdown-position"></div>');
 				var countdown_timer = $('<span class="countdown glowingLayout"></span>');
 				// Set up the vote start time
 				var vote_end = new Date('{{now_tz|date:"F j, Y H:i:s"}}');
@@ -229,7 +229,7 @@ $( document ).ready(function() {
 				// Create the player rows and columns
 				for (var option_num in option_data) {
 					var player_number = parseInt(option_num) + 1;
-					var player_column = $('<div class="col-sm-2"></div>');
+					var player_column = $('<div class="col-sm-2 role-player-panels"></div>');
 					var player_img = $('<img src="{{player_image_path}}' + option_data[option_num]['photo_filename'] + '" class="img-responsive img-thumbnail" />');
 					var player_btn = $('<button class="btn btn-default btn-block vote-option-font word-wrap vote-option-font">' + player_number + '</button>');
 					var player_percent = $(PROGRESS_BAR_ELEMENT);
@@ -310,7 +310,7 @@ $( document ).ready(function() {
 		var panel = $('<div class="panel panel-primary"></div>');
 		var panel_body = $('<div class="panel-body"></div>');
 		var panel_body_row = $('<div class="row"></div>');
-		var thumbnail_column = $('<div class="col-sm-6 col-sm-offset-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>');
+		var thumbnail_column = $('<div class="col-sm-6 col-sm-offset-4 result-thumbnail"></div>');
 		var thumbnail_img = $('<img src="{{player_image_path}}' + voted_dict['photo_filename'] + '" class="img-responsive img-thumbnail" />');
 		var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
 		var role_row = $('<div class="row"></div>');
@@ -391,8 +391,14 @@ $( document ).ready(function() {
 				if (voting_data['display'] == 'voting') {
 					// Delete the current voting display
 					$("#current-vote").empty();
-					// play the opening vote sound
-					$.playSound('{{host_url}}{{audio_path}}vote-chime');
+					if ('speedup' in voting_data) {
+						// Play the speedup sound
+						$.playSound('{{host_url}}{{audio_path}}smb_warning');
+					}
+					else {
+						// play the opening vote sound
+						$.playSound('{{host_url}}{{audio_path}}vote-chime');
+					}
 				}
 				if (voting_data['display'] == 'result') {
 					// Delete the current voting display

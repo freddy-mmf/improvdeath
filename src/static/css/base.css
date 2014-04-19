@@ -61,6 +61,32 @@ button.vote-option-font {
 	font-size:xx-large;
 }
 
+.vote-selection-column {
+	position:relative;
+	left:48px;
+	top: 20px;
+}
+
+.countdown-position {
+	position:relative;
+	left:40px;
+}
+
+.voting-interval-thumbnail {
+	position:relative;
+	left:90px;
+}
+
+.result-thumbnail {
+	position:relative;
+	left:45px;
+}
+
+.role-player-panels {
+	position:relative;
+	left:185px;
+}
+
 a.large-font {
 	font-size:large;
 }

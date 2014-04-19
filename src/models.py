@@ -255,6 +255,29 @@ class Show(ndb.Model):
         
         return range(0, max_options)
     
+    def is_speedup_interval(self, interval):
+        first_minute_interval = -1
+        # Get the sorted intervals
+        interval_list = sorted([x.interval for x in self.player_actions])
+        # Loop through the intervals in order
+        for i in range(0, len(interval_list)):
+            # Get the minutes elapsed between the next interval in the loop
+            # and the current interval in the loop
+            try:
+                minutes_elapsed = int(interval_list[i+1]) - int(interval_list[i])
+            except IndexError:
+                break
+            else:
+                if minutes_elapsed == 1:
+                    # Find the first interval that starts the minute apart intervals
+                    # "speedup"
+                    first_minute_interval = interval_list[i]
+                    break
+        # If the interval is the "speedup" interval
+        if first_minute_interval == interval:
+            return True
+        return False
+    
     @property
     def current_vote_state(self):
         state_dict = {'state': 'default', 'display': 'default', 'used_types': []}
@@ -422,8 +445,9 @@ class Show(ndb.Model):
                 vote_options['options'] = []
                 # Loop through all the players in the show
                 for player in show.players:
-                    # Make sure the user isn't already the hero
-                    if player.key != show.hero:
+                    # Make sure the user isn't already the hero/lover/villain
+                    if player.key != show.hero and player.key != show.villain \
+                        and player.key != show.lover:
                         # Get the live voting percentage for a role
                         change_vote = get_or_create_role_vote(show, player, state)
                         player_dict = {'photo_filename': player.photo_filename,
@@ -438,9 +462,11 @@ class Show(ndb.Model):
                     role_votes = RoleVote.query(RoleVote.role == state,
                                                 RoleVote.show == show.key,
                                      ).order(-RoleVote.live_vote_value).fetch()
-                    # Grab the first player, making sure they aren't already the hero
+                    # Grab the first player
                     for rv in role_votes:
-                        if rv != show.hero:
+                        # Make sure they aren't already the hero/villain/lover
+                        if rv.player != show.hero and rv.player != show.villain \
+                            and rv.player != show.lover:
                             # We've found the voted role, break out of the loop
                             voted_role = rv
                             break
@@ -477,6 +503,9 @@ class Show(ndb.Model):
                        'hour': interval_vote_end.hour,
                        'minute': interval_vote_end.minute,
                        'second': interval_vote_end.second}
+        
+        if self.is_speedup_interval(interval):
+            action_data['speedup'] = True
         
         if now_tz > interval_vote_end:
             action_data['display'] = 'result'

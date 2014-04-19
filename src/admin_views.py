@@ -309,7 +309,7 @@ class AddPlayers(ViewBase):
 		date_added = self.request.get('date_added')
 		if player_name and photo_filename:
 			if date_added:
-				date_added = datetime.datetime.strptime(scheduled_string,
+				date_added = datetime.datetime.strptime(date_added,
 													   "%d.%m.%Y %H:%M")
 			else:
 				date_added = get_mountain_time()
@@ -352,7 +352,7 @@ class JSTestPage(ViewBase):
 		 				  {'photo_filename': 'denise.png', 'percent': 5},
 		 				  {'photo_filename': 'camilla.png', 'percent': 20},
 		 				  {'photo_filename': 'lindsay.png', 'percent': 10},
-		 				  {'photo_filename': 'jeff.jpg', 'percent': 5}]
+		 				  {'photo_filename': 'greg.jpg', 'percent': 5}]
 		show_mock = type('Show',
 						 (object,),
 						 dict(scheduled = get_mountain_time(),

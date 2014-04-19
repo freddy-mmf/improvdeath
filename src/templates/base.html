@@ -33,7 +33,7 @@
 					<li {% block live-vote-selected %}{% endblock %}><a href="/live_vote/"><strong>Live Vote!</strong></a></li>
 					<li {% block add-action-selected %}{% endblock %}><a href="/add_actions/"><strong>Actions</strong> Add/Vote</a></li>
 					<li {% block add-item-selected %}{% endblock %}><a href="/add_items/"><strong>Items</strong> Add/Vote</a></li>
-					<li {% block add-character-selected %}{% endblock %}><a href="/add_characters/"><strong>Characters</strong> Add/Vote</a></li>
+					{% comment %}<li {% block add-character-selected %}{% endblock %}><a href="/add_characters/"><strong>Characters</strong> Add/Vote</a></li>{% endcomment %}
 					<li {% block add-theme-selected %}{% endblock %}><a href="/add_themes/"><strong>Themes</strong> Add/Vote</a></li>
 					{% comment %}<li {% block other-shows-selected %}{% endblock %}><a href="/other_shows/">Other Shows</a></li>{% endcomment %}
 					{% if is_admin %}

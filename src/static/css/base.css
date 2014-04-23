@@ -35,6 +35,10 @@ input.white-input,input.white-input:visited,input.white-input:hover {
 	text-decoration:none;
 }
 
+input.x-large-font {
+	font-size:x-large;
+}
+
 div.header-btn,div.header-btn:hover {
 	font-size:x-large;
 	cursor:default;
@@ -87,12 +91,28 @@ button.vote-option-font {
 	left:185px;
 }
 
+.home-button-list {
+	position:relative;
+	left:60px;
+}
+
 a.large-font {
 	font-size:large;
 }
 
 span.medium-font {
 	font-size:medium;
+}
+
+span.entered-value {
+	color:black;
+	font-size:x-large;
+}
+
+.upvote-position {
+	float:left;
+	position:relative;
+	bottom:8px;
 }
 
 .progress-bar {

@@ -67,6 +67,7 @@ class Action(ndb.Model):
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
+    session_id = ndb.StringProperty(required=True)
     
     def get_live_action_vote_exists(self, show, interval, session_id):
         return bool(LiveActionVote.query(
@@ -88,6 +89,7 @@ class Theme(ndb.Model):
     name = ndb.StringProperty(required=True)
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
+    session_id = ndb.StringProperty(required=True)
     
     def put(self, *args, **kwargs):
         self.created = get_mountain_time()
@@ -114,6 +116,7 @@ class Item(ndb.Model):
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
+    session_id = ndb.StringProperty(required=True)
     
     def get_live_item_vote_exists(self, show, session_id):
         return bool(LiveItemVote.query(
@@ -135,6 +138,7 @@ class WildcardCharacter(ndb.Model):
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
     live_vote_value = ndb.IntegerProperty(default=0)
+    session_id = ndb.StringProperty(required=True)
     
     def get_live_wc_vote_exists(self, show, session_id):
         return bool(LiveWildcardCharacterVote.query(

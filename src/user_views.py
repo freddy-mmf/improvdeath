@@ -33,6 +33,60 @@ def show_today():
 						   Show.scheduled < tomorrow_start).get())
 
 
+def pre_show_voting_post(type_name, entry_value_type, type_model, type_vote_model,
+						 request, session_id, is_admin):
+	context = {'session_id': session_id}
+	entity = None
+	# Get the value of the entry that was added
+	entry_value = request.get('entry_value')
+	# Get the upvote
+	upvote = request.get('upvote')
+	# If a delete was requested on an entry
+	delete_id = request.get('delete_id')
+	# Get the key to query with (i.e. ThemeVote.theme)
+	type_vote_key_query = getattr(type_vote_model, type_name, None)
+	if entry_value:
+		entity_data = {entry_value_type: entry_value,
+					   'vote_value': 0,
+					   'session_id': session_id}
+		entity = type_model(**entity_data).put().get()
+		context['created'] = True
+	elif upvote:
+		entity_key = ndb.Key(type_model, int(upvote)).get().key
+		tv = type_vote_model.query(
+				type_vote_key_query == entity_key,
+				type_vote_model.session_id == session_id).get()
+		if not tv:
+			vote_data = {type_name: entity_key,
+						 'session_id': session_id}
+			type_vote_model(**vote_data).put()
+	# If a delete was requested
+	elif delete_id:
+		# Fetch the them
+		entity = ndb.Key(type_model, int(delete_id)).get()
+		# Make sure the entry was either the session id that created it
+		# Or this is an admin user
+		if session_id == entity.session_id or is_admin:
+			entity.key.delete()
+		
+	if entity:
+		# Have to sort first by entity key, since we query on it. Dumb...
+		entities = type_model.query(type_model.used == False,
+								  type_model.key != entity.key).fetch()
+		entities.sort(key=lambda x: (x.vote_value, x.created), reverse=True)
+		# If the entity wasn't deleted
+		if not delete_id:
+			# Add the newly added entity
+			entities.append(entity)
+	else:
+		entities = type_model.query(type_model.used == False,
+								   ).order(-type_model.vote_value,
+									 type_model.created).fetch()
+	context['%ss' % type_name] = entities
+	
+	return context
+
+
 class MainPage(ViewBase):
 	def get(self):
 		# Get the current show
@@ -167,37 +221,20 @@ class AddActions(ViewBase):
 			Action.used == False).order(-Action.vote_value,
 										Action.created).fetch()
 		context = {'actions': actions,
-				   'show_today': show_today()}
+				   'show_today': show_today(),
+				   'session_id': str(self.session.get('id', '0'))}
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
 
 	def post(self):
-		context = {'show_today': show_today()}
-		action = None
-		description = self.request.get('description')
-		upvote = self.request.get('upvote')
-		if description:
-			action = Action(description=description).put().get()
-			context['created'] = True
-		elif upvote:
-			action_key = ndb.Key(Action, int(upvote)).get().key
-			av = ActionVote.query(
-					ActionVote.action == action_key,
-					ActionVote.session_id == str(self.session.get('id', '0'))).get()
-			if not av:
-				ActionVote(action=action_key,
-					  	   session_id=str(self.session.get('id'))).put()
-		if action:
-			context['actions'] = Action.query(Action.used == False,
-											  Action.key != action.key,
-											  ).order(Action.key,
-											  		  -Action.vote_value,
-											  		  Action.created).fetch()
-			context['actions'].append(action)
-		else:
-			context['actions'] = Action.query(Action.used == False
-											 ).order(-Action.vote_value,
-											 		 Action.created).fetch()
+		context = pre_show_voting_post('action',
+									   'description',
+									   Action,
+									   ActionVote,
+									   self.request,
+									   str(self.session.get('id', '0')),
+									   self.context.get('is_admin', False))
+		context['show_today'] = show_today
 			
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
@@ -286,46 +323,26 @@ class AddCharacters(ViewBase):
 			
 		self.response.out.write(template.render(self.path('add_characters.html'),
 												self.add_context(context)))
-
+		
 
 class AddThemes(ViewBase):
 	def get(self):
 		themes = Theme.query(
 					Theme.used == False).order(-Theme.vote_value,
 											   Theme.created).fetch()
-		context = {'themes': themes}
+		context = {'themes': themes,
+				   'session_id': str(self.session.get('id', '0'))}
 		self.response.out.write(template.render(self.path('add_themes.html'),
 												self.add_context(context)))
 
 	def post(self):
-		context = {}
-		theme = None
-		theme_name = self.request.get('theme_name')
-		upvote = self.request.get('upvote')
-		if theme_name:
-			theme = Theme(name=theme_name,
-						  vote_value=0).put().get()
-			context['created'] = True
-		elif upvote:
-			theme_key = ndb.Key(Theme, int(upvote)).get().key
-			tv = ThemeVote.query(
-					ThemeVote.theme == theme_key,
-					ThemeVote.session_id == str(self.session.get('id', '0'))).get()
-			if not tv:
-				ThemeVote(theme=theme_key,
-					  	  session_id=str(self.session.get('id'))).put()
-		if theme:
-			# Have to sort first by theme key, since we query on it. Dumb...
-			themes = Theme.query(Theme.key != theme.key
-								).order(Theme.key,
-										-Theme.vote_value,
-										Theme.created).fetch()
-			context['themes'] = themes
-			context['themes'].append(theme)
-		else:
-			themes = Theme.query().order(-Theme.vote_value,
-										 Theme.created).fetch()
-			context['themes'] = themes
+		context = pre_show_voting_post('theme',
+									   'name',
+									   Theme,
+									   ThemeVote,
+									   self.request,
+									   str(self.session.get('id', '0')),
+									   self.context.get('is_admin', False))
 			
 		self.response.out.write(template.render(self.path('add_themes.html'),
 												self.add_context(context)))

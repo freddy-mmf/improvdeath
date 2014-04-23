@@ -18,14 +18,14 @@
 			</div>
 		{% endif %}
 		<div class="row">
-			<div class="col-md-5 col-md-offset-1">
+			<div class="col-md-6">
 				<div class="panel panel-warning">
 					<div class="panel-heading x-large-font">Add Theme</div>
 					<div class="panel-body">
 						<form class="form-horizontal" role="form" action="/add_themes/" method="post">
 							<div class="form-group">
 								<div class="col-md-9">
-									<input type="text" class="form-control" name="theme_name">
+									<input type="text" class="form-control" name="entry_value">
 								</div>
 								<div>
 									<button type="submit" class="btn btn-default">Add Theme</button>
@@ -37,7 +37,7 @@
 			</div>
 		</div>
 		<div class="row">
-			<div class="col-md-5 col-md-offset-1">
+			<div class="col-md-6">
 				<div class="panel panel-primary">
 					<div class="panel-heading x-large-font">Vote for Themes</div>
 					<div class="panel-body">
@@ -47,15 +47,23 @@
 									<div class="upvote">
 										<form action="/add_themes/" method="post">
 											<input type="hidden" name="upvote" value="{{theme.key.id}}"/>
-											<button class="upvote" type="submit"></button>
+											<button class="upvote upvote-position" type="submit"></button>
+											<span class="count upvote-position">&nbsp;&nbsp;{{theme.vote_value}}</span>
 										</form> 
-										<span class="count">&nbsp;&nbsp;{{theme.vote_value}}</span>
 									</div>
 								</div>
-								<div class="col-md-11">
-									<span class="word-wrap" style="color:black;font-size:x-large;">&nbsp;{{theme.name}}</span>
+								<div class="col-md-9">
+								    <span class="word-wrap entered-value">{{theme.name}}</span>
 								</div>
-							</div>							
+							{% if is_admin or session_id == theme.session_id %}
+                                <div class="col-md-1">
+                                    <form class="form-horizontal" role="form" action="/add_themes/" method="post">
+                                        <input type="hidden" name="delete_id" value="{{theme.key.id}}"/>
+                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                    </form>
+                                </div>
+							{% endif %}
+							</div>
 							{% if not forloop.last %}
 								<hr class="thick-divider bg-primary"/>
 							{% endif %}

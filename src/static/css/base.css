@@ -91,9 +91,11 @@ button.vote-option-font {
 	left:185px;
 }
 
-.home-button-list {
-	position:relative;
-	left:60px;
+@media (min-width: @screen-sm-min) {
+	.home-button-list {
+		position:relative;
+		left:60px;
+	}
 }
 
 a.large-font {

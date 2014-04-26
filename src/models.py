@@ -168,6 +168,8 @@ class Show(ndb.Model):
     incident_vote_init = ndb.DateTimeProperty()
     wildcard_vote_init = ndb.DateTimeProperty()
     shapeshifter_vote_init = ndb.DateTimeProperty()
+    recap_type = ndb.StringProperty(choices=VOTE_TYPES)
+    recap_init = ndb.DateTimeProperty()
     lover_vote_init = ndb.DateTimeProperty()
     incident = ndb.KeyProperty(kind=Action)
     test = ndb.KeyProperty(kind=VotingTest)
@@ -194,12 +196,14 @@ class Show(ndb.Model):
         for pa in self.player_actions:
             if pa.interval == int(interval):
                 return pa
-        raise ValueError(
-            "Player action for this interval doesn't exists, interval: %s" % interval)
+        return None
     
     def get_player_by_interval(self, interval):
         pa = self.get_player_action_by_interval(interval)
-        return pa.player
+        if pa:
+            return pa.player
+        else:
+            return None
         
     @property
     def players(self):
@@ -316,6 +320,18 @@ class Show(ndb.Model):
                                        'hour': vote_end.hour,
                                        'minute': vote_end.minute,
                                        'second': vote_end.second})
+        # If we're in a recap state
+        if self.recap_init:
+            recap_start_tz = back_to_tz(self.recap_init)
+            # Get the end of the recap display
+            display_end = recap_start_tz + datetime.timedelta(seconds=DISPLAY_VOTED)
+            # If we're in the display period of this recap type
+            if now_tz >= recap_start_tz and now_tz <= display_end:
+                state_dict.update({'state': self.recap_type,
+                                   'display': 'result',
+                                   'hour': display_end.hour,
+                                   'minute': display_end.minute,
+                                   'second': display_end.second})
         
         # Get the list of used vote types
         for vt in VOTE_TYPES:
@@ -494,6 +510,10 @@ class Show(ndb.Model):
         interval = self.current_interval
         # Get the player
         player = self.get_player_by_interval(interval)
+        player_action = self.get_player_action_by_interval(interval)
+        # If we aren't currently at an interval
+        if not player or not player_action:
+            return {'state': 'interval', 'display': 'logo'}
         # Determine if we've already voted on this interval
         now = get_mountain_time()
         # Add timezone for comparisons
@@ -513,7 +533,6 @@ class Show(ndb.Model):
         
         if now_tz > interval_vote_end:
             action_data['display'] = 'result'
-            player_action = self.get_player_action_by_interval(interval)
             # If an action wasn't already chosen for this interval
             if not player_action.action:
                 # Get the actions that were voted on this interval

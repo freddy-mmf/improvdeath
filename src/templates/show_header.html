@@ -7,6 +7,15 @@
 <script>
 $( document ).ready(function() {
 	var PROGRESS_BAR_ELEMENT = '<div class="progress-bar" style="height: 27px;"><div></div></div>';
+	var STATE_RENAME = {'interval': 'Action',
+						'incident': 'Turning Point',
+						'test': 'Test',
+						'item': 'Item',
+						'wildcard': 'Character',
+						'hero': 'Hero',
+						'villain': 'Villain',
+						'shapeshifter': 'Shapeshifter',
+						'lover': 'Love Interest'};
 	function is_defined(variable, dflt) {
 		return typeof variable === "undefined" ? dflt : variable;
 	}
@@ -64,7 +73,6 @@ $( document ).ready(function() {
 		var state = voting_data['state'];
 		if (state == 'interval') {
 			var panel = $('<div class="panel panel-danger"></div>');
-			var panel_header = $('<div class="panel-heading text-center x-large-font">Action Vote</div>');
 			var thumbnail_column = $('<div class="col-sm-2 col-sm-offset-4 voting-interval-thumbnail"></div>');
 			var thumbnail_img = $('<img src="{{player_image_path}}' + voting_data['player_photo'] + '" class="img-responsive img-thumbnail" />');
 			// Add the thumbnail column to the panel body row
@@ -75,26 +83,25 @@ $( document ).ready(function() {
 		// Change the panel to the appropriate color/heading
 		if (state == 'test') {
 			var panel = $('<div class="panel panel-warning"></div>');
-			var panel_header = $('<div class="panel-heading text-center x-large-font">Test Vote</div>');
 		}
 		if (state == 'item') {
 			var panel = $('<div class="panel panel-success"></div>');
-			var panel_header = $('<div class="panel-heading text-center x-large-font">Item Vote</div>');
 		}
 		if (state == 'incident') {
 			var panel = $('<div class="panel panel-danger"></div>');
-			var panel_header = $('<div class="panel-heading text-center x-large-font">Turning Point Vote</div>');
 		}
 		if (state == 'wildcard') {
 			var panel = $('<div class="panel panel-info"></div>');
-			var panel_header = $('<div class="panel-heading text-center x-large-font">Character Vote</div>');
 		}
+		var panel_header = $('<div class="panel-heading text-center x-large-font">' + STATE_RENAME[state] + ' Vote</div>');
 		return {'panel': panel,
 				'panel_header': panel_header,
 				'thumbnail_column': thumbnail_column}
 	}
 	
 	function create_voted_option(element_id, voted_dict) {
+		// Clear the element
+		$(element_id).html('');
 		var row = $('<div class="row"></div>');
 		var column = $('<div class="col-sm-11"></div>');
 		var panel_body = $('<div class="panel-body"></div>');
@@ -192,7 +199,7 @@ $( document ).ready(function() {
 			}
 		}
 		// We're in the result state
-		else {
+		if (voting_data['display'] == 'result') {
 			// Show the voted option in the footer
 			create_voted_option(element_id, voting_data);
 		}
@@ -411,8 +418,15 @@ $( document ).ready(function() {
 					create_role_panels("#current-vote", voting_data);
 				}
 				else {
-					// Create the voting screen
-					create_vote_panel("#current-vote", voting_data);
+					// IF we just want to show the logo and not voting/results
+					if (voting_data['display'] == 'logo') {
+						// Delete the current voting display
+						$("#current-vote").empty();
+					}
+					else {
+						// Create the voting screen
+						create_vote_panel("#current-vote", voting_data);
+					}
 				}
 			}
 			// If we're on the select vote types screen
@@ -425,7 +439,23 @@ $( document ).ready(function() {
 				// Loop through and hide the types that are already used
 				var used_types = voting_data['used_types'];
 				for (var used_index in used_types) {
-					$('#' + used_types[used_index] + '-vote').hide();
+					var used_id = '#' + used_types[used_index] + '-vote';
+					var used_inputs = $(used_id).find('input');
+					// Loop through the used inputs
+					$(used_inputs).each(function(index) {
+						// If the input type is hidden
+						if ($(this).attr('type') == 'hidden') {
+							// Replace the hidden input with recap attributes
+							$(this).attr('name', 'recap');
+							$(this).attr('value', used_types[used_index]);
+						}
+						// If the input type is submit
+						if ($(this).attr('type') == 'submit') {
+							// Replace the value with a recap label
+							$(this).attr('value', 'Recap ' + STATE_RENAME[used_types[used_index]]);
+						}
+					});
+					
 				}
 			}
 			

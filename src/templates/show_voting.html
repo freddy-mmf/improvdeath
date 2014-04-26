@@ -4,7 +4,7 @@
 		<div class="row">
 			<div class="col-sm-11">
 				<h3 class="text-center" style="background-color:#003D7A;">
-					<a href="/" class="white-link">{{host_domain}}</a> (Text: 23343)
+					<a href="/" class="white-link">{{host_domain}}</a> - Tonight's Theme: {{show.theme.get.name}}
 				</h3>
 			</div>
 		</div>
@@ -32,7 +32,7 @@
 						{% if available_actions >= show.player_actions|length %}
 							<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#003D7A;"  value="Start the Plasma Show">
 						{% else %}
-							<div class="btn btn-block btn-lg x-large-font" style="background-color:#003D7A;">Need more Actions to start Plasma Show</div>
+							<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">Need more Actions to start Plasma Show</div>
 						{% endif %}
 					</form>
 					<hr/>
@@ -64,7 +64,7 @@
 						{% if available_actions %}
 							<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#A30000;" value="Start the Turning Point Vote">
 						{% else %}
-							<div class="btn btn-block btn-lg x-large-font" style="background-color:#A30000;">Need more Actions to start Turning Point Vote</div>
+							<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#A30000;">Need more Actions to start Turning Point Vote</div>
 						{% endif %}
 					</form>
 				</div>

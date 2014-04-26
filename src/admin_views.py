@@ -2,11 +2,12 @@ import datetime
 import json
 from functools import wraps
 
-from views_base import ViewBase
-
+import webapp2
 from google.appengine.ext.webapp import template
 from google.appengine.ext import ndb
 from google.appengine.api import users
+
+from views_base import ViewBase
 
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
@@ -99,6 +100,11 @@ class ShowPage(ViewBase):
 		# Admin is starting the lover vote
 		elif self.request.get('lover_vote') and self.context.get('is_admin', False):
 			show.lover_vote_init = get_mountain_time()
+			show.put()
+		# Admin is starting a recap
+		elif self.request.get('recap') and self.context.get('is_admin', False):
+			show.recap_init = get_mountain_time()
+			show.recap_type = self.request.get('recap')
 			show.put()
 		available_actions = len(Action.query(
 							   Action.used == False).fetch())
@@ -417,9 +423,12 @@ class JSTestPage(ViewBase):
 							 	  'photo_filename': player_options[0]['photo_filename'],
 							 	  'count': player_options[0]['percent'],
 				             	  'percent': player_options[0]['percent']})
+		
+		mock_data['used_types'] = []
 		# Add used vote types
 		for vt in VOTE_TYPES:
 			if vt in votes_used:
+				mock_data['used_types'].append(vt)
 				setattr(show_mock, vt, True)
 		
 		# Add start of vote time

@@ -33,6 +33,12 @@ def show_today():
 						   Show.scheduled < tomorrow_start).get())
 
 
+def get_current_show():
+	return Show.query(
+			Show.scheduled >= get_today_start(),
+			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
+
+
 def pre_show_voting_post(type_name, entry_value_type, type_model, type_vote_model,
 						 request, session_id, is_admin):
 	context = {'session_id': session_id}
@@ -89,31 +95,21 @@ def pre_show_voting_post(type_name, entry_value_type, type_model, type_vote_mode
 
 class MainPage(ViewBase):
 	def get(self):
-		# Get the current show
-		current_show = Show.query(
-			Show.scheduled >= get_today_start(),
-			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
-		context = {'current_show': current_show}
+		context = {'current_show': get_current_show()}
 		self.response.out.write(template.render(self.path('home.html'),
 												self.add_context(context)))
 
 
 class LiveVote(ViewBase):
 	def get(self):
-		# Get the current show
-		show = Show.query(
-			Show.scheduled >= get_today_start(),
-			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
-		context	= {'show': show}
+		context	= {'show': get_current_show()}
 		self.response.out.write(template.render(self.path('live_vote.html'),
 												self.add_context(context)))
 
 	def post(self):
 		voted = True
 		# Get the current show
-		show = Show.query(
-			Show.scheduled >= get_today_start(),
-			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
+		show = get_current_show()
 		vote_num = int(self.request.get('vote_num', '0'))
 		session_id = str(self.session.get('id'))
 		# Determine which show type we're voting for
@@ -221,6 +217,7 @@ class AddActions(ViewBase):
 			Action.used == False).order(-Action.vote_value,
 										Action.created).fetch()
 		context = {'actions': actions,
+				   'show': get_current_show(),
 				   'show_today': show_today(),
 				   'session_id': str(self.session.get('id', '0'))}
 		self.response.out.write(template.render(self.path('add_actions.html'),

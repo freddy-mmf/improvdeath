@@ -9,7 +9,7 @@
   			<hr/>
   			<div class="row">
 				<div class="btn-group-vertical col-md-12">
-					{% if current_show.running or current_show.scheduled %}
+					{% if current_show.is_today %}
 						{% if is_admin %}
 							<a class-"text-center" href="/show/{{current_show.key.id}}/">
 								<div class="btn btn-primary btn-block btn-lg home-show-btn">Show Admin</div>

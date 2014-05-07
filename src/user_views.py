@@ -112,13 +112,7 @@ class LiveVote(ViewBase):
 		show = get_current_show()
 		vote_num = int(self.request.get('vote_num', '0'))
 		session_id = str(self.session.get('id'))
-		# Determine which show type we're voting for
-		if show.running:
-			# Interval
-			vote_data = show.current_action_options()
-		else:
-			# Hero
-			vote_data = show.current_vote_options(show)
+		vote_data = show.current_vote_options(show)
 		# If we're in the voting period
 		if vote_data.get('display') == 'voting':
 			state = vote_data['state']

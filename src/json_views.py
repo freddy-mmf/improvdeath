@@ -12,10 +12,6 @@ from timezone import get_mountain_time, back_to_tz
 class ShowJSON(ViewBase):
     def get(self, show_id):
         show = ndb.Key(Show, int(show_id)).get()
-        # If the interval show is running
-        if show.running:
-            vote_options = show.current_action_options()
-        else:
-            vote_options = show.current_vote_options(show)
+        vote_options = show.current_vote_options(show)
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
         self.response.out.write(json.dumps(vote_options))

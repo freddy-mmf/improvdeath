@@ -1,6 +1,7 @@
 import datetime
 import json
 from functools import wraps
+import random
 
 import webapp2
 from google.appengine.ext.webapp import template
@@ -12,7 +13,7 @@ from views_base import ViewBase
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
 					WildcardCharacter, WildcardCharacterVote,
-					VotingTest, LiveVotingTest,
+					VotingTest, LiveVotingTest, RoleVote,
 					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES, VOTE_TYPES)
 from timezone import get_mountain_time, back_to_tz
 
@@ -52,9 +53,16 @@ class ShowPage(ViewBase):
 	def post(self, show_id):
 		show = ndb.Key(Show, int(show_id)).get()
 		# Admin is starting the show
-		if self.request.get('start_show') and self.context.get('is_admin', False):
-			show.start_time = get_mountain_time()
-			show.put()
+		if self.request.get('interval_vote') and self.context.get('is_admin', False):
+			# Get the next interval
+			next_interval = show.get_next_interval(show.current_interval)
+			# If there is a next interval
+			if next_interval != None:
+				# Set the current interval to the next interval
+				show.current_interval = next_interval
+				# Set the start time of this interval vote
+				show.interval_vote_init = get_mountain_time()
+				show.put()
 		# Admin is starting item vote
 		elif self.request.get('test_vote') and self.context.get('is_admin', False):
 			show.test = None
@@ -135,14 +143,13 @@ class CreateShow(ViewBase):
 
 	@admin_required
 	def post(self):
-		length = int(self.request.get('show_length'))
 		scheduled_string = self.request.get('scheduled')
 		theme_id = self.request.get('theme_id')
 		player_list = self.request.get_all('player_list')
 		action_intervals = self.request.get('action_intervals')
 		context = {'players': Player.query().fetch(),
 		           'themes': Theme.query(Theme.used == False).fetch()}
-		if length and player_list and action_intervals:
+		if player_list and action_intervals:
 			# Get the list of interval times
 			try:
 				interval_list = [int(x.strip()) for x in action_intervals.split(',')]
@@ -154,15 +161,27 @@ class CreateShow(ViewBase):
 			else:
 				scheduled = get_mountain_time()
 			theme = ndb.Key(Theme, int(theme_id))
-			show = Show(length=length, scheduled=scheduled, theme=theme).put()
-			# Add the action intervals to the show
-			for interval in interval_list:
-				player_action = PlayerAction(interval=interval).put()
-				ShowAction(show=show, player_action=player_action).put()
+			show = Show(scheduled=scheduled, theme=theme).put()
+			players = []
 			# Add the players to the show
 			for player in player_list:
 				player_key = ndb.Key(Player, int(player)).get().key
+				players.append(player_key)
 				ShowPlayer(show=show, player=player_key).put()
+			# Make a copy of the list of players and randomize it
+			rand_players = list(players)
+			random.shuffle(rand_players, random.random)
+			# Add the action intervals to the show
+			for interval in interval_list:
+				# If random players list gets empty, refill it with more players
+				if len(rand_players) == 0:
+					rand_players = list(players)
+					random.shuffle(rand_players, random.random)
+				# Pop a random player off the list and create a PlayerAction
+				player_action = PlayerAction(interval=interval,
+											 player=rand_players.pop()).put()
+				print "player_action, ", player_action
+				ShowAction(show=show, player_action=player_action).put()
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
@@ -247,6 +266,10 @@ class DeleteTools(ViewBase):
 				show_players = ShowPlayer.query(ShowPlayer.show == show_entity.key).fetch()
 				for show_player in show_players:
 					show_player.key.delete()
+				# Delete all Role votes
+				role_votes = RoleVote.query(RoleVote.show == show_entity.key).fetch()
+				for role_vote in role_votes:
+					role_vote.key.delete()
 				# Delete the theme used in the show, if it existed
 				if show_entity.theme:
 					show_entity.theme.delete()
@@ -341,8 +364,6 @@ class JSTestPage(ViewBase):
 		display = self.request.get('display', 'voting')
 		votes_used = self.request.get('votes_used', '')
 		available_mock = [1,2,3]
-		start_time = back_to_tz(get_mountain_time())
-		end_time = start_time + datetime.timedelta(minutes=4)
 		three_options = [{"name": "Walks into a house", "percent": 30},
 					    {"name": "Something else crazy long, so forget about what you know about options lenghts", "percent": 60},
 					    {"name": "Here is a super long option that nobody could have ever guessed because they never dreamed of such things", "percent": 10}]
@@ -364,16 +385,9 @@ class JSTestPage(ViewBase):
 						 dict(scheduled = get_mountain_time(),
 							  player_actions = [],
 							  theme = type('Theme', (object,), dict(name = 'Pirates')),
-							  length = 4,
-							  start_time = start_time,
-							  end_time = end_time,
-							  start_time_tz = start_time,
-							  end_time_tz = end_time,
-							  running = False,
 							  is_today = True))
 		mock_data = {'state': state, 'display': display}
 		if state == 'interval':
-			show_mock.running = True
 			if display == 'voting':
 				mock_data.update({'player_name': 'Freddy',
 				                  'player_photo': 'freddy.jpg',

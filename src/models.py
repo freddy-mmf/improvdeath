@@ -1,6 +1,5 @@
 import datetime
 import math
-import random
 
 from google.appengine.ext import ndb
 
@@ -12,7 +11,7 @@ WILDCARD_AMOUNT = 5
 ITEM_AMOUNT = 5
 ROLE_TYPES = ['hero', 'villain', 'shapeshifter', 'lover']
 VOTE_TYPES = list(ROLE_TYPES)
-VOTE_TYPES += ['item', 'wildcard', 'incident', 'test']
+VOTE_TYPES += ['item', 'wildcard', 'incident', 'interval', 'test']
 VOTE_OPTIONS = 5
 ACTION_OPTIONS = 3
 INCIDENT_AMOUNT = 5
@@ -158,10 +157,8 @@ class WildcardCharacter(ndb.Model):
 class Show(ndb.Model):
     scheduled = ndb.DateTimeProperty()
     theme = ndb.KeyProperty(kind=Theme)
-    length = ndb.IntegerProperty(required=True)
-    start_time = ndb.DateTimeProperty()
-    end_time = ndb.DateTimeProperty()
     test_vote_init = ndb.DateTimeProperty()
+    interval_vote_init = ndb.DateTimeProperty()
     item_vote_init = ndb.DateTimeProperty()
     hero_vote_init = ndb.DateTimeProperty()
     villain_vote_init = ndb.DateTimeProperty()
@@ -171,6 +168,8 @@ class Show(ndb.Model):
     recap_type = ndb.StringProperty(choices=VOTE_TYPES)
     recap_init = ndb.DateTimeProperty()
     lover_vote_init = ndb.DateTimeProperty()
+    current_interval = ndb.IntegerProperty()
+    speedup_reached = ndb.BooleanProperty(default=False)
     incident = ndb.KeyProperty(kind=Action)
     test = ndb.KeyProperty(kind=VotingTest)
     item = ndb.KeyProperty(kind=Item)
@@ -179,14 +178,6 @@ class Show(ndb.Model):
     wildcard = ndb.KeyProperty(kind=WildcardCharacter)
     shapeshifter = ndb.KeyProperty(kind=Player)
     lover = ndb.KeyProperty(kind=Player)
-    
-    @property
-    def start_time_tz(self):
-        return back_to_tz(self.start_time)
-    
-    @property
-    def end_time_tz(self):
-        return back_to_tz(self.end_time)
     
     @property
     def scheduled_tz(self):
@@ -216,33 +207,28 @@ class Show(ndb.Model):
         return [x.player_action.get() for x in action_intervals if getattr(x, 'player_action', None) and x.player_action.get()]
     
     @property
-    def running(self):
-        #return True
-        if not self.start_time or not self.end_time:
-            return False
-        now_tz = back_to_tz(get_mountain_time())
-        if now_tz >= self.start_time_tz and now_tz <= self.end_time_tz:
-            return True
-        return False
+    def sorted_intervals(self):
+        return sorted([x.interval for x in self.player_actions])
     
-    @property
-    def current_interval(self):
-        # If the interval show has started
-        if self.start_time:
-            # Determine how many minutes have elapsed in the show
-            now_tz = back_to_tz(get_mountain_time())
-            delta = now_tz - self.start_time_tz
-            minutes_elapsed = (delta.seconds//60)%60
-            max_interval = 0
-            # Look through the player actions
-            for pa in self.player_actions:
-                # If we're at or past the minutes elapsed
-                # And this is the furthest along interval we've found
-                if minutes_elapsed >= pa.interval and pa.interval > max_interval:
-                    # Set it to the furthest interval we've reached
-                    max_interval = pa.interval
-            # Return the furthest interval we've reached
-            return max_interval
+    def get_next_interval(self, interval):
+        sorted_intervals = self.sorted_intervals
+        # If given an interval
+        if interval != None:
+            # Loop through the intervals in order
+            for i in range(0, len(sorted_intervals)):
+                if interval == sorted_intervals[i]:
+                    # Get the minutes elapsed between the next interval in the loop
+                    # and the current interval in the loop
+                    try:
+                        return sorted_intervals[i+1]
+                    except IndexError:
+                        return None
+        # Otherwise, assume first interval
+        else:
+            try:
+                return sorted_intervals[0]
+            except IndexError:
+                return None
         return None
 
     @property
@@ -263,28 +249,12 @@ class Show(ndb.Model):
         
         return range(0, max_options)
     
-    def is_speedup_interval(self, interval):
-        first_minute_interval = -1
-        # Get the sorted intervals
-        interval_list = sorted([x.interval for x in self.player_actions])
-        # Loop through the intervals in order
-        for i in range(0, len(interval_list)):
-            # Get the minutes elapsed between the next interval in the loop
-            # and the current interval in the loop
-            try:
-                minutes_elapsed = int(interval_list[i+1]) - int(interval_list[i])
-            except IndexError:
-                break
-            else:
-                if minutes_elapsed == 1:
-                    # Find the first interval that starts the minute apart intervals
-                    # "speedup"
-                    first_minute_interval = interval_list[i]
-                    break
-        # If the interval is the "speedup" interval
-        if first_minute_interval == interval:
-            return True
-        return False
+    def get_interval_gap(self, interval):
+        next_interval = self.get_next_interval(interval)
+        # If there is a next interval
+        if next_interval != None:
+            return int(next_interval) - int(interval)
+        return None
     
     @property
     def current_vote_state(self):
@@ -335,8 +305,8 @@ class Show(ndb.Model):
         
         # Get the list of used vote types
         for vt in VOTE_TYPES:
-            # If the vote type has been used
-            if getattr(self, vt, None):
+            # If the vote type has been used (and is not an interval)
+            if getattr(self, vt, None) and not vt =='interval':
                 state_dict['used_types'].append(vt)
                     
         return state_dict
@@ -504,123 +474,99 @@ class Show(ndb.Model):
                 vote_options['photo_filename'] = role_player.get().photo_filename
                 vote_options['count'] = voted_role.live_vote_value
                 vote_options['percent'] = percent
-        return vote_options
-
-    def current_action_options(self):
-        interval = self.current_interval
-        # Get the player
-        player = self.get_player_by_interval(interval)
-        player_action = self.get_player_action_by_interval(interval)
-        # If we aren't currently at an interval
-        if not player or not player_action:
-            return {'state': 'interval', 'display': 'logo'}
-        # Determine if we've already voted on this interval
-        now = get_mountain_time()
-        # Add timezone for comparisons
-        now_tz = back_to_tz(now)
-        interval_vote_end = self.start_time_tz + datetime.timedelta(minutes=int(interval)) \
-                              + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
-        action_data = {'state': 'interval',
-                       'interval': interval,
-                       'player_id': player.id(),
-                       'player_photo': player.get().photo_filename,
-                       'hour': interval_vote_end.hour,
-                       'minute': interval_vote_end.minute,
-                       'second': interval_vote_end.second}
-        
-        if self.is_speedup_interval(interval):
-            action_data['speedup'] = True
-        
-        if now_tz > interval_vote_end:
-            action_data['display'] = 'result'
-            # If an action wasn't already chosen for this interval
-            if not player_action.action:
-                # Get the actions that were voted on this interval
-                interval_voted_actions = []
-                live_action_votes = LiveActionVote.query(
-                                        LiveActionVote.player == player,
-                                        LiveActionVote.interval == int(interval),
-                                        LiveActionVote.created == now.date()).fetch()
-                # Add the voted on actions to a list
-                for lav in live_action_votes:
-                    interval_voted_actions.append(lav.action)
-                # If the actions were voted on
-                if interval_voted_actions:
-                    # Get the most voted, un-used action
-                    voted_action = Action.query(
-                                       Action.used == False,
-                                       Action.key.IN(interval_voted_actions),
-                                       ).order(-Action.live_vote_value,
-                                               Action.created).get()
-                # If no live action votes were cast
-                # take the highest regular voted action that hasn't been used
-                else:
-                    # Get the most voted, un-used action
-                    voted_action = Action.query(
-                                       Action.used == False,
-                                       ).order(-Action.vote_value,
-                                               Action.created).get()
-                # Set the player action
-                player_action.time_of_action = now
-                player_action.action = voted_action.key
-                player_action.put()
-                # Set the action as used
-                voted_action.used = True
-                voted_action.put()
-                percent = player.get().get_live_action_percentage(voted_action.key,
-                                                                  interval,
-                                                                  len(live_action_votes))
-                action_data.update({'voted': voted_action.description,
-                                    'count': voted_action.live_vote_value,
-                                    'percent': percent})
-            else:
+        # If an interval has been triggered
+        elif state == 'interval':
+            interval = self.current_interval
+            # Get the player
+            player = self.get_player_by_interval(interval)
+            # Get the player action for this interval
+            player_action = self.get_player_action_by_interval(interval)
+            # Get the gap between this interval and the next interval
+            interval_gap = self.get_interval_gap(interval)
+            if interval_gap:
+                # Set the end of this gap
+                gap_end = self.interval_vote_init + datetime.timedelta(minutes=interval_gap)
+                vote_options.update({'gap_hour': gap_end.hour,
+                                     'gap_minute': gap_end.minute,
+                                     'gap_second': gap_end.second})
+            vote_options.update({'interval': interval,
+                                 'player_id': player.id(),
+                                 'player_photo': player.get().photo_filename})
+            # If this is a 1 minute interval
+            if interval_gap == 1:
+                vote_options['speedup'] = True
+            # If we're in the voting phase for the interval
+            if display == 'voting':
+                # Return un-used actions, sorted by vote
+                unused_actions = Action.query(Action.used == False,
+                                     ).order(-Action.vote_value,
+                                             Action.created).fetch(ACTION_OPTIONS)
                 all_votes = player.get().get_all_live_action_count(interval)
-                percent = player.get().get_live_action_percentage(player_action.action,
-                                                                  interval,
-                                                                  all_votes)
-                action_data.update({'voted': player_action.action.get().description,
-                                    'count': player_action.action.get().live_vote_value,
-                                    'percent': percent})
-        elif now_tz < interval_vote_end:
-            action_data['display'] = 'voting'
-            # Return un-used actions, sorted by vote
-            unused_actions = Action.query(Action.used == False,
-                                 ).order(-Action.vote_value,
-                                         Action.created).fetch(ACTION_OPTIONS)
-            all_votes = player.get().get_all_live_action_count(interval)
-            action_data['options'] = []
-            for i in range(0, ACTION_OPTIONS):
-                try:
-                    percent = player.get().get_live_action_percentage(
-                                                                  unused_actions[i].key,
-                                                                  interval,
-                                                                  all_votes)
-                    action_data['options'].append({
-                                        'name': unused_actions[i].description,
-                                        'id': unused_actions[i].key.id(),
-                                        'percent': percent})
-                except IndexError:
-                    pass
-        return action_data
+                vote_options['options'] = []
+                for i in range(0, ACTION_OPTIONS):
+                    try:
+                        percent = player.get().get_live_action_percentage(
+                                                                      unused_actions[i].key,
+                                                                      interval,
+                                                                      all_votes)
+                        vote_options['options'].append({
+                                            'name': unused_actions[i].description,
+                                            'id': unused_actions[i].key.id(),
+                                            'percent': percent})
+                    except IndexError:
+                        pass
+            # If we are showing the results of the vote
+            elif display == 'result':
+                # If an action wasn't already chosen for this interval
+                if not player_action.action:
+                    # Get the actions that were voted on this interval
+                    interval_voted_actions = []
+                    live_action_votes = LiveActionVote.query(
+                                            LiveActionVote.player == player,
+                                            LiveActionVote.interval == int(interval),
+                                            LiveActionVote.created == get_mountain_time().date()).fetch()
+                    # Add the voted on actions to a list
+                    for lav in live_action_votes:
+                        interval_voted_actions.append(lav.action)
+                    # If the actions were voted on
+                    if interval_voted_actions:
+                        # Get the most voted, un-used action
+                        voted_action = Action.query(
+                                           Action.used == False,
+                                           Action.key.IN(interval_voted_actions),
+                                           ).order(-Action.live_vote_value,
+                                                   Action.created).get()
+                    # If no live action votes were cast
+                    # take the highest regular voted action that hasn't been used
+                    else:
+                        # Get the most voted, un-used action
+                        voted_action = Action.query(
+                                           Action.used == False,
+                                           ).order(-Action.vote_value,
+                                                   Action.created).get()
+                    # Set the player action
+                    player_action.action = voted_action.key
+                    player_action.put()
+                    # Set the action as used
+                    voted_action.used = True
+                    voted_action.put()
+                    percent = player.get().get_live_action_percentage(voted_action.key,
+                                                                      interval,
+                                                                      len(live_action_votes))
+                    vote_options.update({'voted': voted_action.description,
+                                         'count': voted_action.live_vote_value,
+                                         'percent': percent})
+                else:
+                    all_votes = player.get().get_all_live_action_count(interval)
+                    percent = player.get().get_live_action_percentage(player_action.action,
+                                                                      interval,
+                                                                      all_votes)
+                    vote_options.update({'voted': player_action.action.get().description,
+                                         'count': player_action.action.get().live_vote_value,
+                                         'percent': percent})
+        return vote_options
     
     def put(self, *args, **kwargs):
-        # If start_time is specified, it must mean a show has started
-        if self.start_time and self.length:
-            # Set the end time of the show
-            self.end_time = self.start_time + datetime.timedelta(minutes=self.length)
-            # Make a copy of the list of players and randomize it
-            rand_players = self.players
-            random.shuffle(rand_players, random.random)
-            for player_action in self.player_actions:
-                # If random players list gets empty, refill it with more players
-                if len(rand_players) == 0:
-                    rand_players = self.players
-                    random.shuffle(rand_players, random.random)
-                # Pop a random player off the list
-                player_action.player = rand_players.pop().key
-                player_action.time_of_action = self.start_time + \
-                                      datetime.timedelta(minutes=player_action.interval)
-                player_action.put()
         # If a theme was specified, set the theme as used
         if self.theme:
             theme_entity = self.theme.get()
@@ -663,12 +609,7 @@ class LiveActionVote(ndb.Model):
 class PlayerAction(ndb.Model):
     interval = ndb.IntegerProperty(required=True)
     player = ndb.KeyProperty(kind=Player)
-    time_of_action = ndb.DateTimeProperty()
     action = ndb.KeyProperty(kind=Action)
-
-    @property
-    def time_of_action_tz(self):
-        return back_to_tz(self.time_of_action)
 
 
 class ShowAction(ndb.Model):

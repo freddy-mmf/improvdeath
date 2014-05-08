@@ -14,7 +14,8 @@ from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
 					WildcardCharacter, WildcardCharacterVote,
 					VotingTest, LiveVotingTest, RoleVote,
-					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES, VOTE_TYPES)
+					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES, VOTE_TYPES,
+					get_current_show)
 from timezone import get_mountain_time, back_to_tz
 
 
@@ -128,8 +129,7 @@ class ShowPage(ViewBase):
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
 		self.response.out.write(template.render(self.path('show.html'),
-												self.add_context(context)))
-		
+												self.add_context(context)))		
 
 
 class CreateShow(ViewBase):
@@ -348,6 +348,15 @@ class AddPlayers(ViewBase):
 			created = True
 		context = {'created': created}
 		self.response.out.write(template.render(self.path('add_players.html'),
+												self.add_context(context)))
+
+
+class IntervalTimer(ViewBase):
+	@admin_required
+	def get(self):
+		context = {'show': get_current_show(),
+				  'now_tz': back_to_tz(get_mountain_time())}
+		self.response.out.write(template.render(self.path('interval_timer.html'),
 												self.add_context(context)))
 
 

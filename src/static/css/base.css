@@ -143,3 +143,15 @@ hr.thick-divider {
 	border:none;
 	color:#333;
 }
+
+.intervalTimerLayout span {
+	display: block;
+	float: left;
+	width: 34px;
+	height: 50px; 
+    background: url(img/countdownGlowing.gif) no-repeat 0px 0px;
+}
+
+.intervalTimerLayout span.imageSep {
+	background-position: -374px 0px;
+}

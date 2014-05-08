@@ -37,3 +37,14 @@ def get_mountain_time():
 def back_to_tz(date_time):
 	denver_tz = pytz.timezone('America/Denver')
 	return denver_tz.localize(date_time, is_dst=None)
+
+
+def get_today_start():
+	today = get_mountain_time().date()
+	return datetime.datetime.fromordinal(today.toordinal())
+
+
+def get_tomorrow_start():
+	today = get_mountain_time().date()
+	tomorrow = today + datetime.timedelta(1)
+	return datetime.datetime.fromordinal(tomorrow.toordinal())

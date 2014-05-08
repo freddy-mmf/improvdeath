@@ -25,8 +25,8 @@ from views_base import RobotsTXT
 from user_views import (MainPage, LiveVote, AddActions, AddThemes,
 						AddItems, AddCharacters, OtherShows)
 from admin_views import (ShowPage, CreateShow, DeleteTools,
-					     JSTestPage, AddPlayers)
-from json_views import (ShowJSON)
+					     JSTestPage, AddPlayers, IntervalTimer)
+from json_views import (ShowJSON, IntervalTimerJSON)
 
 
 config = {'webapp2_extras.sessions': {
@@ -52,9 +52,11 @@ app = webapp2.WSGIApplication([
     (r'/create_show/', CreateShow),
     (r'/add_players/', AddPlayers),
     (r'/delete_tools/', DeleteTools),
+    (r'/interval_timer/', IntervalTimer),
     (r'/js_test/', JSTestPage),
     # JSON ENDPOINT
     (r'/show_json/(\d+)/', ShowJSON),
+    (r'/interval_timer_json/(\d+)/', IntervalTimerJSON),
 ],
   config=config,
   debug=True)

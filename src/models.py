@@ -3,7 +3,8 @@ import math
 
 from google.appengine.ext import ndb
 
-from timezone import get_mountain_time, back_to_tz
+from timezone import (get_mountain_time, back_to_tz, get_today_start,
+                      get_tomorrow_start)
 
 VOTE_AFTER_INTERVAL = 12
 DISPLAY_VOTED = 8
@@ -15,6 +16,20 @@ VOTE_TYPES += ['item', 'wildcard', 'incident', 'interval', 'test']
 VOTE_OPTIONS = 5
 ACTION_OPTIONS = 3
 INCIDENT_AMOUNT = 5
+
+
+def show_today():
+	# See if there is a show today, otherwise users aren't allowed to submit actions
+	today_start = get_today_start()
+	tomorrow_start = get_tomorrow_start()
+	return bool(Show.query(Show.scheduled >= today_start,
+						   Show.scheduled < tomorrow_start).get())
+
+
+def get_current_show():
+	return Show.query(
+			Show.scheduled >= get_today_start(),
+			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
 
 
 def get_vote_percentage(subset_count, all_count):
@@ -252,7 +267,7 @@ class Show(ndb.Model):
     def get_interval_gap(self, interval):
         next_interval = self.get_next_interval(interval)
         # If there is a next interval
-        if next_interval != None:
+        if interval != None and next_interval != None:
             return int(next_interval) - int(interval)
         return None
     
@@ -306,7 +321,7 @@ class Show(ndb.Model):
         # Get the list of used vote types
         for vt in VOTE_TYPES:
             # If the vote type has been used (and is not an interval)
-            if getattr(self, vt, None) and not vt =='interval':
+            if getattr(self, vt, None) and vt != 'interval':
                 state_dict['used_types'].append(vt)
                     
         return state_dict
@@ -483,12 +498,6 @@ class Show(ndb.Model):
             player_action = self.get_player_action_by_interval(interval)
             # Get the gap between this interval and the next interval
             interval_gap = self.get_interval_gap(interval)
-            if interval_gap:
-                # Set the end of this gap
-                gap_end = self.interval_vote_init + datetime.timedelta(minutes=interval_gap)
-                vote_options.update({'gap_hour': gap_end.hour,
-                                     'gap_minute': gap_end.minute,
-                                     'gap_second': gap_end.second})
             vote_options.update({'interval': interval,
                                  'player_id': player.id(),
                                  'player_photo': player.get().photo_filename})

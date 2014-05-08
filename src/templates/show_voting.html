@@ -12,64 +12,46 @@
     
 	<div id="current-vote"></div>
 	
-	{% if show.is_today %}	
-		<div id="vote-selection-screen" class="vote-selection-column">
+	{% if show.is_today %}
+		<div id="vote-selection-screen" class="col-md-5 col-md-offset-3">
 			
-			<div class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="test_vote" value="True">
-						<input type="submit" class="btn btn-default btn-block btn-lg x-large-font" value="Start the Live Voting Test">
-					</form>
-					<hr/>
-				</div>
-			</div>
-			
-			<div class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="interval_vote" value="True">
-						{% if available_actions >= show.player_actions|length %}
-							<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#003D7A;" value="Start the Interval Vote">
-						{% else %}
-							<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">Need more Actions to start Interval Show</div>
-						{% endif %}
-					</form>
-					<hr/>
-				</div>
-			</div>
-
-			<div id="hero-vote" class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="hero_vote" value="True">
-						<input type="submit" class="btn btn-primary btn-block btn-lg x-large-font" value="Start the Hero Vote">
-					</form>
-				</div>
-			</div>
-			
-			<div id="villain-vote" class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="villain_vote" value="True">
-						<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#6916E6;" value="Start the Villain Vote">
-					</form>
-				</div>
-			</div>
-			
-			<div id="incident-vote" class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="incident_vote" value="True">
-						{% if available_actions %}
-							<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#A30000;" value="Start the Turning Point Vote">
-						{% else %}
-							<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#A30000;">Need more Actions to start Turning Point Vote</div>
-						{% endif %}
-					</form>
-				</div>
-			</div>
+			<form action="/show/{{show.key.id}}/" method="post">
+				<input type="hidden" name="test_vote" value="True">
+				<input type="submit" class="btn btn-default btn-block btn-lg x-large-font" value="Start the Live Voting Test">
+			</form>
+			<hr/>
 		
+			<form action="/show/{{show.key.id}}/" method="post">
+				<input type="hidden" name="interval_vote" value="True">
+				{% if available_actions >= show.player_actions|length %}
+					<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#003D7A;" value="Start the Interval Vote">
+				{% else %}
+					<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">Need more Actions to start Interval Show</div>
+				{% endif %}
+			</form>
+			<hr/>
+
+			<form id="hero-vote" action="/show/{{show.key.id}}/" method="post">
+				<input type="hidden" name="hero_vote" value="True">
+				<input type="submit" class="btn btn-primary btn-block btn-lg x-large-font" value="Start the Hero Vote">
+			</form>
+		
+			<form id="villain-vote" action="/show/{{show.key.id}}/" method="post">
+				<input type="hidden" name="villain_vote" value="True">
+				<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#6916E6;" value="Start the Villain Vote">
+			</form>
+		
+			<form id="incident-vote" action="/show/{{show.key.id}}/" method="post">
+				<input type="hidden" name="incident_vote" value="True">
+				{% if available_actions %}
+					<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#A30000;" value="Start the Turning Point Vote">
+				{% else %}
+					<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#A30000;">Need more Actions to start Turning Point Vote</div>
+				{% endif %}
+			</form>
+
+		</div>
+
 			{% comment %}
 			<div id="item-vote" class="row">
 				<div class="col-md-4 col-md-offset-3">
@@ -83,9 +65,7 @@
 					</form>
 				</div>
 			</div>
-			{% endcomment %}
 			
-			{% comment %}
 			<div id="lover-vote" class="row">
 				<div class="col-md-4 col-md-offset-3">
 					<form action="/show/{{show.key.id}}/" method="post">
@@ -94,9 +74,7 @@
 					</form>
 				</div>
 			</div>
-			{% endcomment %}
-		
-			{% comment %}
+
 			<div id="wildcard-vote" class="row">
 				<div class="col-md-4 col-md-offset-3">
 					<form action="/show/{{show.key.id}}/" method="post">
@@ -109,9 +87,7 @@
 					</form>
 				</div>
 			</div>
-			{% endcomment %}
-			
-			{% comment %}
+
 			<div id="shapeshifter-vote" class="row">
 				<div class="col-md-4 col-md-offset-3">
 					<form action="/show/{{show.key.id}}/" method="post">
@@ -122,6 +98,5 @@
 			</div>
 			{% endcomment %}
 
-		</div>
 	{% endif %}
 </div>

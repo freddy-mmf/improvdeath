@@ -10,33 +10,9 @@ from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
 					LiveItemVote, WildcardCharacter, WildcardCharacterVote,
 					LiveWildcardCharacterVote, RoleVote, LiveRoleVote,
 					VotingTest, LiveVotingTest,
-					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES)
-from timezone import get_mountain_time
-
-
-def get_today_start():
-	today = get_mountain_time().date()
-	return datetime.datetime.fromordinal(today.toordinal())
-
-
-def get_tomorrow_start():
-	today = get_mountain_time().date()
-	tomorrow = today + datetime.timedelta(1)
-	return datetime.datetime.fromordinal(tomorrow.toordinal())
-
-
-def show_today():
-	# See if there is a show today, otherwise users aren't allowed to submit actions
-	today_start = get_today_start()
-	tomorrow_start = get_tomorrow_start()
-	return bool(Show.query(Show.scheduled >= today_start,
-						   Show.scheduled < tomorrow_start).get())
-
-
-def get_current_show():
-	return Show.query(
-			Show.scheduled >= get_today_start(),
-			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
+					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES,
+					show_today, get_current_show)
+from timezone import get_mountain_time, get_tomorrow_start
 
 
 def pre_show_voting_post(type_name, entry_value_type, type_model, type_vote_model,
@@ -163,9 +139,15 @@ class LiveVote(ViewBase):
 			action = ndb.Key(Action, int(voted_option['id']))
 			# If the user hasn't already voted for the incident
 			if not action.get().get_live_action_vote_exists(show.key, interval, session_id):
+				# If we haven't selected a hero yet
+				if not show.hero:
+					# Make sure there is at least SOME player to attach the vote to
+					vote_player = Player.query().get().key
+				else:
+					vote_player = show.hero
 				LiveActionVote(action=action,
 							   show=show.key,
-							   player=show.hero,
+							   player=vote_player,
 							   interval=interval,
 							   created=get_mountain_time().date(),
 							   session_id=session_id).put()

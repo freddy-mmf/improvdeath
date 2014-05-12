@@ -23,10 +23,14 @@
 		
 			<form action="/show/{{show.key.id}}/" method="post">
 				<input type="hidden" name="interval_vote" value="True">
-				{% if available_actions >= show.player_actions|length %}
-					<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#003D7A;" value="Start the Interval Vote">
+				{% if show.remaining_intervals %}
+					{% if available_actions >= show.remaining_intervals %}
+						<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#003D7A;" value="Start the Interval Vote">
+					{% else %}
+						<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">Need more Actions to start Interval Show</div>
+					{% endif %}
 				{% else %}
-					<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">Need more Actions to start Interval Show</div>
+					<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">No More Intervals</div>
 				{% endif %}
 			</form>
 			<hr/>

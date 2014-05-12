@@ -272,6 +272,17 @@ class Show(ndb.Model):
         return None
     
     @property
+    def remaining_intervals(self):
+        s_intervals = self.sorted_intervals
+        if self.current_interval == None:
+            return len(s_intervals)
+        try:
+            interval_index = s_intervals.index(self.current_interval)
+        except ValueError:
+            return 0
+        return len(s_intervals[interval_index:]) - 1
+    
+    @property
     def current_vote_state(self):
         state_dict = {'state': 'default', 'display': 'default', 'used_types': []}
         now = get_mountain_time()
@@ -533,7 +544,7 @@ class Show(ndb.Model):
                     live_action_votes = LiveActionVote.query(
                                             LiveActionVote.player == player,
                                             LiveActionVote.interval == int(interval),
-                                            LiveActionVote.created == get_mountain_time().date()).fetch()
+                                            LiveActionVote.show == show.key).fetch(ACTION_OPTIONS)
                     # Add the voted on actions to a list
                     for lav in live_action_votes:
                         interval_voted_actions.append(lav.action)
@@ -543,30 +554,33 @@ class Show(ndb.Model):
                         voted_action = Action.query(
                                            Action.used == False,
                                            Action.key.IN(interval_voted_actions),
-                                           ).order(-Action.live_vote_value,
-                                                   Action.created).get()
+                                           ).order(-Action.live_vote_value).get()
                     # If no live action votes were cast
                     # take the highest regular voted action that hasn't been used
                     else:
                         # Get the most voted, un-used action
                         voted_action = Action.query(
                                            Action.used == False,
-                                           ).order(-Action.vote_value,
-                                                   Action.created).get()
+                                           ).order(-Action.vote_value).get()
                     # Set the player action
                     player_action.action = voted_action.key
                     player_action.put()
                     # Set the action as used
                     voted_action.used = True
                     voted_action.put()
+                    # Get all the votes made in this interval
+                    all_votes = player.get().get_all_live_action_count(interval)
+                    # Get the percentage of votes for the winning action
                     percent = player.get().get_live_action_percentage(voted_action.key,
                                                                       interval,
-                                                                      len(live_action_votes))
+                                                                      all_votes)
                     vote_options.update({'voted': voted_action.description,
                                          'count': voted_action.live_vote_value,
                                          'percent': percent})
                 else:
+                    # Get all the votes made in this interval
                     all_votes = player.get().get_all_live_action_count(interval)
+                    # Get the percentage of votes for the winning action
                     percent = player.get().get_live_action_percentage(player_action.action,
                                                                       interval,
                                                                       all_votes)

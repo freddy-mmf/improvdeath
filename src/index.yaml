@@ -14,6 +14,11 @@ indexes:
   properties:
   - name: used
   - name: live_vote_value
+
+- kind: Action
+  properties:
+  - name: used
+  - name: live_vote_value
     direction: desc
   - name: vote_value
     direction: desc

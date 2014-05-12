@@ -24,10 +24,19 @@ def admin_required(func):
     def decorated_view(*args, **kwargs):
         if not users.is_current_user_admin():
             redirect_uri = users.create_login_url(webapp2.get_request().uri)
-            print redirect_uri
             return webapp2.redirect(redirect_uri, abort=True)
         return func(*args, **kwargs)
     return decorated_view
+
+
+def reset_action_live_votes():
+	reset_actions = Action.query(Action.used == False,
+				 				 Action.live_vote_value > 0).fetch()
+	# Set all actions that haven't been used, but have a live_vote_value, to zero
+	for ra in reset_actions:
+		# Set the actions live_vote_value to zero
+		ra.live_vote_value = 0
+		ra.put()
 
 
 class ShowPage(ViewBase):
@@ -64,6 +73,8 @@ class ShowPage(ViewBase):
 				# Set the start time of this interval vote
 				show.interval_vote_init = get_mountain_time()
 				show.put()
+			# Set all actions that haven't been used, but have a live_vote_value, to zero
+			reset_action_live_votes()
 		# Admin is starting item vote
 		elif self.request.get('test_vote') and self.context.get('is_admin', False):
 			show.test = None
@@ -96,6 +107,8 @@ class ShowPage(ViewBase):
 			show.put()
 		# Admin is starting incident vote
 		elif self.request.get('incident_vote') and self.context.get('is_admin', False):
+			# Set all actions that haven't been used, but have a live_vote_value, to zero
+			reset_action_live_votes()
 			show.incident_vote_init = get_mountain_time()
 			show.put()
 		# Admin is starting wildcard vote
@@ -180,7 +193,6 @@ class CreateShow(ViewBase):
 				# Pop a random player off the list and create a PlayerAction
 				player_action = PlayerAction(interval=interval,
 											 player=rand_players.pop()).put()
-				print "player_action, ", player_action
 				ShowAction(show=show, player_action=player_action).put()
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),

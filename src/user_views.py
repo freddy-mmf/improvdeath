@@ -11,7 +11,7 @@ from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
 					LiveWildcardCharacterVote, RoleVote, LiveRoleVote,
 					VotingTest, LiveVotingTest,
 					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES,
-					show_today, get_current_show)
+					get_current_show)
 from timezone import get_mountain_time, get_tomorrow_start
 
 
@@ -194,7 +194,6 @@ class AddActions(ViewBase):
 										Action.created).fetch()
 		context = {'actions': actions,
 				   'show': get_current_show(),
-				   'show_today': show_today(),
 				   'session_id': str(self.session.get('id', '0'))}
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
@@ -207,7 +206,6 @@ class AddActions(ViewBase):
 									   self.request,
 									   str(self.session.get('id', '0')),
 									   self.context.get('is_admin', False))
-		context['show_today'] = show_today
 			
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
@@ -218,13 +216,12 @@ class AddItems(ViewBase):
 		items = Item.query(
 			Item.used == False).order(-Item.vote_value,
 									  Item.created).fetch()
-		context = {'items': items,
-				   'show_today': show_today()}
+		context = {'items': items}
 		self.response.out.write(template.render(self.path('add_items.html'),
 												self.add_context(context)))
 
 	def post(self):
-		context = {'show_today': show_today()}
+		context = {}
 		item = None
 		name = self.request.get('name')
 		upvote = self.request.get('upvote')
@@ -260,13 +257,12 @@ class AddCharacters(ViewBase):
 		characters = WildcardCharacter.query(
 			WildcardCharacter.used == False).order(-WildcardCharacter.vote_value,
 			                                       WildcardCharacter.created).fetch()
-		context = {'characters': characters,
-				   'show_today': show_today()}
+		context = {'characters': characters}
 		self.response.out.write(template.render(self.path('add_characters.html'),
 												self.add_context(context)))
 
 	def post(self):
-		context = {'show_today': show_today()}
+		context = {}
 		character = None
 		name = self.request.get('name')
 		upvote = self.request.get('upvote')

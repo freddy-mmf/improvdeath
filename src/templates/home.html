@@ -24,16 +24,31 @@
 					{% endif %}
 				</div>
 			</div>
+			
+			{% if show_today %}
+                <hr/>
+                <div class="row">
+                    <div class="btn-group-vertical col-md-12">
+                        <a class="text-center white-link" href="/add_actions/">
+                            <div class="btn btn-danger btn-block btn-lg x-large-font">
+                                Add Actions / Vote for Actions
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+			
 			<hr/>
 			<div class="row">
 				<div class="btn-group-vertical col-md-12">
-					<a class="text-center white-link" href="/add_actions/">
-						<div class="btn btn-danger btn-block btn-lg x-large-font">
-							Add Actions / Vote for Actions
+					<a class="text-center white-link" href="/add_themes/">
+						<div class="btn btn-warning btn-block btn-lg x-large-font">
+							Add Themes / Vote for Themes
 						</div>
 					</a>
 				</div>
 			</div>
+			
 			{% comment %}
 			<div class="row">
 				&nbsp;
@@ -63,18 +78,6 @@
 				</div>
 			</div>
 			{% endcomment %}
-			
-			<hr/>
-			
-			<div class="row">
-				<div class="btn-group-vertical col-md-12">
-					<a class="text-center white-link" href="/add_themes/">
-						<div class="btn btn-warning btn-block btn-lg x-large-font">
-							Add Themes / Vote for Themes
-						</div>
-					</a>
-				</div>
-			</div>
 			
 		</div>
 	</div>

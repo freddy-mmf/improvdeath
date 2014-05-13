@@ -6,7 +6,7 @@ import webapp2
 from webapp2_extras import sessions
 from google.appengine.api import users
 
-from models import Show
+from models import show_today
 from timezone import get_mountain_time
 
 
@@ -32,7 +32,8 @@ class ViewBase(webapp2.RequestHandler):
 					'user': user,
 					'auth_url': auth_url,
 					'auth_action': auth_action,
-					'path_qs': self.request.path_qs}
+					'path_qs': self.request.path_qs,
+					'show_today': show_today()}
 	
 	def add_context(self, add_context={}):
 		self.context.update(add_context)

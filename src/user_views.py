@@ -50,7 +50,8 @@ def pre_show_voting_post(type_name, entry_value_type, type_model, type_vote_mode
 		# Or this is an admin user
 		if session_id == entity.session_id or is_admin:
 			entity.key.delete()
-		
+	
+	# If an new entity was created
 	if entity:
 		# Have to sort first by entity key, since we query on it. Dumb...
 		entities = type_model.query(type_model.used == False,
@@ -206,6 +207,7 @@ class AddActions(ViewBase):
 									   self.request,
 									   str(self.session.get('id', '0')),
 									   self.context.get('is_admin', False))
+		context['show'] = get_current_show()
 			
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))

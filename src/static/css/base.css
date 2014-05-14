@@ -57,6 +57,10 @@ div.x-large-font {
 	font-size:x-large;
 }
 
+div.medium-font {
+	font-size:small;
+}
+
 button.x-large-font {
 	font-size:x-large;
 }
@@ -108,13 +112,18 @@ span.medium-font {
 
 span.entered-value {
 	color:black;
-	font-size:x-large;
+	font-size:large;
 }
 
-.upvote-position {
-	float:left;
-	position:relative;
-	bottom:8px;
+span.vote-value {
+	color: black;
+	font-weight:bold;
+	font-size: x-large;
+}
+
+span.vote-button-label {
+	color: black;
+	font-size: large;
 }
 
 .progress-bar {

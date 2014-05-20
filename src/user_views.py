@@ -1,9 +1,11 @@
 import datetime
+import webapp2
 
 from views_base import ViewBase
 
 from google.appengine.ext.webapp import template
 from google.appengine.ext import ndb
+from google.appengine.api import taskqueue
 
 from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
 					LiveActionVote, Item, ItemVote,
@@ -89,6 +91,25 @@ class LiveVote(ViewBase):
 		show = get_current_show()
 		vote_num = int(self.request.get('vote_num', '0'))
 		session_id = str(self.session.get('id'))
+		
+		# Add the task to the default queue.
+        #taskqueue.add(url='/live_vote_worker/',
+        #			  params={#'vote_num': vote_num,
+        			  		  #'session_id': session_id})
+        #			  		  })
+        context	= {'show': show,
+				   'voted': voted}
+        self.response.out.write(template.render(self.path('live_vote.html'),
+                                                self.add_context(context)))
+
+
+class LiveVoteWorker(webapp2.RequestHandler):
+    def post(self):
+		# Get the current show
+		show = get_current_show()
+		vote_num = self.request.get('vote_num')
+		session_id = self.request.get('session_id')
+
 		vote_data = show.current_vote_options(show)
 		# If we're in the voting period
 		if vote_data.get('display') == 'voting':
@@ -101,7 +122,6 @@ class LiveVote(ViewBase):
 			state = None
 		# Submitting an interval vote
 		if state == 'interval':
-			voted = True
 			interval = int(vote_data['interval'])
 			action = ndb.Key(Action, int(voted_option['id']))
 			player = ndb.Key(Player, int(vote_data['player_id']))
@@ -115,28 +135,26 @@ class LiveVote(ViewBase):
 							   session_id=session_id).put()
 		# Submitting a player role vote
 		elif state in ROLE_TYPES:
-			voted = True
 			player = ndb.Key(Player, int(voted_option['id']))
 			role_vote = player.get().get_role_vote(show, state)
 			# If no role vote exists for this user
 			if not role_vote:
 				# Create an initial Role vote
 				role_vote = RoleVote(show=show.key,
-						 			 player=player,
-						 			 role=state).put()
+									 player=player,
+									 role=state).put()
 			else:
 				role_vote = role_vote.key
 			# If the user hasn't already submitted a live role vote
 			if not role_vote.get().get_live_role_vote_exists(show.key, state, session_id):
 				# Create the live role vote
 				LiveRoleVote(show=show.key,
-						 	 player=player,
-						 	 role=state,
-						 	 session_id=session_id).put()
+							 player=player,
+							 role=state,
+							 session_id=session_id).put()
 		# Submitting an incident vote
 		elif state == 'incident':
 			interval = -1
-			voted = True
 			action = ndb.Key(Action, int(voted_option['id']))
 			# If the user hasn't already voted for the incident
 			if not action.get().get_live_action_vote_exists(show.key, interval, session_id):
@@ -154,7 +172,6 @@ class LiveVote(ViewBase):
 							   session_id=session_id).put()
 		# Submitting an item vote
 		elif state == 'test':
-			voted = True
 			test = ndb.Key(VotingTest, int(voted_option['id']))
 			# If the user hasn't already voted for an item
 			if not test.get().get_live_test_vote_exists(show.key, session_id):
@@ -163,7 +180,6 @@ class LiveVote(ViewBase):
 							   session_id=session_id).put()
 		# Submitting an item vote
 		elif state == 'item':
-			voted = True
 			item = ndb.Key(Item, int(voted_option['id']))
 			# If the user hasn't already voted for an item
 			if not item.get().get_live_item_vote_exists(show.key, session_id):
@@ -172,20 +188,14 @@ class LiveVote(ViewBase):
 							 session_id=session_id).put()
 		# Submitting a wildcard vote
 		elif state == 'wildcard':
-			voted = True
 			wildcard = ndb.Key(WildcardCharacter, int(voted_option['id']))
 			# If the user hasn't already voted for a wildcard character
 			if not wildcard.get().get_live_wc_vote_exists(show.key, session_id):
 				# Add the live vote for the wildcard character
 				LiveWildcardCharacterVote(wildcard=wildcard,
 										  show=show.key,
-							 			  session_id=session_id).put()
-						   
-		context	= {'show': show,
-				   'vote_options': show.vote_options,
-				   'voted': voted}
-		self.response.out.write(template.render(self.path('live_vote.html'),
-												self.add_context(context)))
+										  session_id=session_id).put()
+        
 
 
 class AddActions(ViewBase):

@@ -34,7 +34,7 @@
 					{% if show_today %}<li {% block add-action-selected %}{% endblock %}><a href="/add_actions/"><strong>Actions</strong> Add/Vote</a></li>{% endif %}
 					{% comment %}<li {% block add-item-selected %}{% endblock %}><a href="/add_items/"><strong>Items</strong> Add/Vote</a></li>{% endcomment %}
 					{% comment %}<li {% block add-character-selected %}{% endblock %}><a href="/add_characters/"><strong>Characters</strong> Add/Vote</a></li>{% endcomment %}
-					<li {% block add-theme-selected %}{% endblock %}><a href="/add_themes/"><strong>Themes</strong> Add/Vote</a></li>
+					{% if not show_today %}<li {% block add-theme-selected %}{% endblock %}><a href="/add_themes/"><strong>Themes</strong> Add/Vote</a></li>{% endif %}
 					{% comment %}<li {% block other-shows-selected %}{% endblock %}><a href="/other_shows/">Other Shows</a></li>{% endcomment %}
 					{% if is_admin %}
 						<li class="dropdown{% block admin-selected %}{% endblock %}">

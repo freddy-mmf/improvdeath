@@ -6,7 +6,7 @@ from google.appengine.ext import ndb
 from timezone import (get_mountain_time, back_to_tz, get_today_start,
                       get_tomorrow_start)
 
-VOTE_AFTER_INTERVAL = 12
+VOTE_AFTER_INTERVAL = 25
 DISPLAY_VOTED = 8
 WILDCARD_AMOUNT = 5
 ITEM_AMOUNT = 5

@@ -30,7 +30,7 @@
 				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 				  <ul class="nav navbar-nav">
 					<li {% block home-selected %}{% endblock %}><a href="/">Home</a></li>
-					{% if show_today %}<li {% block live-vote-selected %}{% endblock %}><a href="/live_vote/"><strong>Live Vote!</strong></a></li>{% endif %}
+					{% if show_today %}{% if is_admin %}<li><a href="/show/{{current_show.key.id}}/"><strong>Show Admin</strong></a></li>{% else %}<li {% block live-vote-selected %}{% endblock %}><a href="/live_vote/"><strong>Live Vote!</strong></a></li>{% endif %}{% endif %}
 					{% if show_today %}<li {% block add-action-selected %}{% endblock %}><a href="/add_actions/"><strong>Actions</strong> Add/Vote</a></li>{% endif %}
 					{% comment %}<li {% block add-item-selected %}{% endblock %}><a href="/add_items/"><strong>Items</strong> Add/Vote</a></li>{% endcomment %}
 					{% comment %}<li {% block add-character-selected %}{% endblock %}><a href="/add_characters/"><strong>Characters</strong> Add/Vote</a></li>{% endcomment %}

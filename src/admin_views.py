@@ -14,7 +14,7 @@ from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
 					Theme, ActionVote, ThemeVote, Item, ItemVote,
 					WildcardCharacter, WildcardCharacterVote,
 					VotingTest, LiveVotingTest, RoleVote,
-					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES, VOTE_TYPES,
+					VOTE_AFTER_INTERVAL, ROLE_TYPES, VOTE_TYPES,
 					get_current_show)
 from timezone import get_mountain_time, back_to_tz
 
@@ -127,6 +127,11 @@ class ShowPage(ViewBase):
 		elif self.request.get('recap') and self.context.get('is_admin', False):
 			show.recap_init = get_mountain_time()
 			show.recap_type = self.request.get('recap')
+			show.put()
+		# Admin is locking/unlocking the voting
+		elif self.request.get('lock_vote') and self.context.get('is_admin', False):
+			# Toggle the lock/unlock
+			show.locked = not show.locked
 			show.put()
 		available_actions = len(Action.query(
 							   Action.used == False).fetch())

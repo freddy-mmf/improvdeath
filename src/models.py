@@ -1,5 +1,6 @@
 import datetime
 import math
+import random
 
 from google.appengine.ext import ndb
 
@@ -7,15 +8,16 @@ from timezone import (get_mountain_time, back_to_tz, get_today_start,
                       get_tomorrow_start)
 
 VOTE_AFTER_INTERVAL = 25
-DISPLAY_VOTED = 8
+DISPLAY_VOTED = 10
 WILDCARD_AMOUNT = 5
 ITEM_AMOUNT = 5
 ROLE_TYPES = ['hero', 'villain', 'shapeshifter', 'lover']
 VOTE_TYPES = list(ROLE_TYPES)
 VOTE_TYPES += ['item', 'wildcard', 'incident', 'interval', 'test']
 VOTE_OPTIONS = 5
-ACTION_OPTIONS = 3
 INCIDENT_AMOUNT = 5
+ACTION_OPTIONS = 3
+RANDOM_ACTION_OPTIONS = 6
 
 
 def show_today():
@@ -193,6 +195,7 @@ class Show(ndb.Model):
     wildcard = ndb.KeyProperty(kind=WildcardCharacter)
     shapeshifter = ndb.KeyProperty(kind=Player)
     lover = ndb.KeyProperty(kind=Player)
+    locked = ndb.BooleanProperty(default=False)
     
     @property
     def scheduled_tz(self):
@@ -281,6 +284,42 @@ class Show(ndb.Model):
         except ValueError:
             return 0
         return len(s_intervals[interval_index:]) - 1
+    
+    def get_randomized_unused_actions(self, show, interval):
+        # Get the stored interval options
+        interval_vote_options = IntervalVoteOptions.query(
+                                    IntervalVoteOptions.show == show.key,
+                                    IntervalVoteOptions.interval == interval).get()
+        # If the interval options haven't been generated
+        if not interval_vote_options:                    
+            # Return un-used action keys, sorted by vote
+            unused_keys = Action.query(Action.used == False,
+                                 ).order(-Action.vote_value,
+                                         Action.created).fetch(RANDOM_ACTION_OPTIONS,
+                                                               keys_only=True)
+            # Get a randomized sample of the top ACTION_OPTIONS amount of action keys
+            random_sample_keys = list(random.sample(set(unused_keys),
+                                                    min(ACTION_OPTIONS, len(unused_keys))))
+            # Convert the keys into actual entities
+            unused_actions = ndb.get_multi(random_sample_keys)
+            ivo_create_dict = {'show': show.key, 'interval': interval}
+            # Loop through the randomly select unused actions
+            for i in range(0, len(unused_actions)):
+                ivo_option_num = i + 1
+                # Add the option to the create dict
+                ivo_create_dict['option_' + str(ivo_option_num)] = unused_actions[i].key
+            # Store the interval options
+            IntervalVoteOptions(**ivo_create_dict).put()
+        else:
+            iov_keys = []
+            # Loop through and get the stored interval options
+            for i in range(1, ACTION_OPTIONS + 1):
+                option_key = getattr(interval_vote_options, 'option_' + str(i), None)
+                if option_key:
+                    iov_keys.append(option_key)
+            # Convert the keys into actual entities
+            unused_actions = ndb.get_multi(iov_keys)
+        return unused_actions    
     
     @property
     def current_vote_state(self):
@@ -517,10 +556,7 @@ class Show(ndb.Model):
                 vote_options['speedup'] = True
             # If we're in the voting phase for the interval
             if display == 'voting':
-                # Return un-used actions, sorted by vote
-                unused_actions = Action.query(Action.used == False,
-                                     ).order(-Action.vote_value,
-                                             Action.created).fetch(ACTION_OPTIONS)
+                unused_actions = self.get_randomized_unused_actions(show, interval)
                 all_votes = player.get().get_all_live_action_count(interval)
                 vote_options['options'] = []
                 for i in range(0, ACTION_OPTIONS):
@@ -755,3 +791,10 @@ class LiveRoleVote(ndb.Model):
         role_vote.live_vote_value += 1
         role_vote.put()
         return super(LiveRoleVote, self).put(*args, **kwargs)
+
+class IntervalVoteOptions(ndb.Model):
+    show = ndb.KeyProperty(kind=Show, required=True)
+    interval = live_vote_value = ndb.IntegerProperty(required=True)
+    option_1 = ndb.KeyProperty(kind=Action)
+    option_2 = ndb.KeyProperty(kind=Action)
+    option_3 = ndb.KeyProperty(kind=Action)

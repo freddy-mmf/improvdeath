@@ -1,16 +1,15 @@
 import datetime
 
-from views_base import ViewBase
-
 from google.appengine.ext.webapp import template
 from google.appengine.ext import ndb
 
+from views_base import ViewBase, redirect_locked
 from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
 					LiveActionVote, Item, ItemVote,
 					LiveItemVote, WildcardCharacter, WildcardCharacterVote,
 					LiveWildcardCharacterVote, RoleVote, LiveRoleVote,
 					VotingTest, LiveVotingTest,
-					VOTE_AFTER_INTERVAL, DISPLAY_VOTED, ROLE_TYPES,
+					VOTE_AFTER_INTERVAL, ROLE_TYPES,
 					get_current_show)
 from timezone import get_mountain_time, get_tomorrow_start
 
@@ -71,6 +70,7 @@ def pre_show_voting_post(type_name, entry_value_type, type_model, type_vote_mode
 
 
 class MainPage(ViewBase):
+	@redirect_locked
 	def get(self):
 		context = {'current_show': get_current_show()}
 		self.response.out.write(template.render(self.path('home.html'),
@@ -189,6 +189,8 @@ class LiveVote(ViewBase):
 
 
 class AddActions(ViewBase):
+	
+	@redirect_locked
 	def get(self):
 		actions = Action.query(
 			Action.used == False).order(-Action.vote_value,
@@ -199,6 +201,7 @@ class AddActions(ViewBase):
 		self.response.out.write(template.render(self.path('add_actions.html'),
 												self.add_context(context)))
 
+	@redirect_locked
 	def post(self):
 		context = pre_show_voting_post('action',
 									   'description',
@@ -297,6 +300,7 @@ class AddCharacters(ViewBase):
 		
 
 class AddThemes(ViewBase):
+	@redirect_locked
 	def get(self):
 		themes = Theme.query(
 					Theme.used == False).order(-Theme.vote_value,
@@ -306,6 +310,7 @@ class AddThemes(ViewBase):
 		self.response.out.write(template.render(self.path('add_themes.html'),
 												self.add_context(context)))
 
+	@redirect_locked
 	def post(self):
 		context = pre_show_voting_post('theme',
 									   'name',

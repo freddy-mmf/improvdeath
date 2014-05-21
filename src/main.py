@@ -23,7 +23,7 @@ import webapp2
 
 from views_base import RobotsTXT
 from user_views import (MainPage, LiveVote, AddActions, AddThemes,
-						AddItems, AddCharacters, OtherShows, LiveVoteWorker)
+						AddItems, AddCharacters, OtherShows)#, LiveVoteWorker)
 from admin_views import (ShowPage, CreateShow, DeleteTools,
 					     JSTestPage, AddPlayers, IntervalTimer)
 from json_views import (ShowJSON, IntervalTimerJSON)
@@ -58,7 +58,7 @@ app = webapp2.WSGIApplication([
     (r'/show_json/(\d+)/', ShowJSON),
     (r'/interval_timer_json/(\d+)/', IntervalTimerJSON),
     # Task Queues
-    (r'/live_vote_worker/', LiveVoteWorker),
+    #(r'/live_vote_worker/', LiveVoteWorker),
 ],
   config=config,
   debug=True)

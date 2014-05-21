@@ -16,6 +16,12 @@
 		<div id="vote-selection-screen" class="col-md-5 col-md-offset-3">
 			
 			<form action="/show/{{show.key.id}}/" method="post">
+				<input type="hidden" name="lock_vote" value="True">
+				<input type="submit" class="btn btn-info btn-block btn-lg x-large-font" value="Voting {% if show.locked %}Locked{% else %}Unlocked{% endif %}">
+			</form>
+			<hr/>
+			
+			<form action="/show/{{show.key.id}}/" method="post">
 				<input type="hidden" name="test_vote" value="True">
 				<input type="submit" class="btn btn-default btn-block btn-lg x-large-font" value="Start the Live Voting Test">
 			</form>

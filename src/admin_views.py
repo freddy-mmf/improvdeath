@@ -402,7 +402,6 @@ class JSTestPage(ViewBase):
 		 				  {'photo_filename': 'dan.jpg', 'percent': 10},
 		 				  {'photo_filename': 'eric.jpg', 'percent': 15},
 		 				  {'photo_filename': 'brogan.jpg', 'percent': 5},
-		 				  {'photo_filename': 'denise.png', 'percent': 5},
 		 				  {'photo_filename': 'camilla.png', 'percent': 20},
 		 				  {'photo_filename': 'lindsay.png', 'percent': 10},
 		 				  {'photo_filename': 'greg.jpg', 'percent': 5}]
@@ -477,6 +476,8 @@ class JSTestPage(ViewBase):
 		mock_data['hour'] = end_vote_time.hour
 		mock_data['minute'] = end_vote_time.minute
 		mock_data['second'] = end_vote_time.second
+		mock_data['second'] = end_vote_time.second
+		mock_data['voting_length'] = (end_vote_time - now_tz).seconds
 
 		context	= {'show': show_mock,
 				   'now_tz': back_to_tz(get_mountain_time()),

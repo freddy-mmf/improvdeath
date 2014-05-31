@@ -8,7 +8,7 @@
 $( document ).ready(function() {
 	var PROGRESS_BAR_ELEMENT = '<div class="progress-bar" style="height: 27px;"><div></div></div>';
 	var STATE_RENAME = {'interval': 'Action',
-						'incident': 'Turning Point',
+						'incident': 'Peak Action',
 						'test': 'Test',
 						'item': 'Item',
 						'wildcard': 'Character',
@@ -149,7 +149,7 @@ $( document ).ready(function() {
 		progress(voted_dict['percent'], $(option_percent), $(option_percent).prev().width());
 	}
 	
-	function create_vote_panel(element_id, voting_data, update_percent_only) {
+	function create_vote_panel(element_id, voting_data, vote_end, update_percent_only) {
 		var state = voting_data['state'];
 		// If we're currently in the voting state
 		if (voting_data['display'] == 'voting') {
@@ -163,9 +163,6 @@ $( document ).ready(function() {
 				var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
 				var countdown_column = $('<div class="col-sm-3 col-sm-offset-5 countdown-position"></div>');
 				var countdown_timer = $('<span class="countdown glowingLayout"></span>');
-				// Set up the vote start time
-				var vote_end = new Date('{{now_tz|date:"F j, Y H:i:s"}}');
-				vote_end.setHours(voting_data['hour'], voting_data['minute'], voting_data['second']);
 				// Set up the countdown clock
 				$(countdown_timer).countdown({until: vote_end, compact: true,
 					layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
@@ -196,6 +193,10 @@ $( document ).ready(function() {
 			else {
 				var panel_footer = $(element_id).find("div.panel-footer");
 				add_options(panel_footer, voting_data['options']);
+				var countdown_timer = $(element_id).find("span.countdown");
+				// Update the countdown clock
+				$(countdown_timer).countdown({until: vote_end, compact: true,
+					layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
 			}
 		}
 		// We're in the result state
@@ -207,7 +208,7 @@ $( document ).ready(function() {
 		return panel
 	}
 	
-	function create_role_panels(element_id, voting_data, update_percent_only) {
+	function create_role_panels(element_id, voting_data, vote_end, update_percent_only) {
 		// If we're currently in the voting state
 		if (voting_data['display'] == 'voting') {
 			var state = voting_data['state'];
@@ -225,9 +226,6 @@ $( document ).ready(function() {
 				var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
 				var countdown_column = $('<div class="col-sm-3 col-sm-offset-5 countdown-position"></div>');
 				var countdown_timer = $('<span class="countdown glowingLayout"></span>');
-				// Set up the vote start time
-				var vote_end = new Date('{{now_tz|date:"F j, Y H:i:s"}}');
-				vote_end.setHours(voting_data['hour'], voting_data['minute'], voting_data['second']);
 				// Set up the countdown clock
 				$(countdown_timer).countdown({until: vote_end, compact: true,
 					layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
@@ -291,6 +289,10 @@ $( document ).ready(function() {
 			// Just update the footers of the pre-created panel
 			else {
 				update_role_percentages(element_id, option_data);
+				var countdown_timer = $(element_id).find("span.countdown");
+				// Update the countdown clock
+				$(countdown_timer).countdown({until: vote_end, compact: true,
+					layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
 			}
 			// Add the countdown timer to the countdown column
 			$(countdown_column).append($(countdown_timer));
@@ -367,6 +369,7 @@ $( document ).ready(function() {
 	$("#top-nav-bar").hide();
 	$("#vote-selection-screen").hide();
 	var current_display = '';
+	var vote_end;
 	
 	(function show_loop(){
 		
@@ -396,6 +399,9 @@ $( document ).ready(function() {
 				// Show the voting screen
 				$("#current-vote").show();
 				if (voting_data['display'] == 'voting') {
+					// Set up the vote end time
+					var vote_end = new Date();
+					vote_end.setSeconds(vote_end.getSeconds() + parseInt(voting_data['voting_length']));
 					// Delete the current voting display
 					$("#current-vote").empty();
 					if ('speedup' in voting_data) {
@@ -415,7 +421,7 @@ $( document ).ready(function() {
 				}
 				if ('role' in voting_data) {
 					// Create the role voting screens
-					create_role_panels("#current-vote", voting_data);
+					create_role_panels("#current-vote", voting_data, vote_end);
 				}
 				else {
 					// IF we just want to show the logo and not voting/results
@@ -425,7 +431,7 @@ $( document ).ready(function() {
 					}
 					else {
 						// Create the voting screen
-						create_vote_panel("#current-vote", voting_data);
+						create_vote_panel("#current-vote", voting_data, vote_end);
 					}
 				}
 			}
@@ -466,11 +472,11 @@ $( document ).ready(function() {
 		if (voting_data['display'] == 'voting') {
 			if ('role' in voting_data) {
 				// Update the percentages of the role voting screens
-				create_role_panels("#current-vote", voting_data, true);
+				create_role_panels("#current-vote", voting_data, vote_end, true);
 			}
 			else {
 				// Update the percentages of the other voting screens
-				create_vote_panel("#current-vote", voting_data, true);
+				create_vote_panel("#current-vote", voting_data, vote_end, true);
 			}
 		}
 		

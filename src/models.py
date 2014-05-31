@@ -348,7 +348,8 @@ class Show(ndb.Model):
                             # Set the end of the voting period
                             'hour': vote_end.hour,
                             'minute': vote_end.minute,
-                            'second': vote_end.second})
+                            'second': vote_end.second,
+                            'voting_length': (vote_end - now_tz).seconds})
                 elif now_tz >= vote_end and now_tz <= display_end:
                     state_dict.update({'state': vote_type,
                                        'display': 'result',

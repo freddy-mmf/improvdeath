@@ -3,7 +3,7 @@
 {% block add_head %}
 <script src="{{js_path}}jquery.upvote.js"></script>
 
-<link rel="stylesheet" href="{{css_path}}jquery.upvote.css">
+{% include "async_upvote.html" %}
 {% endblock %}
 
 {% block add-theme-selected %}class="active"{% endblock %}
@@ -19,6 +19,9 @@
 		{% endif %}
 		<div class="row">
 			<div class="col-md-6">
+			    <a id="item-alert" href="{{path_qs}}" class="alert-link text-center white-link">
+                    <div class="alert alert-info"><span id="item-count"></span>New Theme(s) added, click to refresh</div>
+                </a>
 				<div class="panel panel-warning">
 					<div class="panel-heading x-large-font">Add Theme
 					    <div class="well well-sm medium-font">
@@ -49,13 +52,10 @@
 						{% for theme in themes %}
 							<div class="row">
 							    <div class="col-sm-2">
-                                    <form action="/add_themes/" method="post">
-                                        <input type="hidden" name="upvote" value="{{theme.key.id}}"/>
-                                        <button type="submit" class="btn btn-success">
-                                            <span class="glyphicon glyphicon-circle-arrow-up vote-button-label">Upvote</span>
-                                        </button>
-                                        <span class="vote-value">&nbsp;{{theme.vote_value}}</span>
-                                    </form>
+                                    <button id="theme-{{theme.key.id}}" class="upvote btn btn-success" {% if session_id in theme.get_voted_sessions %}disabled="disabled"{% endif %} type="submit">
+                                        <span class="glyphicon glyphicon-circle-arrow-up vote-button-label">Upvote</span>
+                                    </button>
+                                    <span class="vote-value">&nbsp;{{theme.vote_value}}</span>
 								</div>
 							</div>
 							<div class="row">

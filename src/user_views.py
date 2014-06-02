@@ -206,7 +206,8 @@ class AddActions(ViewBase):
                                         Action.created).fetch()
         context = {'actions': actions,
                    'show': get_current_show(),
-                   'session_id': str(self.session.get('id', '0'))}
+                   'session_id': str(self.session.get('id', '0')),
+                   'item_count': len(actions)}
         self.response.out.write(template.render(self.path('add_actions.html'),
                                                 self.add_context(context)))
 
@@ -220,92 +221,11 @@ class AddActions(ViewBase):
                                        str(self.session.get('id', '0')),
                                        self.context.get('is_admin', False))
         context['show'] = get_current_show()
+        context['item_count'] = len(context.get('actions', 0))
             
         self.response.out.write(template.render(self.path('add_actions.html'),
                                                 self.add_context(context)))
 
-
-class AddItems(ViewBase):
-    def get(self):
-        items = Item.query(
-            Item.used == False).order(-Item.vote_value,
-                                      Item.created).fetch()
-        context = {'items': items}
-        self.response.out.write(template.render(self.path('add_items.html'),
-                                                self.add_context(context)))
-
-    def post(self):
-        context = {}
-        item = None
-        name = self.request.get('name')
-        upvote = self.request.get('upvote')
-        if name:
-            item = Item(name=name).put().get()
-            context['created'] = True
-        elif upvote:
-            item_key = ndb.Key(Item, int(upvote)).get().key
-            av = ItemVote.query(
-                    ItemVote.item == item_key,
-                    ItemVote.session_id == str(self.session.get('id', '0'))).get()
-            if not av:
-                ItemVote(item=item_key,
-                             session_id=str(self.session.get('id'))).put()
-        if item:
-            context['items'] = Item.query(Item.used == False,
-                                              Item.key != item.key,
-                                              ).order(Item.key,
-                                                      -Item.vote_value,
-                                                      Item.created).fetch()
-            context['items'].append(item)
-        else:
-            context['items'] = Item.query(Item.used == False
-                                             ).order(-Item.vote_value,
-                                                     Item.created).fetch()
-            
-        self.response.out.write(template.render(self.path('add_items.html'),
-                                                self.add_context(context)))
-
-
-class AddCharacters(ViewBase):
-    def get(self):
-        characters = WildcardCharacter.query(
-            WildcardCharacter.used == False).order(-WildcardCharacter.vote_value,
-                                                   WildcardCharacter.created).fetch()
-        context = {'characters': characters}
-        self.response.out.write(template.render(self.path('add_characters.html'),
-                                                self.add_context(context)))
-
-    def post(self):
-        context = {}
-        character = None
-        name = self.request.get('name')
-        upvote = self.request.get('upvote')
-        if name:
-            character = WildcardCharacter(name=name).put().get()
-            context['created'] = True
-        elif upvote:
-            character_key = ndb.Key(WildcardCharacter, int(upvote)).get().key
-            av = WildcardCharacterVote.query(
-                    WildcardCharacterVote.wildcard == character_key,
-                    WildcardCharacterVote.session_id == str(self.session.get('id', '0'))).get()
-            if not av:
-                WildcardCharacterVote(wildcard=character_key,
-                             session_id=str(self.session.get('id'))).put()
-        if character:
-            context['characters'] = WildcardCharacter.query(
-                                   WildcardCharacter.used == False,
-                                   WildcardCharacter.key != character.key,
-                                   ).order(WildcardCharacter.key,
-                                           -WildcardCharacter.vote_value,
-                                           WildcardCharacter.created).fetch()
-            context['characters'].append(character)
-        else:
-            context['characters'] = WildcardCharacter.query(WildcardCharacter.used == False
-                                             ).order(-WildcardCharacter.vote_value,
-                                                     WildcardCharacter.created).fetch()
-            
-        self.response.out.write(template.render(self.path('add_characters.html'),
-                                                self.add_context(context)))
         
 
 class AddThemes(ViewBase):
@@ -315,7 +235,8 @@ class AddThemes(ViewBase):
                     Theme.used == False).order(-Theme.vote_value,
                                                Theme.created).fetch()
         context = {'themes': themes,
-                   'session_id': str(self.session.get('id', '0'))}
+                   'session_id': str(self.session.get('id', '0')),
+                   'item_count': len(themes)}
         self.response.out.write(template.render(self.path('add_themes.html'),
                                                 self.add_context(context)))
 
@@ -328,6 +249,7 @@ class AddThemes(ViewBase):
                                        self.request,
                                        str(self.session.get('id', '0')),
                                        self.context.get('is_admin', False))
+        context['item_count'] = len(context.get('themes', 0))
             
         self.response.out.write(template.render(self.path('add_themes.html'),
                                                 self.add_context(context)))

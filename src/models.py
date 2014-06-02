@@ -94,6 +94,12 @@ class Action(ndb.Model):
         all_count = LiveActionVote.query(LiveActionVote.show == show,
                                          LiveActionVote.interval == -1).count()
         return get_vote_percentage(self.live_vote_value, all_count)
+    
+    @property
+    def get_voted_sessions(self):
+        avs = ActionVote.query(ActionVote.action == self.key).fetch()
+        return [x.session_id for x in avs]
+        
 
     def put(self, *args, **kwargs):
         self.created = get_mountain_time()
@@ -106,6 +112,11 @@ class Theme(ndb.Model):
     used = ndb.BooleanProperty(default=False)
     vote_value = ndb.IntegerProperty(default=0)
     session_id = ndb.StringProperty(required=True)
+    
+    @property
+    def get_voted_sessions(self):
+        tvs = ThemeVote.query(ThemeVote.theme == self.key).fetch()
+        return [x.session_id for x in tvs]
     
     def put(self, *args, **kwargs):
         self.created = get_mountain_time()

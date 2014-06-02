@@ -3,7 +3,7 @@
 {% block add_head %}
 <script src="{{js_path}}jquery.upvote.js"></script>
 
-<link rel="stylesheet" href="{{css_path}}jquery.upvote.css">
+{% include "async_upvote.html" %}
 {% endblock %}
 
 {% block add-action-selected %}class="active"{% endblock %}
@@ -20,6 +20,9 @@
 			{% endif %}
 			<div class="row">
 				<div class="col-md-6">
+				    <a id="item-alert" href="{{path_qs}}" class="alert-link text-center white-link">
+	                    <div class="alert alert-info"><span id="item-count"></span>New Action(s) added, click to refresh</div>
+	                </a>
 					<div class="panel panel-danger">
 						<div class="panel-heading x-large-font">Add Action
 						    <div class="bg-info large-font">Tonight's Theme: {{show.theme.get.name}}</div>
@@ -52,13 +55,10 @@
 							{% for action in actions %}
 								<div class="row">
 									<div class="col-md-2">
-                                        <form action="/add_actions/" method="post">
-                                            <input type="hidden" name="upvote" value="{{action.key.id}}"/>
-                                            <button class="btn btn-success" type="submit">
-                                                <span class="glyphicon glyphicon-circle-arrow-up vote-button-label">Upvote</span>
-                                            </button>
-                                            <span class="vote-value">&nbsp;{{action.vote_value}}</span>
-                                        </form>
+                                        <button id="action-{{action.key.id}}" class="upvote btn btn-success" {% if session_id in action.get_voted_sessions %}disabled="disabled"{% endif %} type="submit">
+                                            <span class="glyphicon glyphicon-circle-arrow-up vote-button-label">Upvote</span>
+                                        </button>
+                                        <span class="vote-value">&nbsp;{{action.vote_value}}</span>
 									</div>
 								</div>
 								<div class="row">

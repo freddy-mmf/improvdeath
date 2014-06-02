@@ -1,0 +1,51 @@
+<script src="{{js_path}}jquery.sticky.js"></script>
+
+<script>
+$( document ).ready(function() {
+    // Stick the new item alert to the top, and hide it
+    $('#item-alert').sticky({topSpacing:0});
+    $('#item-alert').width($('#item-alert').parent().width());
+    $('#item-alert').hide();
+    var vote_ajax_url = "/upvote_json/";
+    $(".upvote").click(function() {
+        // Disable the upvote button
+        $( this ).prop('disabled', true);
+        // Get the vote value element
+        vv_element = $( this ).siblings( ".vote-value" );
+        // Get the int vote value
+        vote_value = parseInt($.trim($(vv_element).text()));
+        // Increment it
+        vote_value += 1;
+        // Set the vote value element to the new incremented value
+        $(vv_element).html("&nbsp;"+ vote_value);
+        // Send an ajax request to upvote the item
+        $.post(vote_ajax_url, {'id': $( this ).attr('id'),
+                               'session_id': "{{session_id}}"}
+        );
+    });
+    
+    (function action_refresh(){
+        setTimeout(function(){
+			   $.ajax({
+				   url: vote_ajax_url,
+				   error: function(voting_data){
+				       console.log("Voting data fetching error!");
+                       console.log(voting_data);
+                       action_refresh(); // recurse
+				   },
+				   success: function(voting_data){
+				       var item_count = voting_data['item_count'];
+				       if ( item_count > {{item_count}} ) {
+				           var pathname = window.location.pathname;
+				           var count_diff = item_count - {{item_count}};
+                           $('#item-count').html(count_diff + "&nbsp;");
+                           // Show the sticky alert
+                           $('#item-alert').slideDown();
+				       }
+                       action_refresh(); // recurse
+                   }
+                });
+        }, 10000);
+    })();
+});
+</script>

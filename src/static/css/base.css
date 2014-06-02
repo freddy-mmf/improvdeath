@@ -168,3 +168,8 @@ hr.thick-divider {
 .intervalTimerLayout span.imageSep {
 	background-position: -374px 0px;
 }
+
+#item-alert {
+	font-size: large;
+	z-index: 50000;
+}

@@ -52,7 +52,7 @@
 						{% for theme in themes %}
 							<div class="row">
 							    <div class="col-sm-2">
-                                    <button id="theme-{{theme.key.id}}" class="upvote btn btn-success" {% if session_id in theme.get_voted_sessions %}disabled="disabled"{% endif %} type="submit">
+                                    <button id="theme-{{theme.key.id}}" class="upvote btn btn-success" {% if session_id in theme.get_voted_sessions or session_id == theme.session_id %}disabled="disabled"{% endif %} type="submit">
                                         <span class="glyphicon glyphicon-circle-arrow-up vote-button-label">Upvote</span>
                                     </button>
                                     <span class="vote-value">&nbsp;{{theme.vote_value}}</span>

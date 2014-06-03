@@ -55,7 +55,7 @@
 							{% for action in actions %}
 								<div class="row">
 									<div class="col-md-2">
-                                        <button id="action-{{action.key.id}}" class="upvote btn btn-success" {% if session_id in action.get_voted_sessions %}disabled="disabled"{% endif %} type="submit">
+                                        <button id="action-{{action.key.id}}" class="upvote btn btn-success" {% if session_id in action.get_voted_sessions or session_id == action.session_id %}disabled="disabled"{% endif %} type="submit">
                                             <span class="glyphicon glyphicon-circle-arrow-up vote-button-label">Upvote</span>
                                         </button>
                                         <span class="vote-value">&nbsp;{{action.vote_value}}</span>

@@ -173,3 +173,7 @@ hr.thick-divider {
 	font-size: large;
 	z-index: 50000;
 }
+
+.overlay-alert {
+    z-index: 50000;
+}

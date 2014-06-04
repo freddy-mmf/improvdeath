@@ -41,6 +41,8 @@ $( document ).ready(function() {
                            $('#item-count').html(count_diff + "&nbsp;");
                            // Show the sticky alert
                            $('#item-alert').slideDown();
+                           // Hide the overlapping "Add Object"
+                           $(".underlay-object").html("&nbsp;");
 				       }
                        action_refresh(); // recurse
                    }

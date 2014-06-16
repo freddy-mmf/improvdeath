@@ -17,7 +17,6 @@ def redirect_locked(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         show = get_current_show()
-        print "webapp2.get_request().uri, ", webapp2.get_request().uri
         if show and show.locked and not users.is_current_user_admin():
             return webapp2.redirect(LIVE_VOTE_URI, abort=True)
         return func(*args, **kwargs)

@@ -11,8 +11,7 @@ from google.appengine.api import users
 from views_base import ViewBase
 
 from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
-					Theme, ActionVote, ThemeVote, Item, ItemVote,
-					WildcardCharacter, WildcardCharacterVote,
+					Theme, ActionVote, ThemeVote,
 					VotingTest, LiveVotingTest, RoleVote,
 					VOTE_AFTER_INTERVAL, ROLE_TYPES, VOTE_TYPES,
 					get_current_show)
@@ -45,15 +44,9 @@ class ShowPage(ViewBase):
 		show = ndb.Key(Show, int(show_id)).get()
 		available_actions = len(Action.query(
 							   Action.used == False).fetch())
-		available_items = bool(Item.query(
-							   Item.used == False).fetch())
-		available_characters = bool(WildcardCharacter.query(
-							   	WildcardCharacter.used == False).fetch())
 		context	= {'show': show,
 				   'now_tz': back_to_tz(get_mountain_time()),
 				   'available_actions': available_actions,
-				   'available_items': available_items,
-				   'available_characters': available_characters,
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
 		self.response.out.write(template.render(self.path('show.html'),
@@ -93,10 +86,6 @@ class ShowPage(ViewBase):
 
 			show.test_vote_init = get_mountain_time()
 			show.put()
-		# Admin is starting item vote
-		elif self.request.get('item_vote') and self.context.get('is_admin', False):
-			show.item_vote_init = get_mountain_time()
-			show.put()
 		# Admin is starting hero vote
 		elif self.request.get('hero_vote') and self.context.get('is_admin', False):
 			show.hero_vote_init = get_mountain_time()
@@ -110,10 +99,6 @@ class ShowPage(ViewBase):
 			# Set all actions that haven't been used, but have a live_vote_value, to zero
 			reset_action_live_votes()
 			show.incident_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting wildcard vote
-		elif self.request.get('wildcard_vote') and self.context.get('is_admin', False):
-			show.wildcard_vote_init = get_mountain_time()
 			show.put()
 		# Admin is starting the shapeshifter vote
 		elif self.request.get('shapeshifter_vote') and self.context.get('is_admin', False):
@@ -135,15 +120,9 @@ class ShowPage(ViewBase):
 			show.put()
 		available_actions = len(Action.query(
 							   Action.used == False).fetch())
-		available_items = bool(Item.query(
-							   Item.used == False).fetch())
-		available_characters = bool(WildcardCharacter.query(
-							   	WildcardCharacter.used == False).fetch())
 		context	= {'show': show,
 				   'now_tz': back_to_tz(get_mountain_time()),
 				   'available_actions': available_actions,
-				   'available_items': available_items,
-				   'available_characters': available_characters,
 				   'host_url': self.request.host_url,
 				   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL}
 		self.response.out.write(template.render(self.path('show.html'),
@@ -209,9 +188,6 @@ class DeleteTools(ViewBase):
 	def get(self):
 		context = {'shows': Show.query().fetch(),
 				   'actions': Action.query(Action.used == False).fetch(),
-				   'items': Item.query(Item.used == False).fetch(),
-				   'characters': WildcardCharacter.query(
-				   					WildcardCharacter.used == False).fetch(),
 				   'themes': Theme.query(Theme.used == False).fetch()}
 		self.response.out.write(template.render(self.path('delete_tools.html'),
 												self.add_context(context)))
@@ -236,27 +212,6 @@ class DeleteTools(ViewBase):
 					av.key.delete()
 				action_entity.key.delete()
 			deleted = 'Action(s)'
-		# If item(s) were deleted
-		if item_list:
-			for item in item_list:
-				item_entity = ndb.Key(Item, int(item)).get()
-				# Get all the related item votes and delete them
-				item_votes = ItemVote.query(ItemVote.item == item_entity.key).fetch()
-				for av in item_votes:
-					av.key.delete()
-				item_entity.key.delete()
-			deleted = 'Item(s)'
-		# If character(s) were deleted
-		if character_list:
-			for character in character_list:
-				character_entity = ndb.Key(WildcardCharacter, int(character)).get()
-				# Get all the related character votes and delete them
-				character_votes = WildcardCharacterVote.query(
-								WildcardCharacterVote.wildcard == character_entity.key).fetch()
-				for av in character_votes:
-					av.key.delete()
-				character_entity.key.delete()
-			deleted = 'Character(s)'
 		# If theme(s) were deleted
 		if theme_list:
 			for theme in theme_list:
@@ -290,12 +245,6 @@ class DeleteTools(ViewBase):
 				# Delete the theme used in the show, if it existed
 				if show_entity.theme:
 					show_entity.theme.delete()
-				# Delete the item used in the show, if it existed
-				if show_entity.item:
-					show_entity.item.delete()
-				# Delete the character used in the show, if it existed
-				if show_entity.wildcard:
-					show_entity.wildcard.delete()
 				show_entity.key.delete()
 				deleted = 'Show(s)'
 		# Delete ALL un-used things
@@ -309,33 +258,11 @@ class DeleteTools(ViewBase):
 					av.key.delete()
 				# Delete the un-used actions
 				unused_action.key.delete()
-			# Delete Un-used Items
-			unused_items = Item.query(Item.used == False).fetch()
-			for unused_item in unused_items:
-				# Get all the related item votes and delete them
-				item_votes = ItemVote.query(ItemVote.item == unused_item.key).fetch()
-				for iv in item_votes:
-					iv.key.delete()
-				# Delete the un-used items
-				unused_item.key.delete()
-			# Delete Un-used Characters
-			unused_characters = WildcardCharacter.query(WildcardCharacter.used == False).fetch()
-			for unused_character in unused_characters:
-				# Get all the related character votes and delete them
-				character_votes = WildcardCharacterVote.query(
-									WildcardCharacterVote.wildcard == unused_character.key).fetch()
-				for cv in character_votes:
-					cv.key.delete()
-				# Delete the un-used characters
-				unused_character.key.delete()
-			deleted = 'All Un-used Things'
+			deleted = 'All Un-used Actions'
 		context = {'deleted': deleted,
 				   'unused_deleted': unused_deleted,
 				   'shows': Show.query().fetch(),
 				   'actions': Action.query(Action.used == False).fetch(),
-				   'items': Item.query(Item.used == False).fetch(),
-				   'characters': WildcardCharacter.query(
-				   					WildcardCharacter.used == False).fetch(),
 				   'themes': Theme.query(Theme.used == False).fetch()}
 		self.response.out.write(template.render(self.path('delete_tools.html'),
 												self.add_context(context)))
@@ -390,21 +317,21 @@ class JSTestPage(ViewBase):
 		display = self.request.get('display', 'voting')
 		votes_used = self.request.get('votes_used', '')
 		available_mock = [1,2,3]
-		three_options = [{"name": "Walks into a house", "percent": 30},
-					    {"name": "Something else crazy long, so forget about what you know about options lenghts", "percent": 60},
-					    {"name": "Here is a super long option that nobody could have ever guessed because they never dreamed of such things", "percent": 10}]
-		five_options = [{"name": "Option 1", "percent": 20},
-					   {"name": "Option 2", "percent": 50},
-					   {"name": "Option 3", "percent": 10},
-					   {"name": "Option 4", "percent": 15},
-					   {"name": "Option 5", "percent": 5}]
-		player_options = [{'photo_filename': 'freddy.jpg', 'percent': 30},
-		 				  {'photo_filename': 'dan.jpg', 'percent': 10},
-		 				  {'photo_filename': 'eric.jpg', 'percent': 15},
-		 				  {'photo_filename': 'brogan.jpg', 'percent': 5},
-		 				  {'photo_filename': 'camilla.png', 'percent': 20},
-		 				  {'photo_filename': 'lindsay.png', 'percent': 10},
-		 				  {'photo_filename': 'greg.jpg', 'percent': 5}]
+		three_options = [{"name": "Walks into a house", "count": 20},
+					    {"name": "Something else crazy long, so forget about what you know about options lenghts", "count": 30},
+					    {"name": "Here is a super long option that nobody could have ever guessed because they never dreamed of such things", "count": 10}]
+		five_options = [{"name": "Option 1", "count": 20},
+					   {"name": "Option 2", "count": 50},
+					   {"name": "Option 3", "count": 10},
+					   {"name": "Option 4", "count": 15},
+					   {"name": "Option 5", "count": 5}]
+		player_options = [{'photo_filename': 'freddy.jpg', 'count': 30},
+		 				  {'photo_filename': 'dan.jpg', 'count': 10},
+		 				  {'photo_filename': 'eric.jpg', 'count': 15},
+		 				  {'photo_filename': 'brogan.jpg', 'count': 5},
+		 				  {'photo_filename': 'camilla.png', 'count': 20},
+		 				  {'photo_filename': 'lindsay.png', 'count': 10},
+		 				  {'photo_filename': 'greg.jpg', 'count': 5}]
 		show_mock = type('Show',
 						 (object,),
 						 dict(scheduled = get_mountain_time(),
@@ -421,36 +348,19 @@ class JSTestPage(ViewBase):
 				mock_data.update({'player_name': 'Freddy',
 				                  'player_photo': 'freddy.jpg',
 								  'voted': three_options[1]['name'],
-								  'count': three_options[1]['percent'],
-				                  'percent': three_options[1]['percent']})
+								  'count': three_options[1]['count']})
 		elif state == 'test':
 			if display == 'voting':
 				mock_data.update({'options': five_options})
 			else:
 				mock_data.update({'voted': five_options[1]['name'],
-								  'count': five_options[1]['percent'],
-				                  'percent': five_options[1]['percent']})
-		elif state == 'item':
-			if display == 'voting':
-				mock_data.update({'options': five_options})
-			else:
-				mock_data.update({'voted': five_options[1]['name'],
-								  'count': five_options[1]['percent'],
-				                  'percent': five_options[1]['percent']})
-		elif state == 'wildcard':
-			if display == 'voting':
-				mock_data.update({'options': five_options})
-			else:
-				mock_data.update({'voted': five_options[1]['name'],
-								  'count': five_options[1]['percent'],
-				                  'percent': five_options[1]['percent']})
+								  'count': five_options[1]['count']})
 		elif state == 'incident':
 			if display == 'voting':
 				mock_data.update({'options': five_options})
 			else:
 				mock_data.update({'voted': five_options[1]['name'],
-							      'count': five_options[1]['percent'],
-				                  'percent': five_options[1]['percent']})
+							      'count': five_options[1]['count']})
 		elif state in ROLE_TYPES:
 			if display == 'voting':
 				player_num = int(self.request.get('players', '8'))
@@ -460,8 +370,7 @@ class JSTestPage(ViewBase):
 				mock_data.update({'role': True,
 								  'voted': state,
 							 	  'photo_filename': player_options[0]['photo_filename'],
-							 	  'count': player_options[0]['percent'],
-				             	  'percent': player_options[0]['percent']})
+							 	  'count': player_options[0]['count']})
 		
 		mock_data['used_types'] = []
 		# Add used vote types

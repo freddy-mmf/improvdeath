@@ -7,9 +7,7 @@ from google.appengine.api import taskqueue
 
 from views_base import ViewBase, redirect_locked
 from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
-                    LiveActionVote, Item, ItemVote,
-                    LiveItemVote, WildcardCharacter, WildcardCharacterVote,
-                    LiveWildcardCharacterVote, RoleVote, LiveRoleVote,
+                    LiveActionVote, RoleVote, LiveRoleVote,
                     VotingTest, LiveVotingTest,
                     VOTE_AFTER_INTERVAL, ROLE_TYPES,
                     get_current_show)
@@ -107,9 +105,7 @@ class LiveVoteWorker(webapp2.RequestHandler):
         show = get_current_show()
         vote_num = int(self.request.get('vote_num'))
         session_id = self.request.get('session_id')
-        print "session_id, ", session_id
-        print "vote_num, ", vote_num
-        vote_data = show.current_vote_options(show)
+        vote_data = show.current_vote_options(show, voting_only=True)
         # If we're in the voting period
         if vote_data.get('display') == 'voting':
             state = vote_data['state']
@@ -177,24 +173,6 @@ class LiveVoteWorker(webapp2.RequestHandler):
                 LiveVotingTest(test=test,
                                show=show.key,
                                session_id=session_id).put()
-        # Submitting an item vote
-        elif state == 'item':
-            item = ndb.Key(Item, int(voted_option['id']))
-            # If the user hasn't already voted for an item
-            if not item.get().get_live_item_vote_exists(show.key, session_id):
-                LiveItemVote(item=item,
-                             show=show.key,
-                             session_id=session_id).put()
-        # Submitting a wildcard vote
-        elif state == 'wildcard':
-            wildcard = ndb.Key(WildcardCharacter, int(voted_option['id']))
-            # If the user hasn't already voted for a wildcard character
-            if not wildcard.get().get_live_wc_vote_exists(show.key, session_id):
-                # Add the live vote for the wildcard character
-                LiveWildcardCharacterVote(wildcard=wildcard,
-                                          show=show.key,
-                                          session_id=session_id).put()
-        
 
 
 class AddActions(ViewBase):

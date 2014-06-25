@@ -28,10 +28,11 @@ def admin_required(func):
     return decorated_view
 
 
+#### RESETS LIVE ACTION VOTES ####
 def reset_action_live_votes():
 	reset_actions = Action.query(Action.used == False,
 				 				 Action.live_vote_value > 0).fetch()
-	# Set all actions that haven't been used, but have a live_vote_value, to zero
+	# Reset all actions that haven't been used, but have a live_vote_value, to zero
 	for ra in reset_actions:
 		# Set the actions live_vote_value to zero
 		ra.live_vote_value = 0
@@ -66,7 +67,7 @@ class ShowPage(ViewBase):
 				# Set the start time of this interval vote
 				show.interval_vote_init = get_mountain_time()
 				show.put()
-			# Set all actions that haven't been used, but have a live_vote_value, to zero
+			# Reset all actions that haven't been used, but have a live_vote_value, to zero
 			reset_action_live_votes()
 		# Admin is starting item vote
 		elif self.request.get('test_vote') and self.context.get('is_admin', False):

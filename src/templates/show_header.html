@@ -22,8 +22,11 @@ $( document ).ready(function() {
 		return string.charAt(0).toUpperCase() + string.slice(1);
 	}
 	
-	function count_update(count, $element) {
-	
+	function update_vote_counts(element_id, voting_options) {
+		$(element_id).find("span.badge").each(function(index) {
+			// update the voting count of the corresponding option index
+			$(this).text(voting_options[index]['count']);
+		});
 	}
 	
 	function add_options(element_id, option_data) {
@@ -35,7 +38,7 @@ $( document ).ready(function() {
 				var option_row = $('<div class="row"></div>');
 				var option_column = $('<div class="col-sm-12"></div>');
 				// Create the button with the option name on it
-				var option_btn = $('<button class="btn btn-primary btn-block vote-option">' + cur_num + '. ' + option_dict['name'] + '</button>');
+				var option_btn = $('<button class="btn btn-primary btn-block vote-option">' + cur_num + '. ' + option_dict['name'] + '&nbsp;<span class="badge count-font">0</span></button><br/>');
 				// Add the option button to the option column
 				$(option_column).append($(option_btn));
 				// Attach the row to the given element, and the column to the row
@@ -45,7 +48,8 @@ $( document ).ready(function() {
 		}
 		// Otherwise, updated the options with their current vote count
 		else {
-			// Update counts here
+			// Update vote counts
+			update_vote_counts(element_id, option_data);
 		}
 	}
 	
@@ -162,7 +166,7 @@ $( document ).ready(function() {
 				// Add the timer to the panel body
 				$(panel_body_row).append($(countdown_column));
 				// Add the panel footer to the panel
-				$(panel).append($(panel_footer));				
+				$(panel).append($(panel_footer));		
 			}
 			// Just fetch the footer and update percentages
 			else {
@@ -211,8 +215,7 @@ $( document ).ready(function() {
 					var player_number = parseInt(option_num) + 1;
 					var player_column = $('<div class="col-sm-2 role-player-panels"></div>');
 					var player_img = $('<img src="{{player_image_path}}' + option_data[option_num]['photo_filename'] + '" class="img-responsive img-thumbnail" />');
-					var player_btn = $('<button class="btn btn-default btn-block vote-option">' + player_number + '</button>');
-					var player_percent = $(PROGRESS_BAR_ELEMENT);
+					var player_btn = $('<button class="btn btn-default btn-block vote-option">Player&nbsp;' + player_number + '<br/><span class="badge count-font">0</span>&nbsp;Votes</button>');
 					// Add the player image to the player column
 					$(player_column).append($(player_img));
 					// Add the player button to the player column
@@ -257,12 +260,14 @@ $( document ).ready(function() {
 				$(panel).append($(panel_footer));
 				
 				// Update the players' role counts
+				update_vote_counts(element_id, option_data);
 			}
 			// Just update the footers of the pre-created panel
 			else {
 				// Update the players' role counts
-				var countdown_timer = $(element_id).find("span.countdown");
+				update_vote_counts(element_id, option_data);
 				// Update the countdown clock
+				var countdown_timer = $(element_id).find("span.countdown");
 				$(countdown_timer).countdown({until: vote_end, compact: true,
 					layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
 			}
@@ -275,14 +280,6 @@ $( document ).ready(function() {
 		else {
 			create_voted_role(element_id, voting_data);
 		}
-	}
-	
-	function update_role_counts(element_id, voting_options) {
-		$(element_id).find("div.progress-bar").each(function(index) {
-			// update the progress bar of the corresponding index
-			//<span class="badge">42</span>
-			progress(voting_options[index]['count'], $(this), $(this).prev().width());
-		});
 	}
 	
 	function create_voted_role(element_id, voted_dict) {
@@ -453,14 +450,14 @@ $( document ).ready(function() {
 				   		show_loop(); // recurse
 				   }
 		   	   });
-	   	   }, 500);
+	   	   }, 1000);
 	   	{% else %}
 	   		function sleep(millis, callback) {
 				setTimeout(function()
 						{ callback(); }
 				, millis);
 			}
-			sleep(500, show_loop);
+			sleep(1000, show_loop);
 	   	{% endif %}
 	})();
 });

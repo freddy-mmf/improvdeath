@@ -114,6 +114,11 @@ span.medium-font {
 	font-size:medium;
 }
 
+span.count-font {
+	font-size:xx-large;
+	font-color:black;
+}
+
 span.entered-value {
 	color:black;
 	font-size:large;

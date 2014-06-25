@@ -48,12 +48,6 @@ class Player(ndb.Model):
                     LiveActionVote.interval == int(interval),
                     LiveActionVote.show == show,
                     LiveActionVote.session_id == str(session_id)).get())
-
-    def get_all_live_action_count(self, interval):
-        return LiveActionVote.query(
-                        LiveActionVote.player == self.key,
-                        LiveActionVote.interval == int(interval),
-                        LiveActionVote.created == get_mountain_time().date()).count()
     
     def get_role_vote(self, show, role):
         return RoleVote.query(
@@ -434,7 +428,8 @@ class Show(ndb.Model):
                     try:
                         vote_options['options'].append({
                                             'name': unused_actions[i].description,
-                                            'id': unused_actions[i].key.id()})
+                                            'id': unused_actions[i].key.id(),
+                                            'count': unused_actions[i].live_vote_value})
                     except IndexError:
                         pass
             # If we are showing the results of the vote
@@ -593,7 +588,7 @@ class LiveRoleVote(ndb.Model):
 
 class IntervalVoteOptions(ndb.Model):
     show = ndb.KeyProperty(kind=Show, required=True)
-    interval = live_vote_value = ndb.IntegerProperty(required=True)
+    interval = ndb.IntegerProperty(required=True)
     option_1 = ndb.KeyProperty(kind=Action)
     option_2 = ndb.KeyProperty(kind=Action)
     option_3 = ndb.KeyProperty(kind=Action)

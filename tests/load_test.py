@@ -38,7 +38,6 @@ def main():
             vote_num = 0
         else:
             vote_num += 1
-        time.sleep(.5)
     for j,value in vote_dict.items():
         print "Option %s votes: %s" % (j, value)
     print "Total count: ", total_count

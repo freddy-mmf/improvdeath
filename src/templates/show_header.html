@@ -450,14 +450,14 @@ $( document ).ready(function() {
 				   		show_loop(); // recurse
 				   }
 		   	   });
-	   	   }, 1000);
+	   	   }, 500);
 	   	{% else %}
 	   		function sleep(millis, callback) {
 				setTimeout(function()
 						{ callback(); }
 				, millis);
 			}
-			sleep(1000, show_loop);
+			sleep(500, show_loop);
 	   	{% endif %}
 	})();
 });

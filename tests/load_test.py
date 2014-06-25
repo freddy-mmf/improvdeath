@@ -7,8 +7,9 @@ def main():
     usage = "usage: %prog [options] arg"
     parser = OptionParser(usage)
     parser.add_option("-r", "--requests", dest="requests_per", default=1)
-    parser.add_option("-d", "--domain", dest="domain", default="adventure-prov.com")
+    parser.add_option("-d", "--domain", dest="domain", default="www.adventure-prov.com")
     parser.add_option("-l", "--length", dest="vote_length", default=25)
+    parser.add_option("-o", "--options", dest="num_options", default=3)
     (options, args) = parser.parse_args()
     if len(args) < 1:
         uri = "/live_vote/"
@@ -33,7 +34,7 @@ def main():
             vote_dict[vote_num] = vote_dict.get(vote_num, 0) + 1
             total_count += 1
         # Increment the vote number, unless it's 3
-        if vote_num == 2:
+        if vote_num == int(options.num_options) - 1:
             vote_num = 0
         else:
             vote_num += 1

@@ -3,6 +3,30 @@ import requests
 from optparse import OptionParser
 
 
+global_total_ms = 0
+global_request_num = 0
+
+
+def timing(method):
+    def wrapper(*args, **kw):
+        startTime = int(round(time.time() * 1000))
+        result = method(*args, **kw)
+        endTime = int(round(time.time() * 1000))
+        delta = endTime - startTime
+        global global_total_ms
+        global global_request_num
+        global_total_ms += delta
+        global_request_num += 1
+        print "%sms" % (delta)
+        return result
+    return wrapper
+
+
+@timing
+def post_request(s, url, vote_num):
+    return s.post(url, data={'vote_num': str(vote_num)})
+
+
 def main():
     usage = "usage: %prog [options] arg"
     parser = OptionParser(usage)
@@ -29,7 +53,7 @@ def main():
             # Create a new session
             s = requests.Session()
             # POST
-            reponse = s.post(url, data={'vote_num': str(vote_num)})
+            reponse = post_request(s, url, vote_num)
             # Keep track of the vote numbers
             vote_dict[vote_num] = vote_dict.get(vote_num, 0) + 1
             total_count += 1
@@ -41,6 +65,7 @@ def main():
     for j,value in vote_dict.items():
         print "Option %s votes: %s" % (j, value)
     print "Total count: ", total_count
+    print "Average request time: %sms" % (global_total_ms/global_request_num)
 
 if __name__ == "__main__":
     main()

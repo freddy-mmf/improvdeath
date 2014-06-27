@@ -77,3 +77,10 @@ class RobotsTXT(webapp2.RequestHandler):
         # Set to not be indexed
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.out.write("User-agent: *\nDisallow: /")
+
+
+class LoaderIO(webapp2.RequestHandler):
+    def get(self):
+        # Set to not be indexed
+        self.response.headers['Content-Type'] = 'text/plain'
+        self.response.out.write("loaderio-9b6fa50492da1609dc61b9198b767688")

@@ -436,29 +436,16 @@ class Show(ndb.Model):
             elif display == 'result' and not voting_only:
                 # If an action wasn't already chosen for this interval
                 if not player_action.action:
+                    voted_action = None
                     # Get the actions that were voted on this interval
-                    interval_voted_actions = []
-                    live_action_votes = LiveActionVote.query(
-                                            LiveActionVote.player == player,
-                                            LiveActionVote.interval == int(interval),
-                                            LiveActionVote.show == show.key).fetch(ACTION_OPTIONS)
-                    # Add the voted on actions to a list
-                    for lav in live_action_votes:
-                        interval_voted_actions.append(lav.action)
-                    # If the actions were voted on
-                    if interval_voted_actions:
-                        # Get the most voted, un-used action
-                        voted_action = Action.query(
-                                           Action.used == False,
-                                           Action.key.IN(interval_voted_actions),
-                                           ).order(-Action.live_vote_value).get()
-                    # If no live action votes were cast
-                    # take the highest regular voted action that hasn't been used
-                    else:
-                        # Get the most voted, un-used action
-                        voted_action = Action.query(
-                                           Action.used == False,
-                                           ).order(-Action.vote_value).get()
+                    unused_actions = self.get_randomized_unused_actions(show, interval)
+                    # Take the action with the highest live_vote_value
+                    # Or just default to the first action
+                    for action in unused_actions:
+                        if voted_action == None:
+                            voted_action = action
+                        elif action.live_vote_value > voted_action.live_vote_value:
+                            voted_action = action
                     # If a voted action exists
                     if voted_action:
                         # Set the player action

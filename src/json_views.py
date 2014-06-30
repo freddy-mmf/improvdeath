@@ -49,20 +49,16 @@ class UpvoteJSON(ViewBase):
     	session_id = self.request.get('session_id')
     	# Splits the id into type and item id
     	item_type, item_id = posted_id.split('-')
-    	print item_type
     	if item_type == 'action':
     		item = ndb.Key(Action, int(item_id)).get()
     	else:
     		item = ndb.Key(Theme, int(item_id)).get()
-        print item_id
-        print "Found, ", session_id in item.get_voted_sessions
         # See if the user already voted for this item
         if not session_id in item.get_voted_sessions:
         	# if the voted item was an action
             if item_type == 'action':
             	ActionVote(action=item.key, session_id=session_id).put()
             else:
-            	print "Adding theme vote"
             	ThemeVote(theme=item.key, session_id=session_id).put()
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
         self.response.out.write(json.dumps({}))

@@ -1,20 +1,5 @@
 {% extends "base.html" %}
 
-{% block add_head %}
-<link rel="stylesheet" type="text/css" href="{{css_path}}jquery.datetimepicker.css"/ >
-<script src="{{js_path}}jquery.datetimepicker.js"></script>
-
-<script>
-$(document).ready(function(){
-  $('#datetimepicker').datetimepicker({
-  	format:'d.m.Y H:i',
-  	inline:true,
-  	step:30,
-  });
-});
-</script>
-{% endblock %}
-
 {% block admin-selected %} active{% endblock %}
 {% block create-selected %}class="active"{% endblock %}
 
@@ -32,12 +17,6 @@ $(document).ready(function(){
                          <option value="{{theme.key.id}}">{{theme.name}}</option>
                        {% endfor %}
                      </select>
-                 </div>
-             </div>
-             <div class="form-group">
-                 <label class="col-md-2 control-label">Scheduled Time:</label>
-                 <div class="col-sm-6">
-                     <input id="datetimepicker" class="form-control" type="text" name="scheduled">
                  </div>
              </div>
              <div class="form-group">

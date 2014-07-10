@@ -10,11 +10,11 @@ from google.appengine.api import users
 
 from views_base import ViewBase
 
-from models import (Show, Player, PlayerAction, ShowPlayer, ShowAction, Action,
-					Theme, ActionVote, ThemeVote,
-					VotingTest, LiveVotingTest, RoleVote,
-					VOTE_AFTER_INTERVAL, ROLE_TYPES, VOTE_TYPES,
-					get_current_show)
+from service import (get_current_show, fetch_suggestions, fetch_players,
+					 get_suggestion, get_player, get_show,
+					 create_show, fetch_shows, fetch_live_votes,
+					 fetch_preshow_votes, fetch_vote_options,
+					 fetch_pool_types, fetch_voted_items)
 from timezone import get_mountain_time, back_to_tz
 
 
@@ -133,63 +133,64 @@ class ShowPage(ViewBase):
 class CreateShow(ViewBase):
 	@admin_required
 	def get(self):
-		context = {'players': Player.query().fetch(),
-				   'themes': Theme.query(Theme.used == False,
-				   				).order(-Theme.vote_value).fetch()}
+		context = {'players': fetch_players(),
+				   'themes': fetch_suggestions(used=False,
+				   							   order_by_vote_value=True)}
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
 
 	@admin_required
 	def post(self):
-		scheduled_string = self.request.get('scheduled')
 		theme_id = self.request.get('theme_id')
 		player_list = self.request.get_all('player_list')
-		action_intervals = self.request.get('action_intervals')
-		context = {'players': Player.query().fetch(),
-		           'themes': Theme.query(Theme.used == False).fetch()}
-		if player_list and action_intervals:
-			# Get the list of interval times
-			try:
-				interval_list = [int(x.strip()) for x in action_intervals.split(',')]
-			except ValueError:
-				raise ValueError("Invalid interval list '%s'. Must be comma separated.")
-			if scheduled_string:
-				scheduled = datetime.datetime.strptime(scheduled_string,
-													   "%d.%m.%Y %H:%M")
+		context = {'players': fetch_players(),
+		           'themes': fetch_suggestions(pool_type='theme', used=False)}
+		if player_list:
+			# If a theme was entered
+			if theme_id:
+				theme = get_suggestion(key_id=theme_id)
+				show = create_show(theme=theme)
 			else:
-				scheduled = get_mountain_time()
-			theme = ndb.Key(Theme, int(theme_id))
-			show = Show(scheduled=scheduled, theme=theme).put()
-			players = []
+				show = create_show()
 			# Add the players to the show
 			for player in player_list:
-				player_key = ndb.Key(Player, int(player)).get().key
-				players.append(player_key)
-				ShowPlayer(show=show, player=player_key).put()
-			# Make a copy of the list of players and randomize it
-			rand_players = list(players)
-			random.shuffle(rand_players, random.random)
-			# Add the action intervals to the show
-			for interval in interval_list:
-				# If random players list gets empty, refill it with more players
-				if len(rand_players) == 0:
-					rand_players = list(players)
-					random.shuffle(rand_players, random.random)
-				# Pop a random player off the list and create a PlayerAction
-				player_action = PlayerAction(interval=interval,
-											 player=rand_players.pop()).put()
-				ShowAction(show=show, player_action=player_action).put()
+				player_key = get_player(key_id=player)
+				show.players.append(player_key)
+			# Loop through all the pool types appearing in the show
+			for pool_type in show.pool_types:
+				# Make a copy of the list of players and randomize it
+				rand_players = list(show.players)
+				random.shuffle(rand_players, random.random)
+				# Add the action intervals to the show
+				for interval in interval_list:
+					# If random players list gets empty, refill it with more players
+					if len(rand_players) == 0:
+						rand_players = list(show.players)
+						random.shuffle(rand_players, random.random)
+					# Pop a random player off the list and create a ShowPlayerInterval
+					create_showplayerinterval(show=show,
+											  player=rand_players.pop()
+											  interval=interval,
+											  pool_type=pool_type)
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
 
 
+def add_pool_type_context(context);
+	# Get all the live pool types that use suggestions
+	pool_types = fetch_pool_types(live=True, uses_suggestions=True)
+	# All available pool types that use suggestions are offered up for deletion
+	for pool_type in pool_types:
+		context['pools'][pool_type] = fetch_suggestions(pool_type=pool_type,
+														used=False)
+	return context
+
 class DeleteTools(ViewBase):
 	@admin_required
 	def get(self):
-		context = {'shows': Show.query().fetch(),
-				   'actions': Action.query(Action.used == False).fetch(),
-				   'themes': Theme.query(Theme.used == False).fetch()}
+		context = {'shows': fetch_shows(), 'pools': {}}
+		context = add_pool_type_context(context)
 		self.response.out.write(template.render(self.path('delete_tools.html'),
 												self.add_context(context)))
 
@@ -198,51 +199,46 @@ class DeleteTools(ViewBase):
 		deleted = None
 		unused_deleted = False
 		show_list = self.request.get_all('show_list')
-		action_list = self.request.get_all('action_list')
-		item_list = self.request.get_all('item_list')
-		character_list = self.request.get_all('character_list')
-		theme_list = self.request.get_all('theme_list')
+		suggestion_list = self.request.get_all('suggestion_list')
 		delete_unused = self.request.get_all('delete_unused')
-		# If action(s) were deleted
-		if action_list:
-			for action in action_list:
-				action_entity = ndb.Key(Action, int(action)).get()
-				# Get all the related action votes and delete them
-				action_votes = ActionVote.query(ActionVote.action == action_entity.key).fetch()
-				for av in action_votes:
-					av.key.delete()
-				action_entity.key.delete()
-			deleted = 'Action(s)'
-		# If theme(s) were deleted
-		if theme_list:
-			for theme in theme_list:
-				theme_entity = ndb.Key(Theme, int(theme)).get()
-				# Get all the related theme votes and delete them
-				theme_votes = ThemeVote.query(ThemeVote.theme == theme_entity.key).fetch()
-				for tv in theme_votes:
-					tv.key.delete()
-				theme_entity.key.delete()
-			deleted = 'Theme(s)'
+		# If suggestion(s) were deleted
+		if suggestion_list:
+			for suggestion in suggestion_list:
+				suggestion_entity = get_suggestion(suggestion)
+				# Get all the related preshow votes and delete them
+				preshow_votes = fetch_preshow_votes(suggestion=suggestion_entity.key)
+				for pv in preshow_votes:
+					pv.key.delete()
+				suggestion_entity.key.delete()
+			deleted = 'Suggestion(s)'
 		# If show(s) were deleted
 		if show_list:
 			for show in show_list:
-				show_entity = ndb.Key(Show, int(show)).get()
-				show_actions = ShowAction.query(ShowAction.show == show_entity.key).fetch()
-				# Delete the actions that occurred within the show
-				for show_action in show_actions:
-					action = show_action.player_action.get().action
-					if action:
-						action.delete()
-					show_action.player_action.delete()
-					show_action.key.delete()
-				# Delete player associations to the show
-				show_players = ShowPlayer.query(ShowPlayer.show == show_entity.key).fetch()
-				for show_player in show_players:
-					show_player.key.delete()
-				# Delete all Role votes
-				role_votes = RoleVote.query(RoleVote.show == show_entity.key).fetch()
-				for role_vote in role_votes:
-					role_vote.key.delete()
+				show_entity = get_show(show)
+				# Delete the Vote Options attached to the show
+				vote_options = fetch_vote_options(show=show_entity.key)
+				for vote_option in vote_options:
+					vote_option.key.delete()
+				# Delete the Suggestions used in the show
+				suggestions = fetch_suggestions(show=show_entity.key)
+				for suggestion in suggestions:
+					suggestion.key.delete()
+				# Delete the Preshow Votes used in the show
+				preshow_votes = fetch_preshow_votes(show=show_entity.key)
+				for preshow_vote in preshow_votes:
+					preshow_votes.key.delete()
+				# Delete the Live Votes used in the show
+				live_votes = fetch_live_votes(show=show_entity.key)
+				for live_vote in live_votes:
+					live_vote.key.delete()
+				# Delete the Voted Items used in the show
+				voted_items = fetch_voted_items(show=show_entity.key)
+				for voted_item in voted_items:
+					voted_item.key.delete()
+				# Delete the Show Player Interval used in the show
+				showplayerintervals = fetch_showplayerinterval(show=show_entity.key)
+				for showplayerinterval in showplayerintervals:
+					showplayerinterval.key.delete()
 				# Delete the theme used in the show, if it existed
 				if show_entity.theme:
 					show_entity.theme.delete()
@@ -250,21 +246,26 @@ class DeleteTools(ViewBase):
 				deleted = 'Show(s)'
 		# Delete ALL un-used things
 		if delete_unused:
-			# Delete Un-used Actions
-			unused_actions = Action.query(Action.used == False).fetch()
-			for unused_action in unused_actions:
-				# Get all the related action votes and delete them
-				action_votes = ActionVote.query(ActionVote.action == unused_action.key).fetch()
-				for av in action_votes:
-					av.key.delete()
-				# Delete the un-used actions
-				unused_action.key.delete()
+			# Get all the live pool types that use suggestions
+			pool_types = fetch_pool_types(live=True, uses_suggestions=True)
+			# Grab all the unused suggestions from pool types that use suggestions
+			for pool_type in pool_types:
+				suggestions = fetch_suggestions(pool_type=pool_type, used=False)
+				for suggestion in suggestions:
+					# Delete the Preshow Votes used in the show
+					preshow_votes = fetch_preshow_votes(suggestion=suggestion.key)
+					for preshow_vote in preshow_votes:
+						preshow_votes.key.delete()
+					# Delete the Live Votes used in the show
+					live_votes = fetch_live_votes(suggestion=suggestion.key)
+					for live_vote in live_votes:
+						live_vote.key.delete()
+					suggestion.key.delete()
 			deleted = 'All Un-used Actions'
 		context = {'deleted': deleted,
 				   'unused_deleted': unused_deleted,
-				   'shows': Show.query().fetch(),
-				   'actions': Action.query(Action.used == False).fetch(),
-				   'themes': Theme.query(Theme.used == False).fetch()}
+				   'shows': fetch_shows()}
+		context = add_pool_type_context(context)
 		self.response.out.write(template.render(self.path('delete_tools.html'),
 												self.add_context(context)))
 
@@ -335,8 +336,7 @@ class JSTestPage(ViewBase):
 		 				  {'photo_filename': 'greg.jpg', 'count': 5}]
 		show_mock = type('Show',
 						 (object,),
-						 dict(scheduled = get_mountain_time(),
-							  player_actions = [],
+						 dict(player_actions = [],
 							  theme = type('Theme', (object,), dict(name = 'Pirates')),
 							  is_today = True))
 		mock_data = {'state': state, 'display': display}

@@ -9,29 +9,13 @@ from timezone import (get_mountain_time, back_to_tz, get_today_start,
 
 VOTE_AFTER_INTERVAL = 25
 DISPLAY_VOTED = 10
-WILDCARD_AMOUNT = 5
-ITEM_AMOUNT = 5
+
 ROLE_TYPES = ['hero', 'villain', 'shapeshifter', 'lover']
 VOTE_TYPES = list(ROLE_TYPES)
 VOTE_TYPES += ['incident', 'interval', 'test']
-VOTE_OPTIONS = 5
-INCIDENT_AMOUNT = 5
-ACTION_OPTIONS = 3
-RANDOM_ACTION_OPTIONS = 6
 
-
-def show_today():
-	# See if there is a show today, otherwise users aren't allowed to submit actions
-	today_start = get_today_start()
-	tomorrow_start = get_tomorrow_start()
-	return bool(Show.query(Show.scheduled >= today_start,
-						   Show.scheduled < tomorrow_start).get())
-
-
-def get_current_show():
-	return Show.query(
-			Show.scheduled >= get_today_start(),
-			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
+VOTE_STYLE = ['players-only', 'removable-players', 'player-options', 'options']
+OCCURS_TYPE = ['before', 'during']
 
 
 class Player(ndb.Model):
@@ -56,86 +40,130 @@ class Player(ndb.Model):
                     RoleVote.role == role).get()
 
 
-class Action(ndb.Model):
-    description = ndb.StringProperty(required=True)
-    created = ndb.DateProperty(required=True)
-    used = ndb.BooleanProperty(default=False)
-    vote_value = ndb.IntegerProperty(default=0)
-    live_vote_value = ndb.IntegerProperty(default=0)
-    session_id = ndb.StringProperty(required=True)
+
+class PoolType(ndb.Model):
+    name = ndb.StringProperty(required=True)
+    display_name = ndb.StringProperty(required=True)
+    allows_intervals = ndb.BooleanProperty(default=False)
+    uses_suggestions = ndb.BooleanProperty(default=False)
+    intervals = ndb.IntegerProperty(repeated=True)
+    current_interval = ndb.IntegerProperty()
+    speedup_reached = ndb.BooleanProperty(default=False)
+    style = ndb.StringProperty(choices=VOTE_STYLE)
+    occurs = ndb.StringProperty(choices=OCCURS_TYPE)
+    live = ndb.BooleanProperty(default=False)
+    ordering = ndb.IntegerProperty(default=0)
+    options = ndb.IntegerProperty(default=3)
+    randomize_amount = ndb.IntegerProperty(default=6)
     
-    def get_live_action_vote_exists(self, show, interval, session_id):
-        return bool(LiveActionVote.query(
-                    LiveActionVote.show == show,
-                    LiveActionVote.session_id == str(session_id)).get())
+    created = ndb.DateProperty(required=True)
+    
+    def put(self, *args, **kwargs):
+        if not self.created:
+            self.created = get_mountain_time()
+        return super(PoolType, self).put(*args, **kwargs)
+
+
+class VoteOptions(ndb.Model):
+    show = ndb.KeyProperty(kind=Show, required=True)
+    pool_type = ndb.KeyProperty(kind=PoolType, required=True)
+    interval = ndb.IntegerProperty()
+    option_list = ndb.KeyProperty(kind=Suggestion, repeated=True)
+
+
+class Suggestion(ndb.Model):
+    show = ndb.KeyProperty(kind=Show)
+    pool_type = ndb.KeyProperty(kind=PoolType)
+    used = ndb.BooleanProperty(default=False)
+    voted_on = ndb.BooleanProperty(default=False)
+    value = ndb.StringProperty(required=True)
+    # Pre-show upvotes
+    preshow_value = ndb.IntegerProperty(default=0)
+    # Aggregate of current live vote value, gets reset after each vote ends
+    live_value = ndb.IntegerProperty(default=0)
+    session_id = ndb.StringProperty(required=True)
+    user = ndb.UserProperty(default=None)
+    
+    created = ndb.DateProperty()
+    
+    def clear_live_votes(self):
+        """Delete all the live votes for this suggestion"""
+        self.live_value = 0
+        self.put()
+    
+    def get_live_vote_exists(self, show, session_id):
+        """Determine if a live vote exists for this suggestion by this session"""
+        return bool(LiveVote.query(
+                    LiveVote.show == show,
+                    LiveVote.session_id == str(session_id)).get())
     
     @property
     def get_voted_sessions(self):
-        avs = ActionVote.query(ActionVote.action == self.key).fetch()
-        return [x.session_id for x in avs]
+        """Determine which sessions have voted for this suggestion pre-show"""
+        psv = PreshowVote.query(PreshowVote.suggestion == self.key).fetch()
+        return [x.session_id for x in psv]
         
 
     def put(self, *args, **kwargs):
-        self.created = get_mountain_time()
-        return super(Action, self).put(*args, **kwargs)
+        if not self.created:
+            self.created = get_mountain_time()
+        return super(Suggestion, self).put(*args, **kwargs)
 
 
-class Theme(ndb.Model):
-    created = ndb.DateTimeProperty(required=True)
-    name = ndb.StringProperty(required=True)
-    used = ndb.BooleanProperty(default=False)
-    vote_value = ndb.IntegerProperty(default=0)
+class PreshowVote(ndb.Model):
+    show = ndb.KeyProperty(kind=Show)
+    suggestion = ndb.KeyProperty(kind=Suggestion, required=True)
     session_id = ndb.StringProperty(required=True)
+    user = ndb.UserProperty(default=None)
+
+
+class LiveVote(ndb.Model):
+    show = ndb.KeyProperty(kind=Show, required=True)
+    suggestion = ndb.KeyProperty(kind=Suggestion, required=True)
+    session_id = ndb.StringProperty(required=True)
+    user = ndb.UserProperty(default=None)
     
-    @property
-    def get_voted_sessions(self):
-        tvs = ThemeVote.query(ThemeVote.theme == self.key).fetch()
-        return [x.session_id for x in tvs]
     
     def put(self, *args, **kwargs):
-        self.created = get_mountain_time()
-        return super(Theme, self).put(*args, **kwargs)
+        """Increment the Suggestion's live value"""
+        suggestion_entity = self.suggestion.get()
+        suggestion_entity.live_value += 1
+        suggestion_entity.voted_on = True
+        suggestion_entity.put()
+        return super(LiveVote, self).put(*args, **kwargs)
 
 
-class VotingTest(ndb.Model):
-    name = ndb.StringProperty(required=True)
-    live_vote_value = ndb.IntegerProperty(default=0)
-    
-    def get_live_test_vote_exists(self, show, session_id):
-        return bool(LiveVotingTest.query(
-                    LiveVotingTest.show == show,
-                    LiveVotingTest.session_id == str(session_id)).get())
+class VotedItem(ndb.Model):
+    show = ndb.KeyProperty(kind=Show, required=True)
+    pool_type = ndb.KeyProperty(kind=PoolType, required=True)
+    suggestion = ndb.KeyProperty(kind=Suggestion, required=True)
+    interval = ndb.IntegerProperty()
 
 
 class Show(ndb.Model):
-    scheduled = ndb.DateTimeProperty()
-    theme = ndb.KeyProperty(kind=Theme)
-    test_vote_init = ndb.DateTimeProperty()
-    interval_vote_init = ndb.DateTimeProperty()
-    hero_vote_init = ndb.DateTimeProperty()
-    villain_vote_init = ndb.DateTimeProperty()
-    incident_vote_init = ndb.DateTimeProperty()
-    shapeshifter_vote_init = ndb.DateTimeProperty()
-    recap_type = ndb.StringProperty(choices=VOTE_TYPES)
+    vote_length = ndb.IntegerProperty(default=25)
+    result_length = ndb.IntegerProperty(default=10)
+    minimum_vote_options = ndb.IntegerProperty(default=5)
+    theme = ndb.KeyProperty(kind=Suggestion)
+    current_pool_type = ndb.KeyProperty(kind=PoolType)
+    current_vote_init = ndb.DateTimeProperty()
+    recap_type = ndb.KeyProperty(kind=PoolType)
     recap_init = ndb.DateTimeProperty()
-    lover_vote_init = ndb.DateTimeProperty()
-    current_interval = ndb.IntegerProperty()
-    speedup_reached = ndb.BooleanProperty(default=False)
-    incident = ndb.KeyProperty(kind=Action)
-    test = ndb.KeyProperty(kind=VotingTest)
-    hero = ndb.KeyProperty(kind=Player)
-    villain = ndb.KeyProperty(kind=Player)
-    shapeshifter = ndb.KeyProperty(kind=Player)
-    lover = ndb.KeyProperty(kind=Player)
+    players = ndb.KeyProperty(kind=Player, repeated=True)
     locked = ndb.BooleanProperty(default=False)
     
-    @property
-    def scheduled_tz(self):
-        return back_to_tz(self.scheduled)
+    created = ndb.DateTimeProperty(required=True)
+    timezone = ndb.StringProperty(default='America/Denver')
     
-    def get_player_action_by_interval(self, interval):
-        for pa in self.player_actions:
-            if pa.interval == int(interval):
+    @property
+    def pool_types(self):
+        return PoolType.query(
+            PoolType.live == True,
+            PoolType.occurs == 'during').order(PoolType.ordering).fetch()
+    
+    def get_player_by_interval(self, interval):
+        for pi in self.player_intervals:
+            if pi.interval == int(interval):
                 return pa
         return None
     
@@ -145,58 +173,39 @@ class Show(ndb.Model):
             return pa.player
         else:
             return None
-        
-    @property
-    def players(self):
-        show_players = ShowPlayer.query(ShowPlayer.show == self.key).fetch()
-        return [x.player.get() for x in show_players if getattr(x, 'player', None)]
     
     @property
-    def player_actions(self):
-        action_intervals = ShowAction.query(ShowAction.show == self.key).fetch()
-        return [x.player_action.get() for x in action_intervals if getattr(x, 'player_action', None) and x.player_action.get()]
-    
-    @property
-    def sorted_intervals(self):
-        return sorted([x.interval for x in self.player_actions])
+    def player_intervals(self):
+        return [x.player_action.get() for x in self.intervals if getattr(x, 'player_action', None) and x.player_action.get()]
     
     def get_next_interval(self, interval):
-        sorted_intervals = self.sorted_intervals
+        intervals = self.intervals
         # If given an interval
         if interval != None:
             # Loop through the intervals in order
-            for i in range(0, len(sorted_intervals)):
-                if interval == sorted_intervals[i]:
+            for i in range(0, len(intervals)):
+                if interval == intervals[i]:
                     # Get the minutes elapsed between the next interval in the loop
                     # and the current interval in the loop
                     try:
-                        return sorted_intervals[i+1]
+                        return intervals[i+1]
                     except IndexError:
                         return None
         # Otherwise, assume first interval
         else:
             try:
-                return sorted_intervals[0]
+                return intervals[0]
             except IndexError:
                 return None
         return None
 
     @property
     def is_today(self):
-        return self.scheduled.date() == get_mountain_time().date()
-    
-    @property
-    def in_future(self):
-        return self.scheduled.date() > get_mountain_time().date()
-    
-    @property
-    def in_past(self):
-        return self.scheduled.date() < get_mountain_time().date()
+        return self.created.date() == get_mountain_time().date()
     
     @property
     def vote_options(self):
-        max_options = max(len(self.players), VOTE_OPTIONS)
-        
+        max_options = max(len(self.players), self.minimum_vote_options)
         return range(0, max_options)
     
     def get_interval_gap(self, interval):
@@ -208,14 +217,13 @@ class Show(ndb.Model):
     
     @property
     def remaining_intervals(self):
-        s_intervals = self.sorted_intervals
         if self.current_interval == None:
-            return len(s_intervals)
+            return len(self.intervals)
         try:
-            interval_index = s_intervals.index(self.current_interval)
+            interval_index = self.intervals.index(self.current_interval)
         except ValueError:
             return 0
-        return len(s_intervals[interval_index:]) - 1
+        return len(self.intervals[interval_index:]) - 1
     
     def get_randomized_unused_actions(self, show, interval):
         # Get the stored interval options
@@ -462,6 +470,9 @@ class Show(ndb.Model):
         return vote_options
     
     def put(self, *args, **kwargs):
+        # If created wasn't specified yet
+        if no self.created:
+            self.created = get_mountain_time()
         # If a theme was specified, set the theme as used
         if self.theme:
             theme_entity = self.theme.get()
@@ -470,112 +481,8 @@ class Show(ndb.Model):
         return super(Show, self).put(*args, **kwargs)
 
 
-class ShowPlayer(ndb.Model):
+class ShowPlayerInterval(ndb.Model):
     show = ndb.KeyProperty(kind=Show, required=True)
+    pool_type = ndb.KeyProperty(kind=PoolType, required=True)
     player = ndb.KeyProperty(kind=Player, required=True)
-
-
-class ActionVote(ndb.Model):
-    action = ndb.KeyProperty(kind=Action, required=True)
-    session_id = ndb.StringProperty(required=True)
-    
-    def put(self, *args, **kwargs):
-        action = Action.query(Action.key == self.action).get()
-        action.vote_value += 1
-        action.put()
-        return super(ActionVote, self).put(*args, **kwargs)
-
-
-class LiveActionVote(ndb.Model):
-    action = ndb.KeyProperty(kind=Action, required=True)
-    player = ndb.KeyProperty(kind=Player, required=True)
-    show = ndb.KeyProperty(kind=Show, required=True)
     interval = ndb.IntegerProperty(required=True)
-    session_id = ndb.StringProperty(required=True)
-    created = ndb.DateProperty(required=True)
-
-    def put(self, *args, **kwargs):
-        action = Action.query(Action.key == self.action).get()
-        action.live_vote_value += 1
-        action.put()
-        return super(LiveActionVote, self).put(*args, **kwargs)
-
-
-class PlayerAction(ndb.Model):
-    interval = ndb.IntegerProperty(required=True)
-    player = ndb.KeyProperty(kind=Player)
-    action = ndb.KeyProperty(kind=Action)
-
-
-class ShowAction(ndb.Model):
-    show = ndb.KeyProperty(kind=Show, required=True)
-    player_action = ndb.KeyProperty(kind=PlayerAction, required=True)
-
-
-class ThemeVote(ndb.Model):
-    theme = ndb.KeyProperty(kind=Theme, required=True)
-    session_id = ndb.StringProperty(required=True)
-
-    def put(self, *args, **kwargs):
-        theme = Theme.query(Theme.key == self.theme).get()
-        theme.vote_value += 1
-        theme.put()
-        return super(ThemeVote, self).put(*args, **kwargs)
-
-
-class LiveVotingTest(ndb.Model):
-    test = ndb.KeyProperty(kind=VotingTest, required=True)
-    show = ndb.KeyProperty(kind=Show, required=True)
-    session_id = ndb.StringProperty(required=True)
-
-    def put(self, *args, **kwargs):
-        vt = VotingTest.query(VotingTest.key == self.test).get()
-        vt.live_vote_value += 1
-        vt.put()
-        return super(LiveVotingTest, self).put(*args, **kwargs)
-
-
-def get_or_create_role_vote(show, player, role):
-    role_vote = RoleVote.query(RoleVote.show == show.key,
-                               RoleVote.player == player.key,
-                               RoleVote.role == role).get()
-    if not role_vote:
-        role_vote = RoleVote(show=show.key,
-                             player=player.key,
-                             role=role).put().get()
-    return role_vote
-
-
-class RoleVote(ndb.Model):
-    show = ndb.KeyProperty(kind=Show, required=True)
-    player = ndb.KeyProperty(kind=Player, required=True)
-    role = ndb.StringProperty(required=True, choices=ROLE_TYPES)
-    live_vote_value = ndb.IntegerProperty(default=0)
-
-    def get_live_role_vote_exists(self, show, role, session_id):
-        return bool(LiveRoleVote.query(
-                    LiveRoleVote.show == show,
-                    LiveRoleVote.role == role,
-                    LiveRoleVote.session_id == str(session_id)).get())
-
-
-class LiveRoleVote(ndb.Model):
-    show = ndb.KeyProperty(kind=Show, required=True)
-    player = ndb.KeyProperty(kind=Player, required=True)
-    role = ndb.StringProperty(required=True, choices=ROLE_TYPES)
-    session_id = ndb.StringProperty(required=True)
-
-    def put(self, *args, **kwargs):
-        role_vote = RoleVote.query(RoleVote.show == self.show,
-                                   RoleVote.player == self.player,
-                                   RoleVote.role == self.role).get()
-        role_vote.live_vote_value += 1
-        role_vote.put()
-        return super(LiveRoleVote, self).put(*args, **kwargs)
-
-class IntervalVoteOptions(ndb.Model):
-    show = ndb.KeyProperty(kind=Show, required=True)
-    interval = ndb.IntegerProperty(required=True)
-    option_1 = ndb.KeyProperty(kind=Action)
-    option_2 = ndb.KeyProperty(kind=Action)
-    option_3 = ndb.KeyProperty(kind=Action)

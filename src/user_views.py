@@ -231,24 +231,3 @@ class AddThemes(ViewBase):
             
         self.response.out.write(template.render(self.path('add_themes.html'),
                                                 self.add_context(context)))
-
-
-class OtherShows(ViewBase):
-    def get(self, show_id=None):
-        # If a show was specified
-        if show_id:
-            show = ndb.Key(Show, int(show_id)).get()
-            context = {'show': show}
-        else:
-            tomorrow_start = get_tomorrow_start()
-            # Get the future shows
-            future_shows = Show.query(
-                Show.scheduled > tomorrow_start).order(Show.scheduled).filter()
-            # Get the previous shows
-            previous_shows = Show.query(
-                                Show.end_time != None).order(
-                                    -Show.end_time).filter()
-            context = {'future_shows': future_shows,
-                       'previous_shows': previous_shows}
-        self.response.out.write(template.render(self.path('other_shows.html'),
-                                                self.add_context(context)))

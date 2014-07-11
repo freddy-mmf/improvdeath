@@ -1,4 +1,4 @@
-from models import (Show, Player, PoolType, Suggestion, PreshowVote,
+from models import (Show, Player, VoteType, Suggestion, PreshowVote,
                     ShowInterval, VoteOptions, LiveVote,
                     VotedItem, get_current_show)
 from timezone import (get_today_start, get_tomorrow_start)
@@ -16,8 +16,8 @@ def get_show(**kwargs):
     return get_model_entity(Show, **kwargs)
 
 
-def get_pool_type(**kwargs):
-    return get_model_entity(PoolType, **kwargs)
+def get_vote_type(**kwargs):
+    return get_model_entity(VoteType, **kwargs)
 
 
 def get_player(**kwargs):
@@ -50,8 +50,8 @@ def fetch_players(**kwargs):
     return fetch_model_entities(Players, **kwargs)
 
 
-def fetch_pool_types(**kwargs):
-    return fetch_model_entities(PoolType, **kwargs)
+def fetch_vote_types(**kwargs):
+    return fetch_model_entities(VoteType, **kwargs)
     
 
 def fetch_preshow_votes(**kwargs):
@@ -74,7 +74,7 @@ def fetch_showinterval(**kwargs):
     return fetch_model_entities(ShowInterval, **kwargs)
 
 
-def fetch_model_entities(model, show=None, pool_type=None, used=None, live=None,
+def fetch_model_entities(model, show=None, vote_type=None, used=None, live=None,
                          suggestion=None, uses_suggestions=None,
                          limit=None, offset=None, keys_only=False,
                          order_by_vote_value=False):
@@ -84,9 +84,9 @@ def fetch_model_entities(model, show=None, pool_type=None, used=None, live=None,
     # Fetch by show key
     if show:
         args.append(model.show == show)
-    # Fetch by PoolType name
-    if pool_type:
-        args.append(model.pool_type == get_pool_type(name=pool_type))
+    # Fetch by VoteType name
+    if vote_type:
+        args.append(model.vote_type == get_vote_type(name=vote_type))
     # Fetch by whether it's used or not
     if used != None:
         args.append(model.used == used)

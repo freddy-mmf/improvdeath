@@ -11,10 +11,10 @@ from google.appengine.api import users
 from views_base import ViewBase
 
 from service import (get_current_show, get_suggestion, get_player, get_show,
-					 get_pool_type, fetch_suggestions, fetch_players,
+					 get_vote_type, fetch_suggestions, fetch_players,
 					 fetch_shows, fetch_live_votes,
 					 fetch_preshow_votes, fetch_vote_options,
-					 fetch_pool_types, fetch_voted_items, create_show,
+					 fetch_vote_types, fetch_voted_items, create_show,
 					 create_showinterval,
 					 reset_live_votes)
 from timezone import get_mountain_time, back_to_tz
@@ -54,8 +54,8 @@ class ShowPage(ViewBase):
 			show.current_pool_type = pool_type
 			# Set the start time of the current vote
 			show.current_vote_init = get_mountain_time()
-			# If this suggestion pool allows intervals
-			if pool_type.allows_intervals:
+			# If this suggestion pool has intervals
+			if vote_type.has_intervals:
 				# Get the next interval
 				next_interval = pool_type.get_next_interval(show_pool.current_interval)
 				# If there is a next interval
@@ -109,8 +109,9 @@ class CreateShow(ViewBase):
 	def post(self):
 		theme_id = self.request.get('theme_id')
 		player_list = self.request.get_all('player_list')
+		vote_type_list = self.request.get_all('vote_type_list')
 		context = {'players': fetch_players(),
-		           'themes': fetch_suggestions(pool_type='theme', used=False)}
+		           'themes': fetch_suggestions(vote_type='theme', used=False)}
 		if player_list:
 			# If a theme was entered
 			if theme_id:
@@ -118,31 +119,45 @@ class CreateShow(ViewBase):
 				show = create_show(theme=theme)
 			else:
 				show = create_show()
+			# Add the vote types to the show
+			for vote_type_id in vote_type_list:
+				# Get the vote type from the db
+				vote_type = get_vote_type(key_id=vote_type_id)
+				# Add the vote type to the show
+				show.vote_types.append(vote_type)
+				# Get the maximum voting options from the vote type
+				# And store it if it's greater than the show's current vote options
+				show.vote_options = max(show.vote_options, vote_type.options)
+				# If the vote type has intervals
+				if vote_type.has_intervals:				
+					# If this suggestion vote has players attached
+					if vote_type.uses_players:
+						# Make a copy of the list of players and randomize it
+						rand_players = list(show.players)
+						random.shuffle(rand_players, random.random)
+						# Add the intervals to the show
+						for interval in vote_type.intervals:
+							# If random players list gets empty, refill it with more players
+							if len(rand_players) == 0:
+								rand_players = list(show.players)
+								random.shuffle(rand_players, random.random)
+							# Pop a random player off the list and create a ShowInterval
+							create_showinterval(show=show,
+												player=rand_players.pop()
+												interval=interval,
+												vote_type=vote_type)
+					else:
+						# Add the suggestion intervals to the show
+						for interval in vote_type.intervals:
+							# Create a ShowInterval
+							create_showinterval(show=show,
+												interval=interval,
+												vote_type=vote_type)
 			# Add the players to the show
 			for player in player_list:
 				player_key = get_player(key_id=player)
 				show.players.append(player_key)
-			# Loop through all the pool types appearing in the show
-			for pool_type in show.pool_types:
-				# Get the maximum voting options from the pool type
-				# And store it if it's greater than the show's current vote options
-				show.vote_options = max(show.vote_options, pool_type.options)
-				# If this suggestion pool has players attached
-				if pool_type.uses_players:
-					# Make a copy of the list of players and randomize it
-					rand_players = list(show.players)
-					random.shuffle(rand_players, random.random)
-					# Add the action intervals to the show
-					for interval in interval_list:
-						# If random players list gets empty, refill it with more players
-						if len(rand_players) == 0:
-							rand_players = list(show.players)
-							random.shuffle(rand_players, random.random)
-						# Pop a random player off the list and create a ShowInterval
-						create_showinterval(show=show,
-											player=rand_players.pop()
-											interval=interval,
-											pool_type=pool_type)
+				show.player_pool.append(player_key)
 			# Save changes to the show
 			show.put()
 			context['created'] = True

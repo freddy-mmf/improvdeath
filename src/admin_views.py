@@ -30,10 +30,6 @@ def admin_required(func):
     return decorated_view
 
 
-#### RESETS LIVE ACTION VOTES ####
-
-
-
 class ShowPage(ViewBase):
 	@admin_required
 	def get(self, show_id):
@@ -53,20 +49,24 @@ class ShowPage(ViewBase):
 		# Admin is starting the show
 		if self.request.get('vote_start') and self.context.get('is_admin', False):
 			pool_type = get_pool_type(name=self.request.get('vote_start'))
-			
 			show_pool = get_show_pool(show=show, pool_type=pool_type)
-			# Get the next interval
-			next_interval = show.get_next_interval(show.current_interval)
-			# If there is a next interval
-			if next_interval != None:
-				# Set the current interval to the next interval
-				show.current_interval = next_interval
-				# Set the start time of this interval vote
-				show.interval_vote_init = get_mountain_time()
-				show.put()
+			# Set the current pool type for the show
+			show.current_pool_type = pool_type
+			# Set the start time of the current vote
+			show.current_vote_init = get_mountain_time()
+			# If this suggestion pool allows intervals
+			if pool_type.allows_intervals:
+				# Get the next interval
+				next_interval = pool_type.get_next_interval(show_pool.current_interval)
+				# If there is a next interval
+				if next_interval != None:
+					# Set the current interval to the next interval
+					show_pool.current_interval = next_interval
 			# Reset all suggestions that haven't been used
 			# but have a live_vote_value, to zero
 			reset_live_votes()
+			# Save the show's new current state
+			show.put()				
 		# Admin is starting a recap
 		elif self.request.get('recap') and self.context.get('is_admin', False):
 			show.recap_init = get_mountain_time()
@@ -124,6 +124,9 @@ class CreateShow(ViewBase):
 				show.players.append(player_key)
 			# Loop through all the pool types appearing in the show
 			for pool_type in show.pool_types:
+				# Get the maximum voting options from the pool type
+				# And store it if it's greater than the show's current vote options
+				show.vote_options = max(show.vote_options, pool_type.options)
 				# If this suggestion pool has players attached
 				if pool_type.uses_players:
 					# Make a copy of the list of players and randomize it
@@ -140,6 +143,8 @@ class CreateShow(ViewBase):
 											player=rand_players.pop()
 											interval=interval,
 											pool_type=pool_type)
+			# Save changes to the show
+			show.put()
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))

@@ -1,15 +1,7 @@
 from models import (Show, Player, PoolType, Suggestion, PreshowVote,
                     ShowInterval, VoteOptions, LiveVote,
-                    VotedItem)
-#from models import (VOTE_AFTER_INTERVAL, ROLE_TYPES, VOTE_TYPES)
+                    VotedItem, get_current_show)
 from timezone import (get_today_start, get_tomorrow_start)
-
-
-
-def get_current_show():
-	return Show.query(
-			Show.scheduled >= get_today_start(),
-			Show.scheduled < get_tomorrow_start()).order(-Show.scheduled).get()
 
 
 def show_today():

@@ -1,5 +1,5 @@
 from models import (Show, Player, PoolType, Suggestion, PreshowVote,
-                    ShowPlayerInterval, VoteOptions, LiveVote,
+                    ShowInterval, VoteOptions, LiveVote,
                     VotedItem)
 #from models import (VOTE_AFTER_INTERVAL, ROLE_TYPES, VOTE_TYPES)
 from timezone import (get_today_start, get_tomorrow_start)
@@ -78,8 +78,8 @@ def fetch_voted_items(**kwargs):
     return fetch_model_entities(VotedItem, **kwargs)
 
 
-def fetch_showplayerinterval(**kwargs):
-    return fetch_model_entities(ShowPlayerInterval, **kwargs)
+def fetch_showinterval(**kwargs):
+    return fetch_model_entities(ShowInterval, **kwargs)
 
 
 def fetch_model_entities(model, show=None, pool_type=None, used=None, live=None,
@@ -98,9 +98,6 @@ def fetch_model_entities(model, show=None, pool_type=None, used=None, live=None,
     # Fetch by whether it's used or not
     if used != None:
         args.append(model.used == used)
-    # Fetch by whether it's live or not
-    if live != None:
-        args.append(model.live == live)
     # Fetch related to a suggestion
     if suggestion != None:
         args.append(model.suggestion == suggestion)
@@ -126,8 +123,8 @@ def create_show(**kwargs):
     return create_model_entity(Show, **kwargs)
 
 
-def create_showplayerinterval(**kwargs)
-    return create_model_entity(ShowPlayerInterval, **kwargs)
+def create_showinterval(**kwargs)
+    return create_model_entity(ShowInterval, **kwargs)
 
 
 def create_model_entity(model, **kwargs):
@@ -135,3 +132,16 @@ def create_model_entity(model, **kwargs):
     for key, value in kwargs.items():
         create_kwargs[key] = value
     return model(**create_kwargs).put()
+
+
+def reset_live_votes():
+    """
+       Reset all suggestions that haven't been used,
+       but have a live_vote_value, to zero
+    """
+    suggestions = Suggestion.query(Suggestion.live_value > 0
+                                   Suggestion.used == False).fetch()
+    for suggestion in suggestions:
+		# Set the suggestion live value to zero
+		suggestion.live_value = 0
+		suggestion.put()

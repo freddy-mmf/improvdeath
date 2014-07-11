@@ -46,12 +46,10 @@ class PoolType(ndb.Model):
     display_name = ndb.StringProperty(required=True)
     allows_intervals = ndb.BooleanProperty(default=False)
     uses_suggestions = ndb.BooleanProperty(default=False)
+    uses_players = ndb.BooleanProperty(default=False)
     intervals = ndb.IntegerProperty(repeated=True)
-    current_interval = ndb.IntegerProperty()
-    speedup_reached = ndb.BooleanProperty(default=False)
     style = ndb.StringProperty(choices=VOTE_STYLE)
     occurs = ndb.StringProperty(choices=OCCURS_TYPE)
-    live = ndb.BooleanProperty(default=False)
     ordering = ndb.IntegerProperty(default=0)
     options = ndb.IntegerProperty(default=3)
     randomize_amount = ndb.IntegerProperty(default=6)
@@ -76,6 +74,7 @@ class Suggestion(ndb.Model):
     pool_type = ndb.KeyProperty(kind=PoolType)
     used = ndb.BooleanProperty(default=False)
     voted_on = ndb.BooleanProperty(default=False)
+    archived = ndb.BooleanProperty(default=False)
     value = ndb.StringProperty(required=True)
     # Pre-show upvotes
     preshow_value = ndb.IntegerProperty(default=0)
@@ -151,6 +150,7 @@ class Show(ndb.Model):
     recap_init = ndb.DateTimeProperty()
     players = ndb.KeyProperty(kind=Player, repeated=True)
     locked = ndb.BooleanProperty(default=False)
+    showing_leaderboard = ndb.BooleanProperty(default=False)
     
     created = ndb.DateTimeProperty(required=True)
     timezone = ndb.StringProperty(default='America/Denver')
@@ -481,8 +481,15 @@ class Show(ndb.Model):
         return super(Show, self).put(*args, **kwargs)
 
 
-class ShowPlayerInterval(ndb.Model):
+class ShowInterval(ndb.Model):
     show = ndb.KeyProperty(kind=Show, required=True)
     pool_type = ndb.KeyProperty(kind=PoolType, required=True)
     player = ndb.KeyProperty(kind=Player, required=True)
     interval = ndb.IntegerProperty(required=True)
+
+
+class ShowPool(ndb.Model):
+    show = ndb.KeyProperty(kind=Show, required=True)
+    pool_type = ndb.KeyProperty(kind=PoolType, required=True)
+    current_interval = ndb.IntegerProperty()
+    speedup_reached = ndb.BooleanProperty(default=False)

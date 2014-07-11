@@ -10,11 +10,13 @@ from google.appengine.api import users
 
 from views_base import ViewBase
 
-from service import (get_current_show, fetch_suggestions, fetch_players,
-					 get_suggestion, get_player, get_show,
-					 create_show, fetch_shows, fetch_live_votes,
+from service import (get_current_show, get_suggestion, get_player, get_show,
+					 get_pool_type, fetch_suggestions, fetch_players,
+					 fetch_shows, fetch_live_votes,
 					 fetch_preshow_votes, fetch_vote_options,
-					 fetch_pool_types, fetch_voted_items)
+					 fetch_pool_types, fetch_voted_items, create_show,
+					 create_showinterval,
+					 reset_live_votes)
 from timezone import get_mountain_time, back_to_tz
 
 
@@ -29,22 +31,14 @@ def admin_required(func):
 
 
 #### RESETS LIVE ACTION VOTES ####
-def reset_action_live_votes():
-	reset_actions = Action.query(Action.used == False,
-				 				 Action.live_vote_value > 0).fetch()
-	# Reset all actions that haven't been used, but have a live_vote_value, to zero
-	for ra in reset_actions:
-		# Set the actions live_vote_value to zero
-		ra.live_vote_value = 0
-		ra.put()
+
 
 
 class ShowPage(ViewBase):
 	@admin_required
 	def get(self, show_id):
-		show = ndb.Key(Show, int(show_id)).get()
-		available_actions = len(Action.query(
-							   Action.used == False).fetch())
+		show = get_show(show_id)
+		# Determine the available suggestions for live vote types
 		context	= {'show': show,
 				   'now_tz': back_to_tz(get_mountain_time()),
 				   'available_actions': available_actions,
@@ -57,7 +51,10 @@ class ShowPage(ViewBase):
 	def post(self, show_id):
 		show = ndb.Key(Show, int(show_id)).get()
 		# Admin is starting the show
-		if self.request.get('interval_vote') and self.context.get('is_admin', False):
+		if self.request.get('vote_start') and self.context.get('is_admin', False):
+			pool_type = get_pool_type(name=self.request.get('vote_start'))
+			
+			show_pool = get_show_pool(show=show, pool_type=pool_type)
 			# Get the next interval
 			next_interval = show.get_next_interval(show.current_interval)
 			# If there is a next interval
@@ -67,48 +64,9 @@ class ShowPage(ViewBase):
 				# Set the start time of this interval vote
 				show.interval_vote_init = get_mountain_time()
 				show.put()
-			# Reset all actions that haven't been used, but have a live_vote_value, to zero
-			reset_action_live_votes()
-		# Admin is starting item vote
-		elif self.request.get('test_vote') and self.context.get('is_admin', False):
-			show.test = None
-			# Delete all live voting test votes
-			for lvt in LiveVotingTest.query().fetch():
-				lvt.key.delete()
-			# Delete all voting test objects
-			for vt in VotingTest.query().fetch():
-				vt.key.delete()
-			# Create a set of five test votes
-			VotingTest(name="I'M JAZZED! START THE SHOW ALREADY!").put()
-			VotingTest(name="I'm VERY interested in... whatever this is...").put()
-			VotingTest(name="Present").put()
-			VotingTest(name="Meh").put()
-			VotingTest(name="If you notice me sleeping in the audience, try and keep it down. Thanks.").put()
-
-			show.test_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting hero vote
-		elif self.request.get('hero_vote') and self.context.get('is_admin', False):
-			show.hero_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting villain vote
-		elif self.request.get('villain_vote') and self.context.get('is_admin', False):
-			show.villain_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting incident vote
-		elif self.request.get('incident_vote') and self.context.get('is_admin', False):
-			# Set all actions that haven't been used, but have a live_vote_value, to zero
-			reset_action_live_votes()
-			show.incident_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting the shapeshifter vote
-		elif self.request.get('shapeshifter_vote') and self.context.get('is_admin', False):
-			show.shapeshifter_vote_init = get_mountain_time()
-			show.put()
-		# Admin is starting the lover vote
-		elif self.request.get('lover_vote') and self.context.get('is_admin', False):
-			show.lover_vote_init = get_mountain_time()
-			show.put()
+			# Reset all suggestions that haven't been used
+			# but have a live_vote_value, to zero
+			reset_live_votes()
 		# Admin is starting a recap
 		elif self.request.get('recap') and self.context.get('is_admin', False):
 			show.recap_init = get_mountain_time()
@@ -119,8 +77,16 @@ class ShowPage(ViewBase):
 			# Toggle the lock/unlock
 			show.locked = not show.locked
 			show.put()
-		available_actions = len(Action.query(
-							   Action.used == False).fetch())
+		# Admin is showing the leaderboard
+		elif self.request.get('show_leaderboard') and self.context.get('is_admin', False):
+			show.showing_leaderboard = True
+			show.put()
+		# Admin is hiding the leaderboard
+		elif self.request.get('hide_leaderboard') and self.context.get('is_admin', False):
+			show.showing_leaderboard = False
+			show.put()
+		# Determine the available suggestions for live vote types
+		
 		context	= {'show': show,
 				   'now_tz': back_to_tz(get_mountain_time()),
 				   'available_actions': available_actions,
@@ -158,20 +124,22 @@ class CreateShow(ViewBase):
 				show.players.append(player_key)
 			# Loop through all the pool types appearing in the show
 			for pool_type in show.pool_types:
-				# Make a copy of the list of players and randomize it
-				rand_players = list(show.players)
-				random.shuffle(rand_players, random.random)
-				# Add the action intervals to the show
-				for interval in interval_list:
-					# If random players list gets empty, refill it with more players
-					if len(rand_players) == 0:
-						rand_players = list(show.players)
-						random.shuffle(rand_players, random.random)
-					# Pop a random player off the list and create a ShowPlayerInterval
-					create_showplayerinterval(show=show,
-											  player=rand_players.pop()
-											  interval=interval,
-											  pool_type=pool_type)
+				# If this suggestion pool has players attached
+				if pool_type.uses_players:
+					# Make a copy of the list of players and randomize it
+					rand_players = list(show.players)
+					random.shuffle(rand_players, random.random)
+					# Add the action intervals to the show
+					for interval in interval_list:
+						# If random players list gets empty, refill it with more players
+						if len(rand_players) == 0:
+							rand_players = list(show.players)
+							random.shuffle(rand_players, random.random)
+						# Pop a random player off the list and create a ShowInterval
+						create_showinterval(show=show,
+											player=rand_players.pop()
+											interval=interval,
+											pool_type=pool_type)
 			context['created'] = True
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
@@ -179,7 +147,7 @@ class CreateShow(ViewBase):
 
 def add_pool_type_context(context);
 	# Get all the live pool types that use suggestions
-	pool_types = fetch_pool_types(live=True, uses_suggestions=True)
+	pool_types = fetch_pool_types(uses_suggestions=True)
 	# All available pool types that use suggestions are offered up for deletion
 	for pool_type in pool_types:
 		context['pools'][pool_type] = fetch_suggestions(pool_type=pool_type,
@@ -201,7 +169,7 @@ class DeleteTools(ViewBase):
 		show_list = self.request.get_all('show_list')
 		suggestion_list = self.request.get_all('suggestion_list')
 		delete_unused = self.request.get_all('delete_unused')
-		# If suggestion(s) were deleted
+		# If suggestion(s) were deleted (archived)
 		if suggestion_list:
 			for suggestion in suggestion_list:
 				suggestion_entity = get_suggestion(suggestion)
@@ -209,7 +177,9 @@ class DeleteTools(ViewBase):
 				preshow_votes = fetch_preshow_votes(suggestion=suggestion_entity.key)
 				for pv in preshow_votes:
 					pv.key.delete()
-				suggestion_entity.key.delete()
+				# Archive the suggestion
+				suggestion_entity.archived = True
+				suggestion_entity.put()
 			deleted = 'Suggestion(s)'
 		# If show(s) were deleted
 		if show_list:
@@ -247,7 +217,7 @@ class DeleteTools(ViewBase):
 		# Delete ALL un-used things
 		if delete_unused:
 			# Get all the live pool types that use suggestions
-			pool_types = fetch_pool_types(live=True, uses_suggestions=True)
+			pool_types = fetch_pool_types(uses_suggestions=True)
 			# Grab all the unused suggestions from pool types that use suggestions
 			for pool_type in pool_types:
 				suggestions = fetch_suggestions(pool_type=pool_type, used=False)
@@ -301,7 +271,7 @@ class IntervalTimer(ViewBase):
 	@admin_required
 	def get(self):
 		context = {'show': get_current_show(),
-				  'now_tz': back_to_tz(get_mountain_time())}
+				   'now_tz': back_to_tz(get_mountain_time())}
 		self.response.out.write(template.render(self.path('interval_timer.html'),
 												self.add_context(context)))
 

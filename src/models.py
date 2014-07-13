@@ -44,6 +44,7 @@ class Player(ndb.Model):
 class SuggestionPool(ndb.Model):
     name = ndb.StringProperty(required=True)
     display_name = ndb.StringProperty(required=True, indexed=False)
+    description = ndb.TextProperty(required=True, indexed=False)
     
     created = ndb.DateProperty(required=True)
     
@@ -179,6 +180,11 @@ class VoteType(ndb.Model):
                 return 0
             return len(self.intervals[interval_index:]) - 1
         return 0
+    
+    @property
+    def current_voted_item(self):
+        return VotedItem.query(VotedItem.vote_type == self.key,
+                               VotedItem.interval == self.current_interval).get()
     
     def get_randomized_unused_suggestions(self, show, interval=None):
         # Get the stored interval options
@@ -343,16 +349,14 @@ class Show(ndb.Model):
                                    'count': count}
                     vote_options['options'].append(player_dict)
             elif vote_type.style == 'player-options':
-                # Get the player
-                player = self.get_player_by_interval(interval, self.current_vote_type)
+                # Get the current player
+                current_player = self.get_player_by_interval(interval, self.current_vote_type)
                 vote_options.update({'interval': current_interval,
-                                     'player_id': player.id(),
-                                     'player_photo': player.get().photo_filename})
+                                     'player_photo': current_player.get().photo_filename})
                 unused_suggestions = vote_type.get_randomized_unused_suggestions(self.key,
                                                                                  interval=current_interval)
                 for unused_suggestion in unused_suggestions:
                     count = vote_type.get_live_vote_count(self.key,
-                                                          player=player,
                                                           suggestion=unused_suggestion,
                                                           interval=current_interval)
                     vote_options['options'].append({'name': unused_suggestion.value,
@@ -373,182 +377,153 @@ class Show(ndb.Model):
                 vote_options['speedup'] = True
         elif display == 'result' and not voting_only:
             if vote_type.style == 'all-players':
-                role_player = getattr(show, state, None)
-                # Set the role if it isn't already set
-                if not role_player:
-                    role_votes = RoleVote.query(RoleVote.role == state,
-                                                RoleVote.show == show.key,
-                                     ).order(-RoleVote.live_vote_value).fetch()
-                    # Grab the first player
-                    for rv in role_votes:
-                        # Make sure they aren't already the hero/villain/lover
-                        if rv.player != show.hero and rv.player != show.villain \
-                            and rv.player != show.lover:
-                            # We've found the voted role, break out of the loop
-                            voted_role = rv
-                            break
-                    # Setting role for the show
-                    setattr(show, state, voted_role.player)
+                # The winning player hasn't been selected
+                if not vote_type.current_voted_item:
+                    winning_count = 0
+                    winning_player = None
+                    # Loop through all the players in the show
+                    for player in self.players:
+                        # Get their live vote count
+                        count = vote_type.get_live_vote_count(self.key,
+                                                              player=player,
+                                                              interval=current_interval)
+                        # Compare which player has the highest votes
+                        if count >= winning_count:
+                            # Set the new winning player/count
+                            winning_player = player
+                            winning_count = count
+                    # Create the current voted
+                    current_voted = VotedItem(vote_type=vote_type.key,
+                                              player=winning_player,
+                                              interval=current_interval).put()
+                    # Append it to the list of voted items for the show
+                    show.voted_items.append(current_voted)
                     show.put()
-                    # Getting the player selected for the role
-                    role_player = voted_role.player
+                # The winning player has already been selected
                 else:
-                    voted_role = RoleVote.query(RoleVote.role == state,
-                                                RoleVote.show == show.key,
-                                                RoleVote.player == role_player).get()
-                vote_options['voted'] = state.title()
-                vote_options['photo_filename'] = role_player.get().photo_filename
-                vote_options['count'] = voted_role.live_vote_value
+                    current_voted = vote_type.current_voted_item
+                    winning_count = vote_type.get_live_vote_count(self.key,
+                                                          player=vote_type.current_voted_item,
+                                                          interval=current_interval)
+                vote_options['voted'] = vote_type.name
+                vote_options['display_name'] = vote_type.display_name
+                vote_options['photo_filename'] = current_voted.player.get().photo_filename
+                vote_options['count'] = winning_count
             elif vote_type.style == 'player-pool':
+                # The winning player hasn't been selected
+                if not vote_type.current_voted_item:
+                    winning_count = 0
+                    winning_player = None
+                    # Loop through all the players left in the show's player pool
+                    for player in self.player_pool:
+                        # Get their live vote count
+                        count = vote_type.get_live_vote_count(self.key,
+                                                              player=player,
+                                                              interval=current_interval)
+                        # Compare which player has the highest votes
+                        if count >= winning_count:
+                            # Set the new winning player/count
+                            winning_player = player
+                            winning_count = count
+                    # Create the current voted
+                    current_voted = VotedItem(vote_type=vote_type.key,
+                                              player=winning_player,
+                                              interval=current_interval).put()
+                    # Append it to the list of current voted items for the show
+                    show.voted_items.append(current_voted)
+                    # Pop the player out of the show's player pool
+                    for player in list(self.player_pool):
+                        if player == winning_player:
+                            # Remove the winning player
+                            self.player_pool.remove(player)
+                    show.put()
+                # The winning player has already been selected
+                else:
+                    current_voted = vote_type.current_voted_item
+                    winning_count = vote_type.get_live_vote_count(self.key,
+                                                                  player=vote_type.current_voted_item,
+                                                                  interval=current_interval)
+                vote_options['voted'] = vote_type.name
+                vote_options['display_name'] = vote_type.display_name
+                vote_options['photo_filename'] = current_voted.player.get().photo_filename
+                vote_options['count'] = winning_count
             elif vote_type.style == 'player-options':
+                # Get the current player
+                current_player = self.get_player_by_interval(interval, self.current_vote_type)
+                # The winning suggestion hasn't been selected
+                if not vote_type.current_voted_item:
+                    unused_suggestions = vote_type.get_randomized_unused_suggestions(self.key,
+                                                                                     interval=current_interval)
+                    winning_count = 0
+                    winning_suggestion = None
+                    for unused_suggestion in unused_suggestions:
+                        count = vote_type.get_live_vote_count(self.key,
+                                                              suggestion=unused_suggestion,
+                                                              interval=current_interval)
+                        # Compare which suggestion has the highest votes
+                        if count >= winning_count:
+                            # Set the new winning suggestion/count
+                            winning_suggestion = unused_suggestion
+                            winning_count = count
+                    # Create the current voted
+                    current_voted = VotedItem(vote_type=vote_type.key,
+                                              player=current_player,
+                                              suggestion=winning_suggestion,
+                                              interval=current_interval).put()
+                    # Append it to the list of current voted items for the show
+                    show.voted_items.append(current_voted)
+                    # Mark the suggestion as used
+                    winning_suggestion.used = True
+                    winning_suggestion.put()
+                    # Append it to the list of voted items for the show
+                    show.voted_items.append(current_voted)
+                    show.put()
+                # The winning suggestion has already been selected
+                else:
+                    current_voted = vote_type.current_voted_item
+                    winning_count = vote_type.get_live_vote_count(self.key,
+                                                                  interval=current_interval)
+                vote_options['voted'] = vote_type.name
+                vote_options['photo_filename'] = current_player.photo_filename
+                vote_options['suggestion'] = current_voted.suggestion
+                vote_options['count'] = winning_count
             elif vote_type.style == 'options':
-        
-        
-        
-        # If an test has been triggered
-        if state == 'test':
-            # If we're in the voting phase for the test
-            if display == 'voting':
-                vts = VotingTest.query().fetch(ITEM_AMOUNT)
-                vote_options['options'] = []
-                for vt in vts:
-                    vote_options['options'].append({'name': vt.name,
-                                                    'id': vt.key.id(),
-                                                    'count': vt.live_vote_value})
-            # If we are showing the results of the vote
-            elif display == 'result' and not voting_only:
-                # Set the most voted test if it isn't already set
-                if not show.test:
-                    voted_test = VotingTest.query().order(
-                                             -VotingTest.live_vote_value).get()
-                    show.test = voted_test.key
+                # The winning suggestion hasn't been selected
+                if not vote_type.current_voted_item:
+                    unused_suggestions = vote_type.get_randomized_unused_suggestions(self.key,
+                                                                                     interval=current_interval)
+                    winning_count = 0
+                    winning_suggestion = None
+                    for unused_suggestion in unused_suggestions:
+                        count = vote_type.get_live_vote_count(self.key,
+                                                              suggestion=unused_suggestion,
+                                                              interval=current_interval)
+                        # Compare which suggestion has the highest votes
+                        if count >= winning_count:
+                            # Set the new winning suggestion/count
+                            winning_suggestion = unused_suggestion
+                            winning_count = count
+                    # Create the current voted
+                    current_voted = VotedItem(vote_type=vote_type.key,
+                                              suggestion=winning_suggestion,
+                                              interval=current_interval).put()
+                    # Append it to the list of current voted items for the show
+                    show.voted_items.append(current_voted)
+                    # Mark the suggestion as used
+                    winning_suggestion.used = True
+                    winning_suggestion.put()
+                    # Append it to the list of voted items for the show
+                    show.voted_items.append(current_voted)
                     show.put()
-                    voted_test.put()
-                vote_options['voted'] = show.test.get().name
-                vote_options['count'] = show.test.get().live_vote_value
-        # If an incident has been triggered
-        elif state == 'incident':
-            # If we're in the voting phase for an incident
-            if display == 'voting':
-                actions = Action.query(Action.used == False,
-                          ).order(-Action.vote_value,
-                                  Action.created).fetch(INCIDENT_AMOUNT)
-                vote_options['options'] = []
-                for action in actions:
-                    vote_options['options'].append({'name': action.description,
-                                                    'id': action.key.id(),
-                                                    'count': action.live_vote_value})
-            # If we are showing the results of the vote
-            elif display == 'result' and not voting_only:
-                # Set the most voted incident if it isn't already set
-                if not show.incident:
-                    voted_incident = Action.query(Action.used == False,
-                                   ).order(-Action.live_vote_value,
-                                           -Action.vote_value,
-                                           Action.created).get()
-                    show.incident = voted_incident.key
-                    show.put()
-                    # Set the Action as used
-                    voted_incident.used = True
-                    voted_incident.put()
-                vote_options['voted'] = show.incident.get().description
-                vote_options['count'] = show.incident.get().live_vote_value
-        # If a role vote has been triggered
-        elif state in ROLE_TYPES:
-            vote_options['role'] = True
-            # If we're in the voting phase for the role
-            if display == 'voting':
-                vote_options['options'] = []
-                # Loop through all the players in the show
-                for player in show.players:
-                    # Make sure the user isn't already the hero/lover/villain
-                    if player.key != show.hero and player.key != show.villain \
-                        and player.key != show.lover:
-                        change_vote = get_or_create_role_vote(show, player, state)
-                        player_dict = {'photo_filename': player.photo_filename,
-                                       'id': player.key.id(),
-                                       'count': change_vote.live_vote_value}
-                        vote_options['options'].append(player_dict)
-            # If we are showing the results of the vote
-            elif display == 'result' and not voting_only:
-                role_player = getattr(show, state, None)
-                # Set the role if it isn't already set
-                if not role_player:
-                    role_votes = RoleVote.query(RoleVote.role == state,
-                                                RoleVote.show == show.key,
-                                     ).order(-RoleVote.live_vote_value).fetch()
-                    # Grab the first player
-                    for rv in role_votes:
-                        # Make sure they aren't already the hero/villain/lover
-                        if rv.player != show.hero and rv.player != show.villain \
-                            and rv.player != show.lover:
-                            # We've found the voted role, break out of the loop
-                            voted_role = rv
-                            break
-                    # Setting role for the show
-                    setattr(show, state, voted_role.player)
-                    show.put()
-                    # Getting the player selected for the role
-                    role_player = voted_role.player
+                # The winning suggestion has already been selected
                 else:
-                    voted_role = RoleVote.query(RoleVote.role == state,
-                                                RoleVote.show == show.key,
-                                                RoleVote.player == role_player).get()
-                vote_options['voted'] = state.title()
-                vote_options['photo_filename'] = role_player.get().photo_filename
-                vote_options['count'] = voted_role.live_vote_value
-        # If an interval has been triggered
-        elif state == 'interval':
-            interval = self.current_interval
-            # Get the player
-            player = self.get_player_by_interval(interval)
-            # Get the player action for this interval
-            player_action = self.get_player_action_by_interval(interval)
-            # If there is a 1 minute interval gap between this interval and the next
-            if pool_type.get_interval_gap(interval) == 1:
-                vote_options['speedup'] = True
-            vote_options.update({'interval': interval,
-                                 'player_id': player.id(),
-                                 'player_photo': player.get().photo_filename})
-            # If we're in the voting phase for the interval
-            if display == 'voting':
-                unused_actions = self.get_randomized_unused_actions(show, interval)
-                vote_options['options'] = []
-                for i in range(0, ACTION_OPTIONS):
-                    try:
-                        vote_options['options'].append({
-                                            'name': unused_actions[i].description,
-                                            'id': unused_actions[i].key.id(),
-                                            'count': unused_actions[i].live_vote_value})
-                    except IndexError:
-                        pass
-            # If we are showing the results of the vote
-            elif display == 'result' and not voting_only:
-                # If an action wasn't already chosen for this interval
-                if not player_action.action:
-                    voted_action = None
-                    # Get the actions that were voted on this interval
-                    unused_actions = self.get_randomized_unused_actions(show, interval)
-                    # Take the action with the highest live_vote_value
-                    # Or just default to the first action
-                    for action in unused_actions:
-                        if voted_action == None:
-                            voted_action = action
-                        elif action.live_vote_value > voted_action.live_vote_value:
-                            voted_action = action
-                    # If a voted action exists
-                    if voted_action:
-                        # Set the player action
-                        player_action.action = voted_action.key
-                        player_action.put()
-                        # Set the action as used
-                        voted_action.used = True
-                        voted_action.put()
-                        vote_options.update({'voted': voted_action.description,
-                                             'count': voted_action.live_vote_value})
-                else:
-                    vote_options.update({'voted': player_action.action.get().description,
-                                         'count': player_action.action.get().live_vote_value})
+                    current_voted = vote_type.current_voted_item
+                    winning_count = vote_type.get_live_vote_count(self.key,
+                                                                  interval=current_interval)
+                vote_options['voted'] = vote_type.name
+                vote_options['suggestion'] = current_voted.suggestion
+                vote_options['count'] = winning_count
+        
         return vote_options
     
     def put(self, *args, **kwargs):
@@ -579,5 +554,6 @@ class VoteOptions(ndb.Model):
 
 class VotedItem(ndb.Model):
     vote_type = ndb.KeyProperty(kind=VoteType, required=True)
-    suggestion = ndb.KeyProperty(kind=Suggestion, required=True)
+    suggestion = ndb.KeyProperty(kind=Suggestion)
+    player = ndb.KeyProperty(kind=Player)
     interval = ndb.IntegerProperty()

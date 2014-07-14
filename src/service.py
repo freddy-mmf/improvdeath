@@ -5,11 +5,11 @@ from timezone import (get_today_start, get_tomorrow_start)
 
 
 def show_today():
-	# See if there is a show today, otherwise users aren't allowed to submit actions
-	today_start = get_today_start()
-	tomorrow_start = get_tomorrow_start()
-	return bool(Show.query(Show.scheduled >= today_start,
-						   Show.scheduled < tomorrow_start).get())
+    # See if there is a show today, otherwise users aren't allowed to submit actions
+    today_start = get_today_start()
+    tomorrow_start = get_tomorrow_start()
+    return bool(Show.query(Show.created >= today_start,
+                           Show.created < tomorrow_start).get())
 
 
 def get_show(**kwargs):
@@ -27,6 +27,8 @@ def get_player(**kwargs):
 def get_suggestion(**kwargs):
     return get_model_entity(Suggestion, **kwargs)
 
+def get_suggestion_pool(**kwargs):
+    return get_model_entity(SuggestionPool, **kwargs)
 
 def get_model_entity(model, key_id=None, name=None):
     # If key id is given, just return the key
@@ -76,7 +78,8 @@ def fetch_showinterval(**kwargs):
     return fetch_model_entities(ShowInterval, **kwargs)
 
 
-def fetch_model_entities(model, show=None, vote_type=None, used=None, live=None,
+def fetch_model_entities(model, show=None, vote_type=None, suggestion_pool=None,
+                         used=None, voted_on=None,
                          suggestion=None, uses_suggestions=None,
                          limit=None, offset=None, keys_only=False,
                          order_by_vote_value=False):
@@ -89,21 +92,29 @@ def fetch_model_entities(model, show=None, vote_type=None, used=None, live=None,
     # Fetch by VoteType name
     if vote_type:
         args.append(model.vote_type == get_vote_type(name=vote_type))
+    # Fetch by SuggestionPool
+    if suggestion_pool:
+        args.append(model.suggestion_pool == suggestion_pool)
     # Fetch by whether it's used or not
     if used != None:
         args.append(model.used == used)
+    # Fetch by whether it's been voted on or not
+    if voted_on != None:
+        args.append(model.voted_on == voted_on)
     # Fetch related to a suggestion
     if suggestion != None:
         args.append(model.suggestion == suggestion)
     # Fetch related to a suggestion
     if uses_suggestions != None:
         args.append(model.uses_suggestions == uses_suggestions)
+    
     # Fetch the limit given
     if limit:
         fetch_args['limit'] = limit
     # If we just need the keys
     if keys_only:
         fetch_args['keys_only'] = keys_only
+    
     # Order by vote_value
     if order_by_vote_value:
         ordering = [-model.vote_value]
@@ -117,15 +128,15 @@ def create_show(**kwargs):
     return create_model_entity(Show, **kwargs)
 
 
-def create_showinterval(**kwargs)
+def create_showinterval(**kwargs):
     return create_model_entity(ShowInterval, **kwargs)
 
 
-def create_vote_type(**kwargs)
+def create_vote_type(**kwargs):
     return create_model_entity(VoteType, **kwargs)
 
 
-def create_suggestion_pool(**kwargs)
+def create_suggestion_pool(**kwargs):
     return create_model_entity(SuggestionPool, **kwargs)
 
 
@@ -136,14 +147,26 @@ def create_model_entity(model, **kwargs):
     return model(**create_kwargs).put()
 
 
+def get_unused_suggestions():
+    """Get unused suggestions for all vote types, categorized by vote type"""
+    vote_types = fetch_vote_types()
+    for vote_type in vote_types:
+        suggestion_pool = vote_type.suggestion_pool
+        suggestions = fetch_suggestions(suggestion_pool=suggestion_pool,
+                                        used=False,
+                                        voted_on=False)
+        setattr(vote_type, 'suggestions', suggestions)
+    return vote_types
+
+
 def reset_live_votes():
     """
        Reset all suggestions that haven't been used,
        but have a live_vote_value, to zero
     """
-    suggestions = Suggestion.query(Suggestion.live_value > 0
+    suggestions = Suggestion.query(Suggestion.live_value > 0,
                                    Suggestion.used == False).fetch()
     for suggestion in suggestions:
-		# Set the suggestion live value to zero
-		suggestion.live_value = 0
-		suggestion.put()
+        # Set the suggestion live value to zero
+        suggestion.live_value = 0
+        suggestion.put()

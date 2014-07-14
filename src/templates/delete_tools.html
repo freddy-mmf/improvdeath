@@ -11,59 +11,23 @@
         {% if unused_deleted %}
             <div class="label label-info" style="font-size:large;">Deleted Un-used Successfully.</div>
         {% endif %}
-        <form class="form-horizontal" role="form" action="/delete_tools/" method="post">
-            <div class="form-group">
-                <label class="col-md-2 control-label">Actions:</label>
-                <div class="col-md-4">
-                    <select name="action_list" multiple class="form-control" size="12">
-                    {% for action in actions %}
-                        <option value="{{action.key.id}}">{{action.description}}</option>
-                    {% endfor %}
-                    </select>
+        {% for vote_type in vote_types %}
+            <form class="form-horizontal" role="form" action="/delete_tools/" method="post">
+                <div class="form-group">
+                    <label class="col-md-2 control-label">{{vote_type.display_name}}</label>
+                    <div class="col-md-4">
+                        <select name="suggestion_list" multiple class="form-control" size="12">
+                        {% for suggestion in vote_type.suggestions %}
+                            <option value="{{suggestion.key.id}}">{{suggestion.value}}</option>
+                        {% endfor %}
+                        </select>
+                    </div>
                 </div>
-            </div>
-            {% comment %}
-            <div class="form-group">
-                <label class="col-md-2 control-label">Items:</label>
-                <div class="col-md-4">
-                    <select name="item_list" multiple class="form-control">
-                    {% for item in items %}
-                        <option value="{{item.key.id}}">{{item.name}}</option>
-                    {% endfor %}
-                    </select>
+                <div class="col-md-offset-2">
+                    <button type="submit" class="btn btn-default">Delete {{vote_type.display_name}}(s)</button>
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="col-md-2 control-label">Characters:</label>
-                <div class="col-md-4">
-                    <select name="character_list" multiple class="form-control">
-                    {% for character in characters %}
-                        <option value="{{character.key.id}}">{{character.name}}</option>
-                    {% endfor %}
-                    </select>
-                </div>
-            </div>
-            {% endcomment %}
-            <div class="col-md-offset-2">
-                <button type="submit" class="btn btn-default">Delete Action(s)</button>
-            </div>
-        </form>
-        <form class="form-horizontal" role="form" action="/delete_tools/" method="post">
-            <div class="form-group">
-                <label class="col-md-2 control-label">Themes:</label>
-                <div class="col-md-4">
-                    <select name="theme_list" multiple class="form-control">
-                    {% for theme in themes %}
-                        <option value="{{theme.key.id}}">{{theme.name}}</option>
-                    {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="col-md-offset-2">
-                <button type="submit" class="btn btn-default">Delete Theme(s)</button>
-            </div>
-        </form>
+            </form>
+        {% endfor %}
         <form class="form-horizontal" role="form" action="/delete_tools/" method="post">
             <div class="form-group">
                 <label class="col-md-2 control-label">Shows:</label>

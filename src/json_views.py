@@ -4,7 +4,7 @@ import datetime
 from google.appengine.ext import ndb
 
 from views_base import ViewBase
-from models import (Show, Action, Theme, ActionVote, ThemeVote)
+from models import (Show)
 from timezone import get_mountain_time, back_to_tz
 
 

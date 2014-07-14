@@ -6,11 +6,7 @@ from google.appengine.ext import ndb
 from google.appengine.api import taskqueue
 
 from views_base import ViewBase, redirect_locked
-from models import (Show, Player, Action, Theme, ActionVote, ThemeVote,
-                    LiveActionVote, RoleVote, LiveRoleVote,
-                    VotingTest, LiveVotingTest,
-                    VOTE_AFTER_INTERVAL, ROLE_TYPES,
-                    get_current_show)
+from models import (Show, Player, get_current_show)
 from timezone import get_mountain_time, get_tomorrow_start
 
 

@@ -7,7 +7,7 @@ import webapp2
 from webapp2_extras import sessions
 from google.appengine.api import users
 
-from models import show_today, get_current_show
+from service import show_today, get_current_show
 from timezone import get_mountain_time
 
 LIVE_VOTE_URI = '/live_vote/'

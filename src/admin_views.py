@@ -16,7 +16,7 @@ from service import (get_current_show, get_suggestion, get_player, get_show,
 					 fetch_shows, fetch_live_votes, fetch_suggestion_pools,
 					 fetch_vote_types, fetch_voted_items, create_show,
 					 create_showinterval, create_suggestion_pool,
-					 create_vote_type,
+					 create_vote_type, get_unused_suggestions,
 					 reset_live_votes, VOTE_STYLE, OCCURS_TYPE)
 from timezone import get_mountain_time, back_to_tz
 
@@ -100,26 +100,19 @@ class ShowPage(ViewBase):
 class CreateShow(ViewBase):
 	@admin_required
 	def get(self):
-		context = {'players': fetch_players(),
-				   'themes': fetch_suggestions(used=False,
-				   							   order_by_vote_value=True)}
+		context = {'vote_types': fetch_vote_types(),
+				   'players': fetch_players()}
 		self.response.out.write(template.render(self.path('create_show.html'),
 												self.add_context(context)))
 
 	@admin_required
 	def post(self):
-		theme_id = self.request.get('theme_id')
 		player_list = self.request.get_all('player_list')
 		vote_type_list = self.request.get_all('vote_type_list')
-		context = {'players': fetch_players(),
-		           'themes': fetch_suggestions(vote_type='theme', used=False)}
+		context = {'vote_types': fetch_vote_types(),
+				   'players': fetch_players()}
 		if player_list:
-			# If a theme was entered
-			if theme_id:
-				theme = get_suggestion(key_id=theme_id)
-				show = create_show(theme=theme)
-			else:
-				show = create_show()
+			show = create_show()
 			# Add the vote types to the show
 			for vote_type_id in vote_type_list:
 				# Get the vote type from the db
@@ -144,7 +137,7 @@ class CreateShow(ViewBase):
 								random.shuffle(rand_players, random.random)
 							# Pop a random player off the list and create a ShowInterval
 							create_showinterval(show=show,
-												player=rand_players.pop()
+												player=rand_players.pop(),
 												interval=interval,
 												vote_type=vote_type)
 					else:
@@ -166,7 +159,7 @@ class CreateShow(ViewBase):
 												self.add_context(context)))
 
 
-def add_pool_type_context(context);
+def add_pool_type_context(context):
 	# Get all the live pool types that use suggestions
 	pool_types = fetch_pool_types(uses_suggestions=True)
 	# All available pool types that use suggestions are offered up for deletion
@@ -181,7 +174,7 @@ class VoteTypes(ViewBase):
 	def get(self):
 		context = context = {'vote_types': fetch_vote_types(),
 							 'suggestion_pools': fetch_suggestion_pools(),
-							 'vote_styles' VOTE_STYLE,
+							 'vote_styles': VOTE_STYLE,
 							 'occurs_types': OCCURS_TYPE}
 		self.response.out.write(template.render(self.path('vote_types.html'),
 												self.add_context(context)))
@@ -222,7 +215,7 @@ class VoteTypes(ViewBase):
 			action = 'created'
 		context = context = {'vote_types': fetch_vote_types(),
 							 'suggestion_pools': fetch_suggestion_pools(),
-							 'vote_styles' VOTE_STYLE,
+							 'vote_styles': VOTE_STYLE,
 							 'occurs_types': OCCURS_TYPE,
 							 'action': action}
 		self.response.out.write(template.render(self.path('vote_types.html'),
@@ -261,7 +254,8 @@ class SuggestionPools(ViewBase):
 class DeleteTools(ViewBase):
 	@admin_required
 	def get(self):
-		context = {'shows': fetch_shows(), 'pools': {}}
+		context = {'shows': fetch_shows(),
+				   'vote_types': get_unused_suggestions()}
 		context = add_pool_type_context(context)
 		self.response.out.write(template.render(self.path('delete_tools.html'),
 												self.add_context(context)))
@@ -313,32 +307,28 @@ class DeleteTools(ViewBase):
 				showplayerintervals = fetch_showplayerinterval(show=show_entity.key)
 				for showplayerinterval in showplayerintervals:
 					showplayerinterval.key.delete()
-				# Delete the theme used in the show, if it existed
-				if show_entity.theme:
-					show_entity.theme.delete()
 				show_entity.key.delete()
 				deleted = 'Show(s)'
 		# Delete ALL un-used things
 		if delete_unused:
-			# Get all the live pool types that use suggestions
-			pool_types = fetch_pool_types(uses_suggestions=True)
-			# Grab all the unused suggestions from pool types that use suggestions
-			for pool_type in pool_types:
-				suggestions = fetch_suggestions(pool_type=pool_type, used=False)
-				for suggestion in suggestions:
-					# Delete the Preshow Votes used in the show
-					preshow_votes = fetch_preshow_votes(suggestion=suggestion.key)
-					for preshow_vote in preshow_votes:
-						preshow_votes.key.delete()
-					# Delete the Live Votes used in the show
-					live_votes = fetch_live_votes(suggestion=suggestion.key)
-					for live_vote in live_votes:
-						live_vote.key.delete()
-					suggestion.key.delete()
+			# Fetch all the suggestions that weren't voted on or used
+			suggestions = fetch_suggestions(used=False,
+											voted_on=False)
+			for suggestion in suggestions:
+				# Delete the Preshow Votes used in the show
+				preshow_votes = fetch_preshow_votes(suggestion=suggestion.key)
+				for preshow_vote in preshow_votes:
+					preshow_votes.key.delete()
+				# Delete the Live Votes used in the show
+				live_votes = fetch_live_votes(suggestion=suggestion.key)
+				for live_vote in live_votes:
+					live_vote.key.delete()
+				suggestion.key.delete()
 			deleted = 'All Un-used Actions'
 		context = {'deleted': deleted,
 				   'unused_deleted': unused_deleted,
-				   'shows': fetch_shows()}
+				   'shows': fetch_shows(),
+				   'vote_types': get_unused_suggestions()}
 		context = add_pool_type_context(context)
 		self.response.out.write(template.render(self.path('delete_tools.html'),
 												self.add_context(context)))

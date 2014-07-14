@@ -10,9 +10,9 @@ from timezone import (get_mountain_time, back_to_tz, get_today_start,
 VOTE_AFTER_INTERVAL = 25
 DISPLAY_VOTED = 10
 
-VOTE_STYLE = ['all-players', 'player-pool', 'player-options', 'options',
-              'preshow-voted']
-OCCURS_TYPE = ['before', 'during']
+VOTE_STYLE = ['player-options', 'player-pool', 'options',
+              'preshow-voted', 'all-players']
+OCCURS_TYPE = ['during', 'before']
 
 
 def get_current_show():
@@ -56,19 +56,13 @@ class SuggestionPool(ndb.Model):
         return super(SuggestionPool, self).put(*args, **kwargs)
 
 
-def vote_type_name_validator(prop, value):
-    """Make sure the name field is unique"""
-    if VoteType.query(VoteType.name == value).count() > 0:
-        raise ValueError("Vote Type name already exists!")
-    return None
-
-
 class VoteType(ndb.Model):
-    name = ndb.StringProperty(required=True, validator=vote_type_name_validator)
+    name = ndb.StringProperty(required=True)
     display_name = ndb.StringProperty(required=True, indexed=False)
     suggestion_pool = ndb.KeyProperty(kind=SuggestionPool, indexed=False)
     preshow_voted = ndb.BooleanProperty(required=True, default=False, indexed=False)
     has_intervals = ndb.BooleanProperty(required=True, default=False, indexed=False)
+    is_test = ndb.BooleanProperty(required=True, default=False)
     current_interval = ndb.IntegerProperty(indexed=False)
     intervals = ndb.IntegerProperty(repeated=True, indexed=False)
     style = ndb.StringProperty(choices=VOTE_STYLE)

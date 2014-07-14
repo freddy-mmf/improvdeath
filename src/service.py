@@ -56,7 +56,7 @@ def fetch_vote_types(**kwargs):
     return fetch_model_entities(VoteType, **kwargs)
 
 def fetch_suggestion_pools(**kwargs):
-    return fetch_model_entities(VoteType, **kwargs)
+    return fetch_model_entities(SuggestionPool, **kwargs)
 
 def fetch_preshow_votes(**kwargs):
     return fetch_model_entities(PreshowVote, **kwargs)
@@ -124,25 +124,25 @@ def fetch_model_entities(model, show=None, vote_type=None, suggestion_pool=None,
         return model.query(*args).fetch(**fetch_args)
 
 
-def create_show(**kwargs):
-    return create_model_entity(Show, **kwargs)
+def create_show(create_data):
+    return create_model_entity(Show, create_data)
 
 
-def create_showinterval(**kwargs):
-    return create_model_entity(ShowInterval, **kwargs)
+def create_showinterval(create_data):
+    return create_model_entity(ShowInterval, create_data)
 
 
-def create_vote_type(**kwargs):
-    return create_model_entity(VoteType, **kwargs)
+def create_vote_type(create_data):
+    return create_model_entity(VoteType, create_data)
 
 
-def create_suggestion_pool(**kwargs):
-    return create_model_entity(SuggestionPool, **kwargs)
+def create_suggestion_pool(create_data):
+    return create_model_entity(SuggestionPool, create_data)
 
 
-def create_model_entity(model, **kwargs):
+def create_model_entity(model, create_data):
     create_kwargs = {}
-    for key, value in kwargs.items():
+    for key, value in create_data.items():
         create_kwargs[key] = value
     return model(**create_kwargs).put()
 

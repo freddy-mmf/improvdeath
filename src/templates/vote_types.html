@@ -24,7 +24,7 @@
              <div class="form-group">
                 <label class="col-md-2 control-label">Vote Types:</label>
                 <div class="col-md-4">
-                    <select name="vote_type_ids" multiple class="form-control">
+                    <select name="vote_type_ids" multiple class="form-control" size="12">
                     {% for vote_type in vote_types %}
                         <option value="{{vote_type.key.id}}">{{vote_type.name}}</option>
                     {% endfor %}
@@ -32,7 +32,7 @@
                 </div>
              </div>
              <div class="form-group">
-                 <div class="col-md-4">
+                 <div class="col-md-offset-3 col-md-4">
                      <button type="submit" class="btn btn-danger">Delete Vote Type(s)</button>
                  </div>
              </div>
@@ -53,7 +53,7 @@
              </div>
              <div class="form-group">
                 <label class="col-md-2 control-label">Suggestion Pool:</label>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <select name="suggestion_pool_ids" class="form-control">
                         <option value="">None</option>
                         {% for suggestion_pool in suggestion_pools %}
@@ -63,25 +63,33 @@
                 </div>
              </div>
              <div class="form-group">
-                <div class="checkbox">
-                  <label>
+                <label class="col-md-2 control-label">Voted only Pre-show:</label>
+                <div class="col-md-4">
                     <input type="checkbox" name="preshow_voted" value="1">
-                    Voted only during pre-show
-                  </label>
                 </div>
              </div>
              <div class="form-group">
-                <div class="checkbox">
-                  <label>
+                <label class="col-md-2 control-label">Has Intervals:</label>
+                <div class="col-md-4">
                     <input type="checkbox" name="has_intervals" value="1">
-                    Has Intervals
-                  </label>
+                </div>
+             </div>
+             <div class="form-group">
+                <label class="col-md-2 control-label">Is Test:</label>
+                <div class="col-md-4">
+                    <input type="checkbox" name="is_test" value="1">
                 </div>
              </div>
              <div class="form-group">
                  <label class="col-md-2 control-label">Intervals:</label>
-                 <div class="col-sm-3">
+                 <div class="col-md-4">
                      <input type="text" class="form-control" name="interval_list"><br/>
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">ex.</label>
+                 <div class="col-md-6">
+                    0,2,4,6,8,10,12,14,16,18,20,22,24,25,26,27,28,29
                  </div>
              </div>
              <div class="form-group">
@@ -106,19 +114,19 @@
              </div>
              <div class="form-group">
                  <label class="col-md-2 control-label">Ordering:</label>
-                 <div class="col-md-2">
+                 <div class="col-md-1">
                      <input type="text" class="form-control" name="ordering">
                  </div>
              </div>
              <div class="form-group">
                  <label class="col-md-2 control-label">Options:</label>
-                 <div class="col-md-2">
+                 <div class="col-md-1">
                      <input type="text" class="form-control" name="options">
                  </div>
              </div>
              <div class="form-group">
                  <label class="col-md-2 control-label">Randomize Amount:</label>
-                 <div class="col-md-2">
+                 <div class="col-md-1">
                      <input type="text" class="form-control" name="randomize_amount">
                  </div>
              </div>

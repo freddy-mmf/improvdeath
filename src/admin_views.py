@@ -194,22 +194,27 @@ class VoteTypes(ViewBase):
 			suggestion_pool_id = self.request.get('suggestion_pool_id')
 			suggestion_pool = get_suggestion_pool(key_id=suggestion_pool_id)
 			intervals_string = self.request.get('interval_list')
-			# Get the integer list of interval times
-			try:
-				intervals = [int(x.strip()) for x in intervals_string.split(',')]
-			except ValueError:
-				raise ValueError("Invalid interval list '%s'. Must be comma separated.")
+			# Parse the intervals, if there are any
+			if intervals_string:
+				# Get the integer list of interval times
+				try:
+					intervals = [int(x.strip()) for x in intervals_string.split(',')]
+				except ValueError:
+					raise ValueError("Invalid interval list '%s'. Must be comma separated.")
+			else:
+				intervals = []
 			# Create the vote type
 			create_vote_type({'name': self.request.get('name'),
 							  'display_name': self.request.get('display_name'),
-							  'suggestion_pool': suggestion_pool,
+							  'suggestion_pool': suggestion_pool.key,
 							  'preshow_voted': bool(self.request.get('preshow_voted', False)),
 							  'has_intervals': bool(self.request.get('has_intervals', False)),
+							  'is_test': bool(self.request.get('is_test', False)),
 							  'style': self.request.get('style'),
 							  'occurs': self.request.get('occurs'),
-							  'ordering': self.request.get('ordering'),
-							  'options': self.request.get('options'),
-							  'randomize_amount': self.request.get('randomize_amount'),
+							  'ordering': int(self.request.get('ordering', 10)),
+							  'options': int(self.request.get('options', 3)),
+							  'randomize_amount': int(self.request.get('randomize_amount', 6)),
 							  'intervals': intervals,
 							  })
 			action = 'created'

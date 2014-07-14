@@ -24,7 +24,7 @@
              <div class="form-group">
                 <label class="col-md-2 control-label">Suggestion Pools:</label>
                 <div class="col-md-4">
-                    <select name="suggestion_pool_ids" multiple class="form-control">
+                    <select name="suggestion_pool_ids" multiple class="form-control" size="12">
                     {% for suggestion_pool in suggestion_pools %}
                         <option value="{{suggestion_pool.key.id}}">{{suggestion_pool.name}}</option>
                     {% endfor %}
@@ -32,7 +32,7 @@
                 </div>
              </div>
              <div class="form-group">
-                 <div class="col-md-4">
+                 <div class="col-md-offset-3 col-md-4">
                      <button type="submit" class="btn btn-danger">Delete Suggestion Pool(s)</button>
                  </div>
              </div>
@@ -54,7 +54,7 @@
              <div class="form-group">
                  <label class="col-md-2 control-label">Description (allows HTML):</label>
                  <div class="col-md-4">
-                     <textarea class="form-control" rows="3" name="description"></textarea>
+                     <textarea class="form-control" rows="6" name="description"></textarea>
                  </div>
              </div>
              <div class="form-group">

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block admin-selected %} active{% endblock %}
+{% block vote-type-selected %}class="active"{% endblock %}
+
+{% block content %}
+     <div class="container-fluid">
+         <div class="row">
+            <div class="col-md-5 col-md-offset-1">
+                <div class="label label-info" style="font-size:large;">Vote Type(s) 
+                    {% if action == 'created' %}
+                        Created
+                    {% endif %}
+                    {% if action == 'deleted' %}
+                        Deleted
+                    {% endif %}
+                    Successfully!
+                </div>
+            </div>
+         </div>
+         <form class="form-horizontal" role="form" action="/vote_types/" method="post">
+             <div class="form-group">
+                <label class="col-md-2 control-label">Vote Types:</label>
+                <div class="col-md-4">
+                    <select name="vote_type_ids" multiple class="form-control">
+                    {% for vote_type in vote_types %}
+                        <option value="{{vote_type.key.id}}">{{vote_type.name}}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+             </div>
+             <div class="form-group">
+                 <div class="col-md-4">
+                     <button type="submit" class="btn btn-danger">Delete Vote Type(s)</button>
+                 </div>
+             </div>
+         </form>
+         <hr/>
+         <form class="form-horizontal" role="form" action="/vote_types/" method="post">
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Name:</label>
+                 <div class="col-md-4">
+                     <input type="text" class="form-control" name="name">
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Display Name:</label>
+                 <div class="col-md-4">
+                     <input type="text" class="form-control" name="display_name">
+                 </div>
+             </div>
+             <div class="form-group">
+                <label class="col-md-2 control-label">Suggestion Pool:</label>
+                <div class="col-md-4">
+                    <select name="suggestion_pool_ids" class="form-control">
+                        <option value="">None</option>
+                        {% for suggestion_pool in suggestion_pools %}
+                            <option value="{{suggestion_pool.key.id}}">{{suggestion_pool.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+             </div>
+             <div class="form-group">
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" name="preshow_voted" value="1">
+                    Voted only during pre-show
+                  </label>
+                </div>
+             </div>
+             <div class="form-group">
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" name="has_intervals" value="1">
+                    Has Intervals
+                  </label>
+                </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Intervals:</label>
+                 <div class="col-sm-3">
+                     <input type="text" class="form-control" name="interval_list"><br/>
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Style:</label>
+                 <div class="col-sm-2">
+                     <select name="style" class="form-control">
+                       {% for vote_style in vote_styles %}
+                         <option value="{{vote_style}}">{{vote_style}}</option>
+                       {% endfor %}
+                     </select>
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Show Occurrence:</label>
+                 <div class="col-sm-2">
+                     <select name="occurs" class="form-control">
+                       {% for occurs_type in occurs_types %}
+                         <option value="{{occurs_type}}">{{occurs_type}}</option>
+                       {% endfor %}
+                     </select>
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Ordering:</label>
+                 <div class="col-md-2">
+                     <input type="text" class="form-control" name="ordering">
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Options:</label>
+                 <div class="col-md-2">
+                     <input type="text" class="form-control" name="options">
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Randomize Amount:</label>
+                 <div class="col-md-2">
+                     <input type="text" class="form-control" name="randomize_amount">
+                 </div>
+             </div>
+             <div class="form-group">
+                 <div class="col-md-4">
+                     <button type="submit" class="btn btn-default">Create Vote Type</button>
+                 </div>
+             </div>
+         </form>
+	 </div>
+{% endblock %}

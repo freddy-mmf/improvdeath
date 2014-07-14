@@ -10,7 +10,8 @@ from timezone import (get_mountain_time, back_to_tz, get_today_start,
 VOTE_AFTER_INTERVAL = 25
 DISPLAY_VOTED = 10
 
-VOTE_STYLE = ['all-players', 'player-pool', 'player-options', 'options']
+VOTE_STYLE = ['all-players', 'player-pool', 'player-options', 'options',
+              'preshow-voted']
 OCCURS_TYPE = ['before', 'during']
 
 
@@ -40,6 +41,7 @@ class Player(ndb.Model):
                     RoleVote.player == self.key,
                     RoleVote.show == show.key,
                     RoleVote.role == role).get()
+
 
 class SuggestionPool(ndb.Model):
     name = ndb.StringProperty(required=True)
@@ -129,11 +131,12 @@ def vote_type_name_validator(prop, value):
 
 class VoteType(ndb.Model):
     name = ndb.StringProperty(required=True, validator=vote_type_name_validator)
-    display_name = ndb.StringProperty(required=True)
-    suggestion_pool = ndb.KeyProperty(kind=SuggestionPool)
-    has_intervals = ndb.BooleanProperty(required=True, default=False)
-    current_interval = ndb.IntegerProperty()
-    intervals = ndb.IntegerProperty(repeated=True)
+    display_name = ndb.StringProperty(required=True, indexed=False)
+    suggestion_pool = ndb.KeyProperty(kind=SuggestionPool, indexed=False)
+    preshow_voted = ndb.BooleanProperty(required=True, default=False, indexed=False)
+    has_intervals = ndb.BooleanProperty(required=True, default=False, indexed=False)
+    current_interval = ndb.IntegerProperty(indexed=False)
+    intervals = ndb.IntegerProperty(repeated=True, indexed=False)
     style = ndb.StringProperty(choices=VOTE_STYLE)
     occurs = ndb.StringProperty(choices=OCCURS_TYPE)
     ordering = ndb.IntegerProperty(default=0)
@@ -267,11 +270,6 @@ class Show(ndb.Model):
         now = get_mountain_time()
         # Get timezone for comparisons
         now_tz = back_to_tz(now)
-        # Go through all the vote vote types to see if they've started
-        for vote_type in self.vote_types:
-            
-            time_property = "%s_vote_init" % vote_type
-            init_time = getattr(self, time_property, None)
         # If any vote has started
         if self.current_vote_init:
             # Get the timezone datetime of the start of the vote type
@@ -280,8 +278,8 @@ class Show(ndb.Model):
             vote_end = init_time_tz + datetime.timedelta(seconds=self.vote_length)
             # Get the end of the overall display of the type
             display_end = vote_end + datetime.timedelta(seconds=self.result_length)
-            # If we're in the voting period of this type
-            if now_tz >= init_time_tz and now_tz <= vote_end:
+            # If we're in the voting period of this type (and it wasn't voted pre-show)
+            if now_tz >= init_time_tz and now_tz <= vote_end and not vote_type.preshow_voted:
                 state_dict.update(
                        {'state': vote_type.name,
                         'display': 'voting',
@@ -290,7 +288,8 @@ class Show(ndb.Model):
                         'minute': vote_end.minute,
                         'second': vote_end.second,
                         'voting_length': (vote_end - now_tz).seconds})
-            elif now_tz >= vote_end and now_tz <= display_end:
+            # If we're in the result period of this type (or it was voted pre-show)
+            elif now_tz >= vote_end and now_tz <= display_end or vote_type.preshow_voted:
                 state_dict.update({'state': vote_type.name,
                                    'display': 'result',
                                    'hour': vote_end.hour,
@@ -401,7 +400,7 @@ class Show(ndb.Model):
                     show.put()
                 # The winning player has already been selected
                 else:
-                    current_voted = vote_type.current_voted_item
+                    current_voted = vote_type.current_voted_item.get()
                     winning_count = vote_type.get_live_vote_count(self.key,
                                                           player=vote_type.current_voted_item,
                                                           interval=current_interval)
@@ -439,7 +438,7 @@ class Show(ndb.Model):
                     show.put()
                 # The winning player has already been selected
                 else:
-                    current_voted = vote_type.current_voted_item
+                    current_voted = vote_type.current_voted_item.get()
                     winning_count = vote_type.get_live_vote_count(self.key,
                                                                   player=vote_type.current_voted_item,
                                                                   interval=current_interval)
@@ -480,7 +479,7 @@ class Show(ndb.Model):
                     show.put()
                 # The winning suggestion has already been selected
                 else:
-                    current_voted = vote_type.current_voted_item
+                    current_voted = vote_type.current_voted_item.get()
                     winning_count = vote_type.get_live_vote_count(self.key,
                                                                   interval=current_interval)
                 vote_options['voted'] = vote_type.name
@@ -517,9 +516,37 @@ class Show(ndb.Model):
                     show.put()
                 # The winning suggestion has already been selected
                 else:
-                    current_voted = vote_type.current_voted_item
+                    current_voted = vote_type.current_voted_item.get()
                     winning_count = vote_type.get_live_vote_count(self.key,
                                                                   interval=current_interval)
+                vote_options['voted'] = vote_type.name
+                vote_options['suggestion'] = current_voted.suggestion
+                vote_options['count'] = winning_count
+            elif vote_type.style == 'preshow-voted':
+                # The winning suggestion hasn't been selected
+                if not vote_type.current_voted_item:
+                    unused_suggestions = vote_type.get_randomized_unused_suggestions(self.key,
+                                                                                     interval=current_interval)
+                    winning_suggestion = unused_suggestions[0]
+                    # Get the winning pre-show vote value
+                    winning_count = winning_suggestion.suggestion.get().preshow_value
+                    # Create the current voted
+                    current_voted = VotedItem(vote_type=vote_type.key,
+                                              suggestion=winning_suggestion,
+                                              interval=current_interval).put()
+                    # Append it to the list of current voted items for the show
+                    show.voted_items.append(current_voted)
+                    # Mark the suggestion as used
+                    winning_suggestion.used = True
+                    winning_suggestion.put()
+                    # Append it to the list of voted items for the show
+                    show.voted_items.append(current_voted)
+                    show.put()
+                # The winning suggestion has already been selected
+                else:
+                    current_voted = vote_type.current_voted_item.get()
+                    # Get the winning pre-show vote value
+                    winning_count = current_voted.suggestion.get().preshow_value
                 vote_options['voted'] = vote_type.name
                 vote_options['suggestion'] = current_voted.suggestion
                 vote_options['count'] = winning_count

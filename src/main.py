@@ -25,6 +25,7 @@ from views_base import RobotsTXT, LoaderIO
 from user_views import (MainPage, LiveVote, AddActions, AddThemes,
 						OtherShows, LiveVoteWorker)
 from admin_views import (ShowPage, CreateShow, DeleteTools,
+						 SuggestionPools, VoteTypes,
 					     JSTestPage, AddPlayers, IntervalTimer)
 from json_views import (ShowJSON, IntervalTimerJSON, UpvoteJSON)
 
@@ -49,6 +50,8 @@ app = webapp2.WSGIApplication([
     (r'/other_shows/(\d+)/', OtherShows),
     # Admin URLS
     (r'/create_show/', CreateShow),
+    (r'/vote_types/', VoteTypes),
+    (r'/suggestion_pools/', SuggestionPools),
     (r'/add_players/', AddPlayers),
     (r'/delete_tools/', DeleteTools),
     (r'/interval_timer/', IntervalTimer),

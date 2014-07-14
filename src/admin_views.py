@@ -11,12 +11,13 @@ from google.appengine.api import users
 from views_base import ViewBase
 
 from service import (get_current_show, get_suggestion, get_player, get_show,
-					 get_vote_type, fetch_suggestions, fetch_players,
-					 fetch_shows, fetch_live_votes,
-					 fetch_preshow_votes, fetch_vote_options,
+					 get_vote_type, fetch_suggestions, get_suggestion_pool,
+					 fetch_players, fetch_preshow_votes, fetch_vote_options,
+					 fetch_shows, fetch_live_votes, fetch_suggestion_pools,
 					 fetch_vote_types, fetch_voted_items, create_show,
-					 create_showinterval,
-					 reset_live_votes)
+					 create_showinterval, create_suggestion_pool,
+					 create_vote_type,
+					 reset_live_votes, VOTE_STYLE, OCCURS_TYPE)
 from timezone import get_mountain_time, back_to_tz
 
 
@@ -33,7 +34,7 @@ def admin_required(func):
 class ShowPage(ViewBase):
 	@admin_required
 	def get(self, show_id):
-		show = get_show(show_id)
+		show = get_show(key_id=show_id)
 		# Determine the available suggestions for live vote types
 		context	= {'show': show,
 				   'now_tz': back_to_tz(get_mountain_time()),
@@ -174,6 +175,89 @@ def add_pool_type_context(context);
 														used=False)
 	return context
 
+
+class VoteTypes(ViewBase):
+	@admin_required
+	def get(self):
+		context = context = {'vote_types': fetch_vote_types(),
+							 'suggestion_pools': fetch_suggestion_pools(),
+							 'vote_styles' VOTE_STYLE,
+							 'occurs_types': OCCURS_TYPE}
+		self.response.out.write(template.render(self.path('vote_types.html'),
+												self.add_context(context)))
+
+	@admin_required
+	def post(self):
+		action = None
+		vote_type_ids = self.request.get('vote_type_ids')
+		# Delete selected vote types
+		if vote_type_ids:
+			for vote_type_id in vote_type_ids:
+				vote_type_entity = get_vote_type(key_id=vote_type_id)
+				vote_type_entity.key.delete()
+			action = 'deleted'
+		# Create Suggestion pool
+		elif self.request.get('name'):
+			suggestion_pool_id = self.request.get('suggestion_pool_id')
+			suggestion_pool = get_suggestion_pool(key_id=suggestion_pool_id)
+			intervals_string = self.request.get('interval_list')
+			# Get the integer list of interval times
+			try:
+				intervals = [int(x.strip()) for x in intervals_string.split(',')]
+			except ValueError:
+				raise ValueError("Invalid interval list '%s'. Must be comma separated.")
+			# Create the vote type
+			create_vote_type({'name': self.request.get('name'),
+							  'display_name': self.request.get('display_name'),
+							  'suggestion_pool': suggestion_pool,
+							  'preshow_voted': bool(self.request.get('preshow_voted', False)),
+							  'has_intervals': bool(self.request.get('has_intervals', False)),
+							  'style': self.request.get('style'),
+							  'occurs': self.request.get('occurs'),
+							  'ordering': self.request.get('ordering'),
+							  'options': self.request.get('options'),
+							  'randomize_amount': self.request.get('randomize_amount'),
+							  'intervals': intervals,
+							  })
+			action = 'created'
+		context = context = {'vote_types': fetch_vote_types(),
+							 'suggestion_pools': fetch_suggestion_pools(),
+							 'vote_styles' VOTE_STYLE,
+							 'occurs_types': OCCURS_TYPE,
+							 'action': action}
+		self.response.out.write(template.render(self.path('vote_types.html'),
+												self.add_context(context)))
+
+
+class SuggestionPools(ViewBase):
+	@admin_required
+	def get(self):
+		context = {'suggestion_pools': fetch_suggestion_pools()}
+		self.response.out.write(template.render(self.path('suggestion_pools.html'),
+												self.add_context(context)))
+
+	@admin_required
+	def post(self):
+		action = None
+		suggestion_pool_ids = self.request.get('suggestion_pool_ids')
+		# Delete selected suggestion pools
+		if suggestion_pool_ids:
+			for suggestion_pool_id in suggestion_pool_ids:
+				suggestion_pool_entity = get_suggestion_pool(key_id=suggestion_pool_id)
+				suggestion_pool_entity.key.delete()
+			action = 'deleted'
+		# Create Suggestion pool
+		elif self.request.get('name'):
+			create_suggestion_pool({'name': self.request.get('name'),
+									'display_name': self.request.get('display_name'),
+									'description': self.request.get('description')})
+			action = 'created'
+		context = {'suggestion_pools': fetch_suggestion_pools(),
+				   'action': action}
+		self.response.out.write(template.render(self.path('suggestion_pools.html'),
+												self.add_context(context)))
+
+
 class DeleteTools(ViewBase):
 	@admin_required
 	def get(self):
@@ -192,7 +276,7 @@ class DeleteTools(ViewBase):
 		# If suggestion(s) were deleted (archived)
 		if suggestion_list:
 			for suggestion in suggestion_list:
-				suggestion_entity = get_suggestion(suggestion)
+				suggestion_entity = get_suggestion(key_id=suggestion)
 				# Get all the related preshow votes and delete them
 				preshow_votes = fetch_preshow_votes(suggestion=suggestion_entity.key)
 				for pv in preshow_votes:
@@ -204,7 +288,7 @@ class DeleteTools(ViewBase):
 		# If show(s) were deleted
 		if show_list:
 			for show in show_list:
-				show_entity = get_show(show)
+				show_entity = get_show(key_id=show)
 				# Delete the Vote Options attached to the show
 				vote_options = fetch_vote_options(show=show_entity.key)
 				for vote_option in vote_options:

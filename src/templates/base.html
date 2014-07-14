@@ -37,10 +37,7 @@
 					<li {% block home-selected %}{% endblock %}><a href="/">Home</a></li>
 					{% if show_today %}{% if is_admin %}<li><a href="/show/{{current_show.key.id}}/"><strong>Show Admin</strong></a></li>{% else %}<li {% block live-vote-selected %}{% endblock %}><a href="/live_vote/"><strong>Live Vote!</strong></a></li>{% endif %}{% endif %}
 					{% if show_today %}<li {% block add-action-selected %}{% endblock %}><a href="/add_actions/"><strong>Actions</strong> Add/Vote</a></li>{% endif %}
-					{% comment %}<li {% block add-item-selected %}{% endblock %}><a href="/add_items/"><strong>Items</strong> Add/Vote</a></li>{% endcomment %}
-					{% comment %}<li {% block add-character-selected %}{% endblock %}><a href="/add_characters/"><strong>Characters</strong> Add/Vote</a></li>{% endcomment %}
 					{% if not show_today %}<li {% block add-theme-selected %}{% endblock %}><a href="/add_themes/"><strong>Themes</strong> Add/Vote</a></li>{% endif %}
-					{% comment %}<li {% block other-shows-selected %}{% endblock %}><a href="/other_shows/">Other Shows</a></li>{% endcomment %}
 					{% if is_admin %}
 						<li class="dropdown{% block admin-selected %}{% endblock %}">
     						<a class="dropdown-toggle" data-toggle="dropdown" href="#">
@@ -48,6 +45,8 @@
     						</a>
     						<ul class="dropdown-menu">
     							<li {% block create-selected %}{% endblock %}><a href="/create_show/">Create Show</a></li>
+    							<li {% block vote-type-selected %}{% endblock %}><a href="/vote_types/">Add/Delete Vote Types</a></li>
+    							<li {% block suggestion-pool-selected %}{% endblock %}><a href="/suggestion_pools/">Add/Delete Suggestion Pools</a></li>
 								<li {% block add-player-selected %}{% endblock %}><a href="/add_players/">Add Players</a></li>
 								<li {% block delete-tools-selected %}{% endblock %}><a href="/delete_tools/">Delete Tools</a></li>
 								<li {% block interval-timer-selected %}{% endblock %}><a href="/interval_timer/">Interval Timer</a></li>

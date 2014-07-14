@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block admin-selected %} active{% endblock %}
+{% block suggestion-pool-selected %}class="active"{% endblock %}
+
+{% block content %}
+     <div class="container-fluid">
+         <div class="row">
+            <div class="col-md-5 col-md-offset-1">
+                <div class="label label-info" style="font-size:large;">Suggestion Pool(s)
+                    {% if action == 'created' %}
+                        Created
+                    {% endif %}
+                    {% if action == 'deleted' %}
+                        Deleted
+                    {% endif %}
+                    Successfully!
+                </div>
+            </div>
+         </div>
+         <form class="form-horizontal" role="form" action="/suggestion_pools/" method="post">
+             <div class="form-group">
+                <label class="col-md-2 control-label">Suggestion Pools:</label>
+                <div class="col-md-4">
+                    <select name="suggestion_pool_ids" multiple class="form-control">
+                    {% for suggestion_pool in suggestion_pools %}
+                        <option value="{{suggestion_pool.key.id}}">{{suggestion_pool.name}}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+             </div>
+             <div class="form-group">
+                 <div class="col-md-4">
+                     <button type="submit" class="btn btn-danger">Delete Suggestion Pool(s)</button>
+                 </div>
+             </div>
+         </form>
+         <hr/>
+         <form class="form-horizontal" role="form" action="/suggestion_pools/" method="post">
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Name:</label>
+                 <div class="col-md-4">
+                     <input type="text" class="form-control" name="name">
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Display Name:</label>
+                 <div class="col-md-4">
+                     <input type="text" class="form-control" name="display_name">
+                 </div>
+             </div>
+             <div class="form-group">
+                 <label class="col-md-2 control-label">Description (allows HTML):</label>
+                 <div class="col-md-4">
+                     <textarea class="form-control" rows="3" name="description"></textarea>
+                 </div>
+             </div>
+             <div class="form-group">
+                 <div class="col-md-4">
+                     <button type="submit" class="btn btn-default">Create Suggestion Pool</button>
+                 </div>
+             </div>
+         </form>
+	 </div>
+{% endblock %}

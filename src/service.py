@@ -1,6 +1,6 @@
 from models import (Show, Player, VoteType, Suggestion, PreshowVote,
-                    ShowInterval, VoteOptions, LiveVote,
-                    VotedItem, get_current_show)
+                    ShowInterval, VoteOptions, LiveVote, SuggestionPool,
+                    VotedItem, get_current_show, VOTE_STYLE, OCCURS_TYPE)
 from timezone import (get_today_start, get_tomorrow_start)
 
 
@@ -52,7 +52,9 @@ def fetch_players(**kwargs):
 
 def fetch_vote_types(**kwargs):
     return fetch_model_entities(VoteType, **kwargs)
-    
+
+def fetch_suggestion_pools(**kwargs):
+    return fetch_model_entities(VoteType, **kwargs)
 
 def fetch_preshow_votes(**kwargs):
     return fetch_model_entities(PreshowVote, **kwargs)
@@ -117,6 +119,14 @@ def create_show(**kwargs):
 
 def create_showinterval(**kwargs)
     return create_model_entity(ShowInterval, **kwargs)
+
+
+def create_vote_type(**kwargs)
+    return create_model_entity(VoteType, **kwargs)
+
+
+def create_suggestion_pool(**kwargs)
+    return create_model_entity(SuggestionPool, **kwargs)
 
 
 def create_model_entity(model, **kwargs):

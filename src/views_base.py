@@ -13,6 +13,11 @@ from timezone import get_mountain_time
 LIVE_VOTE_URI = '/live_vote/'
 
 
+def get_or_default(item, default):
+    if item == '' or item == None:
+        return default
+    return item
+
 def redirect_locked(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):

@@ -12,27 +12,29 @@
             <div class="label label-info" style="font-size:large;">Deleted Un-used Successfully.</div>
         {% endif %}
         {% for vote_type in vote_types %}
-            <form class="form-horizontal" role="form" action="/delete_tools/" method="post">
-                <div class="form-group">
-                    <label class="col-md-2 control-label">{{vote_type.display_name}}</label>
-                    <div class="col-md-4">
-                        <select name="suggestion_list" multiple class="form-control" size="12">
-                        {% for suggestion in vote_type.suggestions %}
-                            <option value="{{suggestion.key.id}}">{{suggestion.value}}</option>
-                        {% endfor %}
-                        </select>
+            {% if vote_type.name != 'test' %}
+                <form class="form-horizontal" role="form" action="/delete_tools/" method="post">
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">{{vote_type.display_name}}</label>
+                        <div class="col-md-4">
+                            <select name="suggestion_list" multiple class="form-control" size="12">
+                            {% for suggestion in vote_type.suggestions %}
+                                <option value="{{suggestion.key.id}}">{{suggestion.value}}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-offset-2">
-                    <button type="submit" class="btn btn-default">Delete {{vote_type.display_name}}(s)</button>
-                </div>
-            </form>
+                    <div class="col-md-offset-2">
+                        <button type="submit" class="btn btn-default">Delete {{vote_type.display_name}}(s)</button>
+                    </div>
+                </form>
+            {% endif %}
         {% endfor %}
         <form class="form-horizontal" role="form" action="/delete_tools/" method="post">
             <div class="form-group">
                 <label class="col-md-2 control-label">Shows:</label>
                 <div class="col-md-4">
-                    <select name="show_list" multiple class="form-control" size="2">
+                    <select name="show_list" multiple class="form-control" size="10">
                     {% for show in shows %}
                         <option value="{{show.key.id}}">{{show.created|date:"l N jS, Y @ P"}}</option>
                     {% endfor %}

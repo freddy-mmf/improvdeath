@@ -22,91 +22,34 @@
 			<hr/>
 			
 			<form action="/show/{{show.key.id}}/" method="post">
-				<input type="hidden" name="test_vote" value="True">
-				<input type="submit" class="btn btn-default btn-block btn-lg x-large-font" value="Start the Live Voting Test">
+				<input type="hidden" name="show_leaderboard" value="True">
+				<input type="submit" class="btn btn-default btn-block btn-lg x-large-font" value="Leaderboard">
 			</form>
 			<hr/>
-		
-			<form action="/show/{{show.key.id}}/" method="post">
-				<input type="hidden" name="interval_vote" value="True">
-				{% if show.remaining_intervals %}
-					{% if available_actions >= show.remaining_intervals %}
-						<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#003D7A;" value="Start the Interval Vote">
+			{% for vote_type in show.vote_types %}
+				<form action="/show/{{show.key.id}}/" method="post">
+					<input type="hidden" name="vote_start" value="{{vote_type.get.name}}">					
+					{% if vote_type.get.has_intervals %}
+						{% if vote_type.get.remaining_intervals %}
+							{% if vote_type.get.suggestion_pool.get.available_suggestions >= vote_type.get.remaining_intervals %}
+								<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:{{vote_type.get.button_color}};" value="Start the {{vote_type.get.display_name}} Interval Vote">
+							{% else %}
+								<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:{{vote_type.get.button_color}};">Need more {{vote_type.get.suggestion_pool.get.display_name}} to start the {{vote_type.get.display_name}} Intervals</div>
+							{% endif %}
+						{% else %}
+							<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:{{vote_type.get.button_color}};">No more {{vote_type.get.display_name}} Intervals</div>
+						{% endif %}
 					{% else %}
-						<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">Need more Actions to start Interval Show</div>
+						{% if vote_type.get.suggestion_pool.get.available_suggestions or vote_type.get.name == 'test' %}
+							<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:{{vote_type.get.button_color}};" value="Start the {{vote_type.get.display_name}} Vote">
+						{% else %}
+							<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:{{vote_type.get.button_color}};">Need more {{vote_type.get.suggestion_pool.get.display_name}} to start the {{vote_type.get.display_name}} Vote</div>
+						{% endif %}
 					{% endif %}
-				{% else %}
-					<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#003D7A;">No More Intervals</div>
-				{% endif %}
-			</form>
-			<hr/>
-
-			<form id="hero-vote" action="/show/{{show.key.id}}/" method="post">
-				<input type="hidden" name="hero_vote" value="True">
-				<input type="submit" class="btn btn-primary btn-block btn-lg x-large-font" value="Start the Hero Vote">
-			</form>
-		
-			<form id="villain-vote" action="/show/{{show.key.id}}/" method="post">
-				<input type="hidden" name="villain_vote" value="True">
-				<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#6916E6;" value="Start the Villain Vote">
-			</form>
-		
-			<form id="incident-vote" action="/show/{{show.key.id}}/" method="post">
-				<input type="hidden" name="incident_vote" value="True">
-				{% if available_actions %}
-					<input type="submit" class="btn btn-block btn-lg white-input x-large-font" style="background-color:#A30000;" value="Start the Peak Action Vote">
-				{% else %}
-					<div class="btn btn-block btn-lg x-large-font word-wrap" style="background-color:#A30000;">Need more Actions to start the Peak Action Vote</div>
-				{% endif %}
-			</form>
+				</form>
+				<hr/>
+			{% endfor %}
 
 		</div>
-
-			{% comment %}
-			<div id="item-vote" class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="item_vote" value="True">
-						{% if available_items %}
-							<input type="submit" class="btn btn-success btn-block btn-lg" value="Start the Item Vote">
-						{% else %}
-							<div class="btn btn-success btn-block btn-lg">Need more items to start Item Vote</div>
-						{% endif %}
-					</form>
-				</div>
-			</div>
-			
-			<div id="lover-vote" class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="lover_vote" value="True">
-						<input type="submit" class="btn btn-block btn-lg white-input" style="background-color:#FF3399;" value="Start the Lover Vote">
-					</form>
-				</div>
-			</div>
-
-			<div id="wildcard-vote" class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="wildcard_vote" value="True">
-						{% if available_characters %}
-							<input type="submit" class="btn btn-info btn-block btn-lg" value="Start the Character Vote">
-						{% else %}
-							<div class="btn btn-info btn-block btn-lg">Need more characters to start Character Vote</div>
-						{% endif %}
-					</form>
-				</div>
-			</div>
-
-			<div id="shapeshifter-vote" class="row">
-				<div class="col-md-4 col-md-offset-3">
-					<form action="/show/{{show.key.id}}/" method="post">
-						<input type="hidden" name="shapeshifter_vote" value="True">
-						<input type="submit" class="btn btn-warning btn-block btn-lg" value="Start the Shapeshifter Vote">
-					</form>
-				</div>
-			</div>
-			{% endcomment %}
-
 	{% endif %}
 </div>

@@ -22,8 +22,9 @@ import os
 import webapp2
 
 from views_base import RobotsTXT, LoaderIO
-from user_views import (MainPage, LiveVote, AddActions, AddThemes,
-						LiveVoteWorker)
+from user_views import (MainPage, LiveVote, AddSuggestions,
+						LiveVoteWorker, ShowLeaderboard,
+						UserLeaderboard, AllTimeLeaderboard)
 from admin_views import (ShowPage, CreateShow, DeleteTools,
 						 SuggestionPools, VoteTypes,
 					     JSTestPage, AddPlayers, IntervalTimer)
@@ -42,11 +43,13 @@ app = webapp2.WSGIApplication([
 	(r'/loaderio-9b6fa50492da1609dc61b9198b767688.txt', LoaderIO),
 	# User pages
     (r'/', MainPage),
-    (r'/show/(\d+)/', ShowPage),
+    (r'/leaderboard/show/(\d+)/', ShowLeaderboard),
+    (r'/leaderboard/user/(\d+)/', UserLeaderboard),
+    (r'/leaderboards/', AllTimeLeaderboard),
     (r'/live_vote/', LiveVote),
-    (r'/add_actions/', AddActions),
-    (r'/add_themes/', AddThemes),
+    (r'/add_([a-zA-Z\-]+)/', AddSuggestions),
     # Admin URLS
+    (r'/show/(\d+)/', ShowPage),
     (r'/create_show/', CreateShow),
     (r'/vote_types/', VoteTypes),
     (r'/suggestion_pools/', SuggestionPools),

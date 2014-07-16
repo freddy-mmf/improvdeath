@@ -26,18 +26,6 @@ class Player(ndb.Model):
     @property
     def img_path(self):
         return "/static/img/players/%s" % self.photo_filename
-    
-    def get_live_action_vote_exists(self, show, interval, session_id):
-        return bool(LiveActionVote.query(
-                    LiveActionVote.interval == int(interval),
-                    LiveActionVote.show == show,
-                    LiveActionVote.session_id == str(session_id)).get())
-    
-    def get_role_vote(self, show, role):
-        return RoleVote.query(
-                    RoleVote.player == self.key,
-                    RoleVote.show == show.key,
-                    RoleVote.role == role).get()
 
 
 class SuggestionPool(ndb.Model):
@@ -601,10 +589,12 @@ class Suggestion(ndb.Model):
     
     created = ndb.DateTimeProperty()
     
-    def get_live_vote_exists(self, show, session_id):
+    def get_live_vote_exists(self, show, interval, session_id):
         """Determine if a live vote exists for this suggestion by this session"""
         return bool(LiveVote.query(
+                    LiveVote.suggestion == self.key,
                     LiveVote.show == show,
+                    LiveVote.interval == interval,
                     LiveVote.session_id == str(session_id)).get())
     
     @property

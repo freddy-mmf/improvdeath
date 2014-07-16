@@ -154,11 +154,26 @@ def create_suggestion_pool(create_data):
     return create_model_entity(SuggestionPool, create_data)
 
 
+def create_live_vote(create_data):
+    return create_model_entity(LiveVote, create_data)
+
+
 def create_model_entity(model, create_data):
     create_kwargs = {}
     for key, value in create_data.items():
         create_kwargs[key] = value
     return model(**create_kwargs).put()
+
+
+def get_live_vote_exists(show, vote_type, interval, session_id, suggestion=None,
+                         player=None):
+    return bool(LiveVote.query(
+                    LiveVote.suggestion == suggestion,
+                    LiveVote.player == player,
+                    LiveVote.show == show,
+                    LiveVote.vote_type == vote_type,
+                    LiveVote.interval == interval,
+                    LiveVote.session_id == str(session_id)).get())
 
 
 def get_unused_suggestions():
@@ -172,3 +187,61 @@ def get_unused_suggestions():
         setattr(vote_type, 'suggestions', suggestions)
     return vote_types
 
+
+def pre_show_voting_post(show_key, suggestion_pool, request, session_id, user_id, is_admin):
+    context = {'session_id': session_id}
+    suggestion_entity = None
+    # Get the value of the entry that was added
+    entry_value = request.get('entry_value')
+    # Get the upvote
+    upvote = request.get('upvote')
+    # If a delete was requested on an entry
+    delete_id = request.get('delete_id')
+    # If this is a brand new entry
+    if entry_value:
+        # Create the suggestion
+        suggestion_entity = Suggestion(value=entry_value,
+                                       show=show,
+                                       suggestion_pool=suggestion_pool.key,
+                                       preshow_value=0,
+                                       session_id=session_id,
+                                       user_id=user_id).put().get()
+        context['created'] = True
+    elif upvote:
+        suggestion_key = ndb.Key(Suggestion, int(upvote)).get().key
+        # Get the pre-show vote if it exists for that suggestion and session id
+        pv = PreshowVote.query(
+                PreshowVote == suggestion_key,
+                PreshowVote.session_id == session_id).get()
+        # If it doesn't exist, create it
+        if not pv:
+            PreshowVote(show=show,
+                        suggestion=suggestion_key,
+                        session_id=session_id).put()
+    # If a delete was requested
+    elif delete_id:
+        # Fetch the suggestion entity
+        suggestion_entity = ndb.Key(Suggestion, int(delete_id)).get()
+        # Make sure the entry was either the session id that created it
+        # Or this is an admin user
+        if session_id == suggestion_entity.session_id or is_admin:
+            suggestion_entity.key.delete()
+    
+    # If an new suggestion entity was created
+    if suggestion_entity:
+        # Have to sort first by suggestion key, since we query on it. Dumb...
+        suggestion_entities = Suggestion.query(Suggestion.used == False,
+                                               Suggestion.key != suggestion_entity.key,
+                                               ).fetch()
+        suggestion_entities.sort(key=lambda x: (x.preshow_value, x.created), reverse=True)
+        # If the entity wasn't deleted
+        if not delete_id:
+            # Add the newly added suggestion entity
+            suggestion_entities.append(suggestion_entity)
+    else:
+        suggestion_entities = Suggestion.query(Suggestion.used == False,
+                                   ).order(-Suggestion.preshow_value,
+                                     Suggestion.created).fetch()
+    context['suggestions'] = suggestion_entities
+    
+    return context

@@ -72,9 +72,13 @@ class ViewBase(webapp2.RequestHandler):
     def session(self):
         session = self.session_store.get_session()
         if not session.get('id'):
-            # Get a random has to store as the session id
+            # Get a random hash to store as the session id
             session['id'] = random.getrandbits(128)
         return session
+  
+    def current_user(self):
+        """Returns currently logged in user"""
+        return users.get_current_user()
 
 
 class RobotsTXT(webapp2.RequestHandler):

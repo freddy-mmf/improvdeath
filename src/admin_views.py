@@ -34,8 +34,10 @@ class ShowPage(ViewBase):
     @admin_required
     def get(self, show_id):
         show = get_show(key_id=show_id)
-        # Determine the available suggestions for live vote types
-        context    = {'show': show,
+        ## TODO
+        ### We need to make sure that the show's leaderboard is set to hidden
+        ### When we hit the leaderboard page
+        context = {'show': show,
                    'now_tz': back_to_tz(get_mountain_time()),
                    'host_url': self.request.host_url}
         self.response.out.write(template.render(self.path('show.html'),
@@ -82,13 +84,7 @@ class ShowPage(ViewBase):
         elif self.request.get('show_leaderboard') and self.context.get('is_admin', False):
             show.showing_leaderboard = True
             show.put()
-        # Admin is hiding the leaderboard
-        elif self.request.get('hide_leaderboard') and self.context.get('is_admin', False):
-            show.showing_leaderboard = False
-            show.put()
-        # Determine the available suggestions for live vote types
-        
-        context    = {'show': show,
+        context = {'show': show,
                    'now_tz': back_to_tz(get_mountain_time()),
                    'host_url': self.request.host_url}
         self.response.out.write(template.render(self.path('show.html'),

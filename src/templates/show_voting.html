@@ -27,7 +27,7 @@
 			</form>
 			<hr/>
 			{% for vote_type in show.vote_types %}
-				<form action="/show/{{show.key.id}}/" method="post">
+				<form id="{{vote_type.name}}-vote" action="/show/{{show.key.id}}/" method="post">
 					<input type="hidden" name="vote_start" value="{{vote_type.get.name}}">					
 					{% if vote_type.get.has_intervals %}
 						{% if vote_type.get.remaining_intervals %}

@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="container-fluid">
-	{% if show %}
-		{% for option in show.vote_options %}
+	{% if vote_options %}
+		{% for option in vote_options %}
 			<div class="row">
 				<div class="col-sm-8 col-sm-offset-2">
 					<form action="/live_vote/" method="post">

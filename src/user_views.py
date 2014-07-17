@@ -23,7 +23,8 @@ class MainPage(ViewBase):
 
 class LiveVote(ViewBase):
     def get(self):
-        context = {'show': get_current_show()}
+        show = get_current_show()
+        context = {'vote_options': show.show_option_list}
         self.response.out.write(template.render(self.path('live_vote.html'),
                                                 self.add_context(context)))
 
@@ -37,8 +38,8 @@ class LiveVote(ViewBase):
                       params={'show': self.context['current_show'],
                               'vote_num': vote_num,
                               'session_id': session_id})
-        context = {'show': self.context['current_show'],
-                   'voted': voted}
+        show = get_current_show()
+        context = {'vote_options': show.show_option_list}
         self.response.out.write(template.render(self.path('live_vote.html'),
                                                 self.add_context(context)))
 

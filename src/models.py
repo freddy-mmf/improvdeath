@@ -218,6 +218,10 @@ class Show(ndb.Model):
     showing_leaderboard = ndb.BooleanProperty(default=False, indexed=False)
     voted_items = ndb.IntegerProperty(repeated=True, indexed=False)
     
+    @property
+    def show_option_list(self):
+        return range(1, self.vote_options+1)
+    
     def get_player_by_interval(self, interval, vote_type):
         return ShowInterval.query(ShowInterval.show == self.key,
                                   ShowInterval.interval == interval,
@@ -252,6 +256,7 @@ class Show(ndb.Model):
                 state_dict.update(
                        {'state': vote_type.name,
                         'display': 'voting',
+                        'style': vote_type.style,
                         # Set the end of the voting period
                         'hour': vote_end.hour,
                         'minute': vote_end.minute,
@@ -261,6 +266,8 @@ class Show(ndb.Model):
             elif now_tz >= vote_end and now_tz <= display_end or vote_type.preshow_voted:
                 state_dict.update({'state': vote_type.name,
                                    'display': 'result',
+                                   'style': vote_type.style,
+                                   'display_name': vote_type.display_name,
                                    'hour': vote_end.hour,
                                    'minute': vote_end.minute,
                                    'second': vote_end.second})
@@ -274,6 +281,8 @@ class Show(ndb.Model):
             if now_tz >= recap_start_tz and now_tz <= display_end:
                 state_dict.update({'state': recap_type_entity.name,
                                    'display': 'result',
+                                   'style': vote_type.style,
+                                   'display_name': vote_type.display_name,
                                    'hour': display_end.hour,
                                    'minute': display_end.minute,
                                    'second': display_end.second})
@@ -332,7 +341,7 @@ class Show(ndb.Model):
                     count = vote_type.get_live_vote_count(self.key,
                                                           suggestion=unused_suggestion,
                                                           interval=current_interval)
-                    vote_options['options'].append({'name': unused_suggestion.value,
+                    vote_options['options'].append({'value': unused_suggestion.value,
                                                     'id': unused_suggestion.key.id(),
                                                     'count': count})
             elif vote_type.style == 'options':
@@ -342,7 +351,7 @@ class Show(ndb.Model):
                     count = vote_type.get_live_vote_count(self.key,
                                                           suggestion=unused_suggestion,
                                                           interval=current_interval)
-                    vote_options['options'].append({'name': unused_suggestion.value,
+                    vote_options['options'].append({'value': unused_suggestion.value,
                                                     'id': unused_suggestion.key.id(),
                                                     'count': count})
             elif vote_type.style == 'test':
@@ -350,7 +359,7 @@ class Show(ndb.Model):
                 for suggestion in suggestions:
                     count = vote_type.get_live_vote_count(self.key,
                                                           suggestion=suggestion.key)
-                    vote_options['options'].append({'name': suggestion.value,
+                    vote_options['options'].append({'value': suggestion.value,
                                                     'id': suggestion.key.id(),
                                                     'count': count})
             # If there is a 1 minute interval gap between this interval and the next
@@ -388,7 +397,6 @@ class Show(ndb.Model):
                                                                   player=current_voted.player,
                                                                   interval=current_interval)
                 vote_options['voted'] = vote_type.name
-                vote_options['display_name'] = vote_type.display_name
                 vote_options['photo_filename'] = current_voted.player.get().photo_filename
                 vote_options['count'] = winning_count
             elif vote_type.style == 'player-pool':
@@ -427,7 +435,6 @@ class Show(ndb.Model):
                                                                   player=current_voted.player,
                                                                   interval=current_interval)
                 vote_options['voted'] = vote_type.name
-                vote_options['display_name'] = vote_type.display_name
                 vote_options['photo_filename'] = current_voted.player.get().photo_filename
                 vote_options['count'] = winning_count
             elif vote_type.style == 'player-options':
@@ -468,7 +475,7 @@ class Show(ndb.Model):
                                                                   interval=current_interval)
                 vote_options['voted'] = vote_type.name
                 vote_options['photo_filename'] = current_player.photo_filename
-                vote_options['suggestion'] = current_voted.suggestion
+                vote_options['value'] = current_voted.suggestion.get().value
                 vote_options['count'] = winning_count
             elif vote_type.style == 'options':
                 # The winning suggestion hasn't been selected
@@ -504,7 +511,7 @@ class Show(ndb.Model):
                                                                   suggestion=current_voted.suggestion,
                                                                   interval=current_interval)
                 vote_options['voted'] = vote_type.name
-                vote_options['suggestion'] = current_voted.suggestion
+                vote_options['value'] = current_voted.suggestion.get().value
                 vote_options['count'] = winning_count
             elif vote_type.style == 'test':
                 # The winning suggestion hasn't been selected
@@ -537,7 +544,7 @@ class Show(ndb.Model):
                     winning_count = vote_type.get_live_vote_count(self.key,
                                                                   suggestion=current_voted.suggestion)
                 vote_options['voted'] = vote_type.name
-                vote_options['suggestion'] = current_voted.suggestion
+                vote_options['value'] = current_voted.suggestion.get().value
                 vote_options['count'] = winning_count
             elif vote_type.style == 'preshow-voted':
                 # The winning suggestion hasn't been selected
@@ -564,7 +571,7 @@ class Show(ndb.Model):
                     # Get the winning pre-show vote value
                     winning_count = current_voted.suggestion.get().preshow_value
                 vote_options['voted'] = vote_type.name
-                vote_options['suggestion'] = current_voted.suggestion
+                vote_options['value'] = current_voted.suggestion.get().value
                 vote_options['count'] = winning_count
         
         return vote_options

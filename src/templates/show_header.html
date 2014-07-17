@@ -3,16 +3,12 @@
 <script src="{{js_path}}jquery.playSound.js"></script>
 <script src="{{js_path}}jquery.plugin.min.js"></script>
 <script src="{{js_path}}jquery.countdown.min.js"></script>
+<script src="{{js_path}}chroma.min.js"></script>
 
 <script>
 $( document ).ready(function() {
-	var STATE_RENAME = {'interval': 'Action',
-						'incident': 'Peak Action',
-						'test': 'Test',
-						'hero': 'Hero',
-						'villain': 'Villain',
-						'shapeshifter': 'Shapeshifter',
-						'lover': 'Love Interest'};
+	var HEAT_MAP_COLORS = ['#fff7ec', '#fee8c8', '#fdd49e', '#fdbb84',
+						   '#fc8d59', '#ef6548', '#d7301f', '#990000'];
 	
 	function is_defined(variable, dflt) {
 		return typeof variable === "undefined" ? dflt : variable;
@@ -22,10 +18,56 @@ $( document ).ready(function() {
 		return string.charAt(0).toUpperCase() + string.slice(1);
 	}
 	
+	function idealTextColor(bgColor) {
+
+	   var nThreshold = 105;
+	   var components = getRGBComponents(bgColor);
+	   var bgDelta = (components.R * 0.299) + (components.G * 0.587) + (components.B * 0.114);
+
+	   return ((255 - bgDelta) < nThreshold) ? "#000000" : "#ffffff";   
+	}
+
+	function getRGBComponents(color) {       
+
+		var r = color.substring(1, 3);
+		var g = color.substring(3, 5);
+		var b = color.substring(5, 7);
+
+		return {
+		   R: parseInt(r, 16),
+		   G: parseInt(g, 16),
+		   B: parseInt(b, 16)
+		};
+	}
+	
 	function update_vote_counts(element_id, voting_options) {
+		// Determine the highest and lowest vote counts
+		var min_count = max_count = 0;
+		for (var index in voting_options) {
+			// If they are empty, initialize them
+			if (min_count == 0 && max_count == 0){
+				min_count = voting_options[index]['count'];
+				max_count = voting_options[index]['count'];
+			}
+			// If we've found a new min, set it
+			if (voting_options[index]['count'] < min_count) {
+				min_count = voting_options[index]['count'];
+			}
+			// If we've found a new max, set it
+			if (voting_options[index]['count'] > max_count) {
+				max_count = voting_options[index]['count'];
+			}
+		}
+		
+		// Create the scale for the vote count colors
+		scale = chroma.scale(HEAT_MAP_COLORS).domain([min_count, max_count], voting_options.length, 'log').out('hex');
 		$(element_id).find("span.badge").each(function(index) {
 			// update the voting count of the corresponding option index
 			$(this).text(voting_options[index]['count']);
+			var hex_color = scale(voting_options[index]['count']);
+			// Set the background color, according to the color scale
+			$(this).css("background-color", hex_color);
+			$(this).css("color", idealTextColor(hex_color));
 		});
 	}
 	
@@ -38,7 +80,7 @@ $( document ).ready(function() {
 				var option_row = $('<div class="row"></div>');
 				var option_column = $('<div class="col-sm-12"></div>');
 				// Create the button with the option name on it
-				var option_btn = $('<button class="btn btn-primary btn-block vote-option">' + cur_num + '. ' + option_dict['name'] + '&nbsp;<span class="badge count-font">0</span></button><br/>');
+				var option_btn = $('<button class="btn btn-primary btn-block vote-option">' + cur_num + '. ' + option_dict['value'] + '&nbsp;<span class="badge count-font">0</span></button><br/>');
 				// Add the option button to the option column
 				$(option_column).append($(option_btn));
 				// Attach the row to the given element, and the column to the row
@@ -54,9 +96,8 @@ $( document ).ready(function() {
 	}
 	
 	function create_panel_components(element_id, voting_data) {
-		var state = voting_data['state'];
-		if (state == 'interval') {
-			var panel = $('<div class="panel panel-danger"></div>');
+		var style = voting_data['style'];
+		if (style == 'player-options') {
 			var thumbnail_column = $('<div class="col-sm-2 col-sm-offset-4 voting-interval-thumbnail"></div>');
 			var thumbnail_img = $('<img src="{{player_image_path}}' + voting_data['player_photo'] + '" class="img-responsive img-thumbnail" />');
 			// Add the thumbnail column to the panel body row
@@ -64,33 +105,21 @@ $( document ).ready(function() {
 			// Add the player thumbnail image to the thumbnail row
 			$(thumbnail_column).append($(thumbnail_img));
 		}
-		// Change the panel to the appropriate color/heading
-		if (state == 'test') {
-			var panel = $('<div class="panel panel-warning"></div>');
-		}
-		if (state == 'item') {
-			var panel = $('<div class="panel panel-success"></div>');
-		}
-		if (state == 'incident') {
-			var panel = $('<div class="panel panel-danger"></div>');
-		}
-		if (state == 'wildcard') {
-			var panel = $('<div class="panel panel-info"></div>');
-		}
-		var panel_header = $('<div class="panel-heading text-center x-large-font">' + STATE_RENAME[state] + ' Vote</div>');
+		var panel = $('<div class="panel panel-primary"></div>');
+		var panel_header = $('<div class="panel-heading text-center x-large-font">' + voting_data['display_name'] + ' Vote</div>');
 		return {'panel': panel,
 				'panel_header': panel_header,
 				'thumbnail_column': thumbnail_column}
 	}
 	
-	function create_voted_option(element_id, voted_dict) {
+	function create_voted_option(element_id, voting_data) {
 		// Clear the element
 		$(element_id).html('');
 		var row = $('<div class="row"></div>');
 		var column = $('<div class="col-sm-11"></div>');
 		var panel_body = $('<div class="panel-body"></div>');
 		var panel_body_row = $('<div class="row"></div>');
-		panel_components = create_panel_components(panel_body_row, voted_dict);
+		panel_components = create_panel_components(panel_body_row, voting_data);
 		// Get the panel pieces
 		panel = panel_components['panel'];
 		panel_header = panel_components['panel_header'];
@@ -101,12 +130,12 @@ $( document ).ready(function() {
 		var option_row = $('<div class="row"></div>');
 		var option_column = $('<div class="col-sm-12"></div>');
 		// Create the button with the option name on it
-		var option_btn = $('<button class="btn btn-primary btn-block vote-option">' + voted_dict['voted'] + '</button>');
+		var option_btn = $('<button class="btn btn-primary btn-block vote-option">' + voting_data['value'] + '</button>');
 		// Add the option button to the option column
 		$(option_column).append($(option_btn));
 		var count_row = $('<div class="row text-center"></div>');
 		// Create the button that shows the count of votes
-		var option_count = $('<button class="btn btn-danger vote-option">' + voted_dict['count'] + ' Votes!</button>');
+		var option_count = $('<button class="btn btn-danger vote-option">' + voting_data['count'] + ' Votes!</button>');
 		$(count_row).append($(option_count));
 		// Add the row to the element
 		$(element_id).append($(row));
@@ -129,8 +158,7 @@ $( document ).ready(function() {
 	}
 	
 	function create_vote_panel(element_id, voting_data, vote_end, update_percent_only) {
-		var state = voting_data['state'];
-		// If we're currently in the voting state
+		// If we're currently in the voting display
 		if (voting_data['display'] == 'voting') {
 			update_percent_only = typeof update_percent_only !== 'undefined' ? update_percent_only : false;
 			// Create the entire panel if the panel is empty
@@ -178,7 +206,7 @@ $( document ).ready(function() {
 					layout: '<span class="image{s10}"></span><span class="image{s1}"></span>'});
 			}
 		}
-		// We're in the result state
+		// We're in the result display
 		if (voting_data['display'] == 'result') {
 			// Show the voted option in the footer
 			create_voted_option(element_id, voting_data);
@@ -187,19 +215,17 @@ $( document ).ready(function() {
 		return panel
 	}
 	
-	function create_role_panels(element_id, voting_data, vote_end, update_percent_only) {
+	function create_player_panels(element_id, voting_data, vote_end, update_percent_only) {
 		// If we're currently in the voting state
 		if (voting_data['display'] == 'voting') {
-			var state = voting_data['state'];
 			var option_data = voting_data['options'];
 			update_percent_only = typeof update_percent_only !== 'undefined' ? update_percent_only : false;
 			// Create the entire panel
 			if (update_percent_only === false) {
-				var capitalized_role = capitaliseFirstLetter(state);
 				var row = $('<div class="row"></div>');
 				var column = $('<div class="col-sm-11"></div>');
 				var panel = $('<div class="panel panel-primary"></div>');
-				var panel_header = $('<div class="panel-heading text-center x-large-font">' + capitalized_role + ' Vote</div>');
+				var panel_header = $('<div class="panel-heading text-center x-large-font">' + voting_data['display_name'] + ' Vote</div>');
 				var panel_body = $('<div class="panel-body"></div>');
 				var panel_body_row = $('<div class="row"></div>');
 				var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
@@ -276,31 +302,30 @@ $( document ).ready(function() {
 			// Add the timer to the panel body
 			$(panel_body_row).append($(countdown_column));
 		}
-		// We're in the result state
+		// We're in the result display
 		else {
-			create_voted_role(element_id, voting_data);
+			create_voted_player(element_id, voting_data);
 		}
 	}
 	
-	function create_voted_role(element_id, voted_dict) {
-		var capitalized_role = capitaliseFirstLetter(voted_dict['voted']);
+	function create_voted_player(element_id, voting_data) {
 		var row = $('<div class="row"></div>');
 		var column = $('<div class="col-sm-11"></div>');
 		var panel = $('<div class="panel panel-primary"></div>');
 		var panel_body = $('<div class="panel-body"></div>');
 		var panel_body_row = $('<div class="row"></div>');
 		var thumbnail_column = $('<div class="col-sm-6 col-sm-offset-4 result-thumbnail"></div>');
-		var thumbnail_img = $('<img src="{{player_image_path}}' + voted_dict['photo_filename'] + '" class="img-responsive img-thumbnail" />');
+		var thumbnail_img = $('<img src="{{player_image_path}}' + voting_data['photo_filename'] + '" class="img-responsive img-thumbnail" />');
 		var panel_footer = $('<div class="panel-footer" style="background-color:black;"></div>');
 		var role_row = $('<div class="row"></div>');
 		var role_column = $('<div class="col-sm-12"></div>');
 		var count_row = $('<div class="row text-center"></div>');
 		// Create the button with the option name on it
-		var role_btn = $('<button class="btn btn-primary btn-block vote-option">' + capitalized_role + '</button>');
+		var role_btn = $('<button class="btn btn-primary btn-block vote-option">' + voting_data['display_name'] + '</button>');
 		// Add the role button to the role column
 		$(role_column).append($(role_btn));
 		// Create the button that shows the count of votes
-		var role_count = $('<button class="btn btn-danger vote-option">' + voted_dict['count'] + ' Votes!</button>');
+		var role_count = $('<button class="btn btn-danger vote-option">' + voting_data['count'] + ' Votes!</button>');
 		$(count_row).append($(role_count));
 		// Add the row to the element
 		$(element_id).append($(row));
@@ -327,9 +352,6 @@ $( document ).ready(function() {
 		
 	}
 	var show_json_url = '/show_json/{{show.key.id}}/';
-	// Hide all objects initially
-	$( "#init-players" ).hide();
-	$( "#player-action" ).hide();
 	// Hide the nav bar and vote selection screen
 	$("#top-nav-bar").hide();
 	$("#vote-selection-screen").hide();
@@ -384,20 +406,14 @@ $( document ).ready(function() {
 					// play the result sound
 					$.playSound('{{host_url}}{{audio_path}}action-chime');
 				}
-				if ('role' in voting_data) {
+				// If it's a players only vote
+				if (voting_data['style'] == 'player-pool' | voting_data['style'] == 'all-players') {
 					// Create the role voting screens
-					create_role_panels("#current-vote", voting_data, vote_end);
+					create_player_panels("#current-vote", voting_data, vote_end);
 				}
 				else {
-					// IF we just want to show the logo and not voting/results
-					if (voting_data['display'] == 'logo') {
-						// Delete the current voting display
-						$("#current-vote").empty();
-					}
-					else {
-						// Create the voting screen
-						create_vote_panel("#current-vote", voting_data, vote_end);
-					}
+					// Create the voting screen
+					create_vote_panel("#current-vote", voting_data, vote_end);
 				}
 			}
 			// If we're on the select vote types screen
@@ -423,7 +439,7 @@ $( document ).ready(function() {
 						// If the input type is submit
 						if ($(this).attr('type') == 'submit') {
 							// Replace the value with a recap label
-							$(this).attr('value', 'Recap ' + STATE_RENAME[used_types[used_index]]);
+							$(this).attr('value', 'Recap ' + capitaliseFirstLetter(used_types[used_index]));
 						}
 					});
 					
@@ -435,9 +451,10 @@ $( document ).ready(function() {
 		
 		// If we're in the voting phase
 		if (voting_data['display'] == 'voting') {
-			if ('role' in voting_data) {
+			// If it's a players only vote
+			if (voting_data['style'] == 'player-pool' | voting_data['style'] == 'all-players') {
 				// Update the percentages of the role voting screens
-				create_role_panels("#current-vote", voting_data, vote_end, true);
+				create_player_panels("#current-vote", voting_data, vote_end, true);
 			}
 			else {
 				// Update the percentages of the other voting screens

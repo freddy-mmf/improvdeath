@@ -363,18 +363,19 @@ class MockObject(object):
 class JSTestPage(ViewBase):
     @admin_required
     def get(self):
-        state = self.request.get('state', 'interval')
+        state = self.request.get('state', 'action-intervals')
         display = self.request.get('display', 'voting')
+        style = self.request.get('style', 'player-options')
         votes_used = self.request.get('votes_used', '')
         available_mock = [1,2,3]
-        three_options = [{"name": "Walks into a house", "count": 20},
-                        {"name": "Something else crazy long, so forget about what you know about options lenghts", "count": 30},
-                        {"name": "Here is a super long option that nobody could have ever guessed because they never dreamed of such things", "count": 10}]
-        five_options = [{"name": "Option 1", "count": 20},
-                       {"name": "Option 2", "count": 50},
-                       {"name": "Option 3", "count": 10},
-                       {"name": "Option 4", "count": 15},
-                       {"name": "Option 5", "count": 5}]
+        three_options = [{"value": "Walks into a house", "count": 20},
+                        {"value": "Something else crazy long, so forget about what you know about options lenghts", "count": 30},
+                        {"value": "Here is a super long option that nobody could have ever guessed because they never dreamed of such things", "count": 10}]
+        five_options = [{"value": "Option 1", "count": 20},
+                       {"value": "Option 2", "count": 50},
+                       {"value": "Option 3", "count": 10},
+                       {"value": "Option 4", "count": 15},
+                       {"value": "Option 5", "count": 5}]
         player_options = [{'photo_filename': 'freddy.jpg', 'count': 30},
                            {'photo_filename': 'dan.jpg', 'count': 10},
                            {'photo_filename': 'eric.jpg', 'count': 15},
@@ -384,11 +385,9 @@ class JSTestPage(ViewBase):
                            {'photo_filename': 'greg.jpg', 'count': 5}]
         show_mock = type('Show',
                          (object,),
-                         dict(player_actions = [],
-                              theme = type('Theme', (object,), dict(name = 'Pirates')),
-                              is_today = True))
+                         dict(is_today = True))
         mock_data = {'state': state, 'display': display}
-        if state == 'interval':
+        if style == 'player-options':
             if display == 'voting':
                 mock_data.update({'player_name': 'Freddy',
                                   'player_photo': 'freddy.jpg',
@@ -396,54 +395,52 @@ class JSTestPage(ViewBase):
             else:
                 mock_data.update({'player_name': 'Freddy',
                                   'player_photo': 'freddy.jpg',
-                                  'voted': three_options[1]['name'],
+                                  'voted': state,
+                                  'value': three_options[1]['value'],
                                   'count': three_options[1]['count']})
-        elif state == 'test':
+        elif style == 'test':
             if display == 'voting':
                 mock_data.update({'options': five_options})
             else:
-                mock_data.update({'voted': five_options[1]['name'],
+                mock_data.update({'voted': state,
+                				  'value': five_options[1]['value'],
                                   'count': five_options[1]['count']})
-        elif state == 'incident':
+        elif style == 'options' or style == 'preshow-voted':
             if display == 'voting':
                 mock_data.update({'options': five_options})
             else:
-                mock_data.update({'voted': five_options[1]['name'],
+                mock_data.update({'voted': state,
+                				  'value': five_options[1]['value'],
                                   'count': five_options[1]['count']})
-        elif state in ROLE_TYPES:
+        elif style == 'all-players' or style == 'player-pool':
             if display == 'voting':
                 player_num = int(self.request.get('players', '8'))
                 mock_data.update({'role': True,
                                   'options': player_options[:player_num]})
             else:
-                mock_data.update({'role': True,
-                                  'voted': state,
-                                   'photo_filename': player_options[0]['photo_filename'],
-                                   'count': player_options[0]['count']})
+                mock_data.update({'voted': state,
+                                  'photo_filename': player_options[0]['photo_filename'],
+                                  'count': player_options[0]['count']})
         
         mock_data['used_types'] = []
         # Add used vote types
-        for vt in VOTE_TYPES:
+        for vt in ['test', 'peak-action']:
             if vt in votes_used:
                 mock_data['used_types'].append(vt)
                 setattr(show_mock, vt, True)
         
         # Add start of vote time
         now_tz = back_to_tz(get_mountain_time())
-        end_vote_time = now_tz + datetime.timedelta(seconds=VOTE_AFTER_INTERVAL)
+        end_vote_time = now_tz + datetime.timedelta(seconds=25)
         mock_data['hour'] = end_vote_time.hour
         mock_data['minute'] = end_vote_time.minute
         mock_data['second'] = end_vote_time.second
         mock_data['second'] = end_vote_time.second
         mock_data['voting_length'] = (end_vote_time - now_tz).seconds
 
-        context    = {'show': show_mock,
+        context = {'show': show_mock,
                    'now_tz': back_to_tz(get_mountain_time()),
-                   'available_actions': available_mock,
-                   'available_items': available_mock,
-                   'available_characters': available_mock,
                    'host_url': self.request.host_url,
-                   'VOTE_AFTER_INTERVAL': VOTE_AFTER_INTERVAL,
                    'mocked': True,
                    'mock_data': json.dumps(mock_data)}
         self.response.out.write(template.render(self.path('js_test.html'),
